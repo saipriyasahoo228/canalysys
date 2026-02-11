@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, X } from 'lucide-react'
+import { ChevronDown, Loader2, X } from 'lucide-react'
 import { Button, Input, Select } from './Ui'
 
 export function ReasonDialog({
@@ -9,6 +9,8 @@ export function ReasonDialog({
   submitLabel = 'Confirm',
   showReason = true,
   requireReason = true,
+  reasonLabel,
+  reasonPlaceholder,
   onClose,
   onSubmit,
   fields,
@@ -23,6 +25,7 @@ export function ReasonDialog({
   const [form, setForm] = useState(initial)
   const [comboText, setComboText] = useState({})
   const [comboOpen, setComboOpen] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
   const boxRef = useRef(null)
   const prevOpenRef = useRef(false)
 
@@ -47,16 +50,19 @@ export function ReasonDialog({
 
   if (!open) return null
 
+  const canSubmit = !(requireReason && showReason) || !!String(form.reason || '').trim()
+
   return (
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30" onClick={submitting ? undefined : onClose} />
       <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-lg">
         <div className="relative border-b border-slate-200 px-4 py-3">
           <Button
             variant="icon"
             size="icon"
             className="absolute right-2 top-2"
-            onClick={onClose}
+            onClick={submitting ? undefined : onClose}
+            disabled={submitting}
             aria-label="Close"
             title="Close"
           >
@@ -73,7 +79,7 @@ export function ReasonDialog({
                 {f.type === 'select' ? (
                   <div className="relative">
                     {(() => {
-                      const isDisabled = !!f.disabled
+                      const isDisabled = !!f.disabled || submitting
                       const opts = typeof f.options === 'function' ? f.options(form) : f.options || []
                       const selected = opts.find((o) => o.value === form[f.name])
                       const typed = comboText[f.name]
@@ -168,13 +174,95 @@ export function ReasonDialog({
                     })()}
                   </div>
                 ) : (
-                  <Input
-                    type={f.type || 'text'}
-                    value={form[f.name]}
-                    disabled={!!f.disabled}
-                    onChange={(e) => setForm((s) => ({ ...s, [f.name]: e.target.value }))}
-                    placeholder={f.placeholder}
-                  />
+                  <>
+                    {f.type === 'file' ? (
+                      <input
+                        type="file"
+                        disabled={!!f.disabled || submitting}
+                        accept={f.accept}
+                        className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-900 hover:file:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        onChange={(e) => {
+                          const file = e.target.files && e.target.files[0]
+                          if (!file) return
+
+                          if (f.fileMode === 'dataUrl') {
+                            const progressName = f.progressName || `${f.name}Progress`
+                            const fileNameName = f.fileNameName || `${f.name}FileName`
+
+                            setForm((s) => ({ ...s, [progressName]: 0, [fileNameName]: file.name }))
+
+                            const reader = new FileReader()
+                            reader.onprogress = (evt) => {
+                              if (!evt.lengthComputable) return
+                              const pct = Math.max(0, Math.min(100, Math.round((evt.loaded / evt.total) * 100)))
+                              setForm((s) => ({ ...s, [progressName]: pct }))
+                            }
+                            reader.onload = () => {
+                              setForm((s) => ({ ...s, [f.name]: String(reader.result || ''), [progressName]: 100 }))
+                              if (typeof f.onChange === 'function') {
+                                setForm((s) => {
+                                  const next = { ...s, [f.name]: String(reader.result || ''), [progressName]: 100 }
+                                  return f.onChange(String(reader.result || ''), next) || next
+                                })
+                              }
+                            }
+                            reader.onerror = () => {
+                              setForm((s) => ({ ...s, [progressName]: 0 }))
+                            }
+                            reader.readAsDataURL(file)
+                            return
+                          }
+
+                          setForm((s) => {
+                            const next = { ...s, [f.name]: file }
+                            if (typeof f.onChange === 'function') return f.onChange(file, next) || next
+                            return next
+                          })
+                        }}
+                      />
+                    ) : (
+                      <Input
+                        type={f.type || 'text'}
+                        value={form[f.name]}
+                        disabled={!!f.disabled || submitting}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          setForm((s) => {
+                            const next = { ...s, [f.name]: v }
+                            if (typeof f.onChange === 'function') return f.onChange(v, next) || next
+                            return next
+                          })
+                        }}
+                        placeholder={f.placeholder}
+                      />
+                    )}
+
+                    {f.type === 'file' && f.fileMode === 'dataUrl' ? (
+                      <div className="mt-2">
+                        {(() => {
+                          const progressName = f.progressName || `${f.name}Progress`
+                          const fileNameName = f.fileNameName || `${f.name}FileName`
+                          const pct = Number(form[progressName] || 0)
+                          const fileName = String(form[fileNameName] || '').trim()
+                          const show = fileName || pct > 0
+
+                          if (!show) return null
+
+                          return (
+                            <div>
+                              <div className="flex items-center justify-between text-xs text-slate-600">
+                                <div className="min-w-0 flex-1 truncate">{fileName || 'Uploading…'}</div>
+                                <div className="ml-3 tabular-nums">{pct}%</div>
+                              </div>
+                              <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                                <div className="h-full bg-cyan-600" style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
+                              </div>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    ) : null}
+                  </>
                 )}
               </div>
             </div>
@@ -182,27 +270,44 @@ export function ReasonDialog({
 
           {showReason ? (
             <div>
-              <div className="text-xs font-medium text-slate-900">Reason (required)</div>
+              <div className="text-xs font-medium text-slate-900">{reasonLabel || 'Reason (required)'}</div>
               <div className="mt-1">
                 <Input
                   value={form.reason}
+                  disabled={submitting}
                   onChange={(e) => setForm((s) => ({ ...s, reason: e.target.value }))}
-                  placeholder="Required for audit log"
+                  placeholder={reasonPlaceholder || 'Required for audit log'}
                 />
               </div>
             </div>
           ) : null}
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={submitting ? undefined : onClose} disabled={submitting}>
             Cancel
           </Button>
           <Button
             variant="primary"
-            onClick={() => onSubmit(form)}
-            disabled={requireReason && showReason ? !String(form.reason || '').trim() : false}
+            onClick={async () => {
+              if (submitting) return
+              if (!canSubmit) return
+              try {
+                setSubmitting(true)
+                await Promise.resolve(onSubmit(form))
+              } finally {
+                setSubmitting(false)
+              }
+            }}
+            disabled={!canSubmit || submitting}
           >
-            {submitLabel}
+            {submitting ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Processing…
+              </span>
+            ) : (
+              submitLabel
+            )}
           </Button>
         </div>
       </div>

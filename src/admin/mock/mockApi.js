@@ -171,6 +171,12 @@ const state = {
     {
       id: 'INSP-001',
       name: 'Asha N.',
+      phone: '9000000101',
+      email: 'asha@carnalysis.local',
+      profilePhotoUrl: '',
+      joinDate: '2025-11-15',
+      employmentType: 'full_time',
+      status: 'active',
       locationIds: ['LOC-BLR-01'],
       active: true,
       skills: ['new', 'pre_owned'],
@@ -181,6 +187,12 @@ const state = {
     {
       id: 'INSP-002',
       name: 'Ravi K.',
+      phone: '9000000102',
+      email: 'ravi@carnalysis.local',
+      profilePhotoUrl: '',
+      joinDate: '2025-09-01',
+      employmentType: 'contract',
+      status: 'active',
       locationIds: ['LOC-BLR-01'],
       active: true,
       skills: ['new'],
@@ -191,6 +203,12 @@ const state = {
     {
       id: 'INSP-003',
       name: 'Neha S.',
+      phone: '9000000103',
+      email: 'neha@carnalysis.local',
+      profilePhotoUrl: '',
+      joinDate: '2025-07-20',
+      employmentType: 'freelancer',
+      status: 'active',
       locationIds: ['LOC-HYD-01'],
       active: true,
       skills: ['pre_owned'],
@@ -201,8 +219,14 @@ const state = {
     {
       id: 'INSP-004',
       name: 'Imran A.',
+      phone: '9000000104',
+      email: 'imran@carnalysis.local',
+      profilePhotoUrl: '',
+      joinDate: '2025-10-10',
+      employmentType: 'full_time',
+      status: 'inactive',
       locationIds: ['LOC-HYD-01'],
-      active: true,
+      active: false,
       skills: ['new', 'pre_owned'],
       utilizationPct: 39,
       lastStateChangeAt: minutesAgo(42),
@@ -211,12 +235,31 @@ const state = {
     {
       id: 'INSP-005',
       name: 'Priya M.',
+      phone: '9000000105',
+      email: 'priya@carnalysis.local',
+      profilePhotoUrl: '',
+      joinDate: '2025-08-05',
+      employmentType: 'full_time',
+      status: 'active',
       locationIds: ['LOC-PUN-01'],
       active: true,
       skills: ['new', 'pre_owned'],
       utilizationPct: 71,
       lastStateChangeAt: minutesAgo(18),
       state: 'busy',
+    },
+  ],
+  inspectorLeaveRequests: [
+    {
+      id: 'LVR-0001',
+      inspectorId: 'INSP-002',
+      fromDate: '2026-02-15',
+      toDate: '2026-02-16',
+      reason: 'Family function',
+      status: 'pending',
+      requestedAt: minutesAgo(90),
+      decidedAt: null,
+      rejectionReason: null,
     },
   ],
   queue: [
@@ -356,10 +399,6 @@ const state = {
   },
 
   vehicleMaster: {
-    types: [
-      { id: 'TYPE-NEW', name: 'New' },
-      { id: 'TYPE-PRE', name: 'Pre-owned' },
-    ],
     makes: [
       { id: 'MAKE-MARUTI', name: 'Maruti Suzuki' },
       { id: 'MAKE-HONDA', name: 'Honda' },
@@ -424,7 +463,7 @@ const state = {
     mappings: [
       {
         id: 'MAP-0001',
-        typeId: 'TYPE-NEW',
+        condition: 'new',
         makeId: 'MAKE-MARUTI',
         modelId: 'MODEL-SWIFT',
         variantId: 'VAR-VXI',
@@ -432,7 +471,7 @@ const state = {
       },
       {
         id: 'MAP-0002',
-        typeId: 'TYPE-NEW',
+        condition: 'new',
         makeId: 'MAKE-HONDA',
         modelId: 'MODEL-CITY',
         variantId: 'VAR-VX',
@@ -440,7 +479,7 @@ const state = {
       },
       {
         id: 'MAP-0003',
-        typeId: 'TYPE-PRE',
+        condition: 'pre_owned',
         makeId: 'MAKE-HYUNDAI',
         modelId: 'MODEL-CRETA',
         variantId: 'VAR-SX',
@@ -448,7 +487,7 @@ const state = {
       },
       {
         id: 'MAP-0004',
-        typeId: 'TYPE-NEW',
+        condition: 'new',
         makeId: 'MAKE-TATA',
         modelId: 'MODEL-NEXON',
         variantId: 'VAR-XZ',
@@ -456,7 +495,7 @@ const state = {
       },
       {
         id: 'MAP-0005',
-        typeId: 'TYPE-NEW',
+        condition: 'new',
         makeId: 'MAKE-TOYOTA',
         modelId: 'MODEL-INNOVA',
         variantId: 'VAR-GX',
@@ -484,7 +523,7 @@ const state = {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const simulateNetwork = async () => {
-  await sleep(120 + Math.random() * 260)
+  await sleep(60 + Math.random() * 120)
 }
 
 const recordAudit = ({ actor, locationId, entity, action, diff, reason, correlationId }) => {
@@ -674,14 +713,24 @@ const applySmallDrift = () => {
   }
 }
 
+function driftNum(current, maxDelta, min, max) {
+  return clamp(current + Math.floor(Math.random() * (maxDelta * 2 + 1)) - maxDelta, min, max)
+}
+
+function generateInspectorId() {
+  return `INSP-${String(100 + Math.floor(Math.random() * 900)).padStart(3, '0')}`
+}
+
+const clamp = (num, min, max) => Math.min(Math.max(num, min), max)
+
 export const mockApi = {
+  generateInspectorId,
   roles,
   COMMISSION_DEFAULT_INR,
 
   async getVehicleMaster() {
     await simulateNetwork()
     return {
-      types: state.vehicleMaster.types,
       makes: state.vehicleMaster.makes,
       models: state.vehicleMaster.models,
       variants: state.vehicleMaster.variants,
@@ -698,7 +747,6 @@ export const mockApi = {
     if (!cleaned) throw new Error('Name is required')
 
     const map = {
-      type: { key: 'types', prefix: 'TYPE-' },
       make: { key: 'makes', prefix: 'MAKE-' },
       model: { key: 'models', prefix: 'MODEL-' },
       variant: { key: 'variants', prefix: 'VAR-' },
@@ -753,7 +801,6 @@ export const mockApi = {
   async deleteVehicleMasterItem({ actor, kind, id, reason }) {
     await simulateNetwork()
     const map = {
-      type: { key: 'types' },
       make: { key: 'makes' },
       model: { key: 'models' },
       variant: { key: 'variants' },
@@ -798,8 +845,6 @@ export const mockApi = {
     if (kind === 'variant') {
       state.vehicleMaster.mappings = state.vehicleMaster.mappings.filter((m) => m.variantId !== id)
     }
-
-    if (kind === 'type') state.vehicleMaster.mappings = state.vehicleMaster.mappings.filter((m) => m.typeId !== id)
 
     recordAudit({
       actor,
@@ -846,7 +891,6 @@ export const mockApi = {
   async updateVehicleMasterItem({ actor, kind, id, patch, reason }) {
     await simulateNetwork()
     const map = {
-      type: { key: 'types' },
       make: { key: 'makes' },
       model: { key: 'models' },
       variant: { key: 'variants' },
@@ -914,15 +958,17 @@ export const mockApi = {
     return { ok: true, item }
   },
 
-  async upsertVehicleMapping({ actor, typeId, makeId, modelId, variantId, categoryId, reason }) {
+  async upsertVehicleMapping({ actor, condition, makeId, modelId, variantId, categoryId, reason }) {
     await simulateNetwork()
 
     const exists = (key, id) => state.vehicleMaster[key].some((x) => x.id === id)
-    if (!exists('types', typeId)) throw new Error('Type not found')
     if (!exists('makes', makeId)) throw new Error('Make not found')
     if (!exists('models', modelId)) throw new Error('Model not found')
     if (!exists('variants', variantId)) throw new Error('Variant not found')
     if (!exists('categories', categoryId)) throw new Error('Category not found')
+
+    const safeCondition = String(condition || '').trim()
+    if (safeCondition !== 'new' && safeCondition !== 'pre_owned') throw new Error('Condition is required')
 
     const model = state.vehicleMaster.models.find((m) => m.id === modelId)
     if (model?.makeId && model.makeId !== makeId) throw new Error('Model does not belong to selected Make')
@@ -930,7 +976,7 @@ export const mockApi = {
     if (variant?.modelId && variant.modelId !== modelId) throw new Error('Variant does not belong to selected Model')
 
     const existing = state.vehicleMaster.mappings.find(
-      (m) => m.typeId === typeId && m.makeId === makeId && m.modelId === modelId && m.variantId === variantId
+      (m) => m.condition === safeCondition && m.makeId === makeId && m.modelId === modelId && m.variantId === variantId
     )
 
     if (existing) {
@@ -948,7 +994,7 @@ export const mockApi = {
     }
 
     const id = `MAP-${String(1000 + Math.floor(Math.random() * 9000))}`
-    const next = { id, typeId, makeId, modelId, variantId, categoryId }
+    const next = { id, condition: safeCondition, makeId, modelId, variantId, categoryId }
     state.vehicleMaster.mappings.unshift(next)
 
     recordAudit({
@@ -992,7 +1038,8 @@ export const mockApi = {
     const next = { ...item, ...(patch || {}) }
 
     const exists = (key, _id) => state.vehicleMaster[key].some((x) => x.id === _id)
-    if (!exists('types', next.typeId)) throw new Error('Type not found')
+    const safeCondition = String(next.condition || '').trim()
+    if (safeCondition !== 'new' && safeCondition !== 'pre_owned') throw new Error('Condition is required')
     if (!exists('makes', next.makeId)) throw new Error('Make not found')
     if (!exists('models', next.modelId)) throw new Error('Model not found')
     if (!exists('variants', next.variantId)) throw new Error('Variant not found')
@@ -1003,7 +1050,7 @@ export const mockApi = {
     const variant = state.vehicleMaster.variants.find((v) => v.id === next.variantId)
     if (variant?.modelId && variant.modelId !== next.modelId) throw new Error('Variant does not belong to selected Model')
 
-    Object.assign(item, next)
+    Object.assign(item, { ...next, condition: safeCondition })
 
     recordAudit({
       actor,
@@ -1320,6 +1367,105 @@ export const mockApi = {
     return { items, locations: state.locations }
   },
 
+  async getInspectorLeaveRequests() {
+    await simulateNetwork()
+    applySmallDrift()
+
+    const items = state.inspectorLeaveRequests
+    return { items, inspectors: state.inspectors }
+  },
+
+  // Mobile app: create leave request
+  async submitInspectorLeaveRequest({ inspectorId, fromDate, toDate, reason }) {
+    await simulateNetwork()
+    const inspector = state.inspectors.find((i) => i.id === inspectorId)
+    if (!inspector) throw new Error('Inspector not found')
+
+    const fd = String(fromDate || '').trim()
+    const td = String(toDate || '').trim()
+    if (!fd || !td) throw new Error('Leave dates are required')
+
+    const cleanedReason = String(reason || '').trim()
+    if (!cleanedReason) throw new Error('Reason is required')
+
+    const id = `LVR-${String(1000 + Math.floor(Math.random() * 9000))}`
+    const next = {
+      id,
+      inspectorId,
+      fromDate: fd,
+      toDate: td,
+      reason: cleanedReason,
+      status: 'pending',
+      requestedAt: nowIso(),
+      decidedAt: null,
+      rejectionReason: null,
+    }
+
+    state.inspectorLeaveRequests.unshift(next)
+    return { ok: true, item: next }
+  },
+
+  async approveInspectorLeaveRequest({ actor, requestId, reason }) {
+    await simulateNetwork()
+    const item = state.inspectorLeaveRequests.find((x) => x.id === requestId)
+    if (!item) throw new Error('Leave request not found')
+    if (item.status !== 'pending') throw new Error('Only pending requests can be approved')
+
+    const beforeStatus = item.status
+    const beforeDecidedAt = item.decidedAt
+    const beforeRejectionReason = item.rejectionReason
+    item.status = 'approved'
+    item.decidedAt = nowIso()
+    item.rejectionReason = null
+
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'inspector_leave_request', id: item.id },
+      action: 'approve_leave_request',
+      diff: {
+        status: { from: beforeStatus, to: 'approved' },
+        decidedAt: { from: beforeDecidedAt, to: item.decidedAt },
+        rejectionReason: { from: beforeRejectionReason, to: null },
+      },
+      reason: String(reason || '').trim() || 'Approved',
+    })
+
+    return { ok: true }
+  },
+
+  async rejectInspectorLeaveRequest({ actor, requestId, reason }) {
+    await simulateNetwork()
+    const item = state.inspectorLeaveRequests.find((x) => x.id === requestId)
+    if (!item) throw new Error('Leave request not found')
+    if (item.status !== 'pending') throw new Error('Only pending requests can be rejected')
+
+    const cleanedReason = String(reason || '').trim()
+    if (!cleanedReason) throw new Error('Rejection reason is required')
+
+    const beforeStatus = item.status
+    const beforeDecidedAt = item.decidedAt
+    const beforeRejectionReason = item.rejectionReason
+    item.status = 'rejected'
+    item.decidedAt = nowIso()
+    item.rejectionReason = cleanedReason
+
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'inspector_leave_request', id: item.id },
+      action: 'reject_leave_request',
+      diff: {
+        status: { from: beforeStatus, to: 'rejected' },
+        decidedAt: { from: beforeDecidedAt, to: item.decidedAt },
+        rejectionReason: { from: beforeRejectionReason, to: cleanedReason },
+      },
+      reason: cleanedReason,
+    })
+
+    return { ok: true }
+  },
+
   async getCommissions({ locationId } = {}) {
     await simulateNetwork()
     applySmallDrift()
@@ -1489,14 +1635,36 @@ export const mockApi = {
 
   async createInspector({ actor, inspector, reason }) {
     await simulateNetwork()
-    if (!inspector?.name) throw new Error('Inspector name is required')
+    const name = String(inspector?.name || '').trim()
+    const phone = String(inspector?.phone || '').trim()
+    const email = String(inspector?.email || '').trim()
+    const joinDate = String(inspector?.joinDate || '').trim()
+    const employmentType = String(inspector?.employmentType || '').trim()
+    const status = String(inspector?.status || '').trim()
+    const profilePhotoUrl = String(inspector?.profilePhotoUrl || '').trim()
+    const providedId = String(inspector?.id || '').trim()
 
-    const id = `INSP-${String(100 + Math.floor(Math.random() * 900)).padStart(3, '0')}`
+    if (!name) throw new Error('Full name is required')
+    if (!phone) throw new Error('Mobile number is required')
+    if (!email) throw new Error('Email is required')
+    if (!joinDate) throw new Error('Date of joining is required')
+    if (!employmentType) throw new Error('Employment type is required')
+    if (!['full_time', 'contract', 'freelancer'].includes(employmentType)) throw new Error('Invalid employment type')
+    if (!['active', 'inactive', 'suspended'].includes(status)) throw new Error('Invalid status')
+
+    const id = providedId || generateInspectorId()
+    if (state.inspectors.some((i) => i.id === id)) throw new Error('Inspector ID already exists')
     const next = {
       id,
-      name: inspector.name,
+      name,
+      phone,
+      email,
+      profilePhotoUrl,
+      joinDate,
+      employmentType,
+      status,
       locationIds: inspector.locationIds || [],
-      active: inspector.active ?? true,
+      active: status === 'active',
       skills: inspector.skills || ['new', 'pre_owned'],
       utilizationPct: 10 + Math.floor(Math.random() * 60),
       lastStateChangeAt: nowIso(),
@@ -1522,15 +1690,59 @@ export const mockApi = {
     const item = state.inspectors.find((i) => i.id === inspectorId)
     if (!item) throw new Error('Inspector not found')
 
-    const before = { ...item }
-    Object.assign(item, patch)
+    const next = { ...item, ...(patch || {}) }
+    const name = String(next.name || '').trim()
+    const phone = String(next.phone || '').trim()
+    const email = String(next.email || '').trim()
+    const joinDate = String(next.joinDate || '').trim()
+    const employmentType = String(next.employmentType || '').trim()
+    const status = String(next.status || '').trim()
+    const profilePhotoUrl = String(next.profilePhotoUrl || '').trim()
+
+    if (!name) throw new Error('Full name is required')
+    if (!phone) throw new Error('Mobile number is required')
+    if (!email) throw new Error('Email is required')
+    if (!joinDate) throw new Error('Date of joining is required')
+    if (!employmentType) throw new Error('Employment type is required')
+    if (!['full_time', 'contract', 'freelancer'].includes(employmentType)) throw new Error('Invalid employment type')
+    if (!['active', 'inactive', 'suspended'].includes(status)) throw new Error('Invalid status')
+
+    const beforeName = item.name
+    const beforePhone = item.phone
+    const beforeEmail = item.email
+    const beforeJoinDate = item.joinDate
+    const beforeEmploymentType = item.employmentType
+    const beforeStatus = item.status
+    const beforeProfilePhotoUrl = item.profilePhotoUrl
+    const beforeActive = item.active
+
+    Object.assign(item, {
+      ...next,
+      name,
+      phone,
+      email,
+      joinDate,
+      employmentType,
+      status,
+      profilePhotoUrl,
+      active: status === 'active',
+    })
 
     recordAudit({
       actor,
       locationId: null,
       entity: { type: 'inspector', id: inspectorId },
       action: 'update_inspector',
-      diff: { before, after: { ...item } },
+      diff: {
+        name: { from: beforeName, to: item.name },
+        phone: { from: beforePhone, to: item.phone },
+        email: { from: beforeEmail, to: item.email },
+        joinDate: { from: beforeJoinDate, to: item.joinDate },
+        employmentType: { from: beforeEmploymentType, to: item.employmentType },
+        status: { from: beforeStatus, to: item.status },
+        profilePhotoUrl: { from: beforeProfilePhotoUrl, to: item.profilePhotoUrl },
+        active: { from: beforeActive, to: item.active },
+      },
       reason,
     })
 

@@ -76,7 +76,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               <NavItem
                 to="/inspectors"
                 icon={Users}
-                label="Inspectors"
+                label="Inspector Onboarding"
                 collapsed={collapsed}
                 iconClassName="text-emerald-600"
               />
@@ -156,7 +156,13 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
             </div>
             <div className="space-y-1 px-2" onClick={() => setMobileOpen(false)}>
               <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" collapsed={false} iconClassName="text-violet-600" />
-              <NavItem to="/inspectors" icon={Users} label="Inspectors" collapsed={false} iconClassName="text-emerald-600" />
+              <NavItem
+                to="/inspectors"
+                icon={Users}
+                label="Inspector Onboarding"
+                collapsed={false}
+                iconClassName="text-emerald-600"
+              />
               <NavItem to="/queue" icon={ClipboardList} label="Queue Control" collapsed={false} iconClassName="text-cyan-600" />
               <NavItem to="/vehicle-master" icon={Layers3} label="Vehicle Master" collapsed={false} iconClassName="text-indigo-600" />
               <NavItem to="/finance" icon={IndianRupee} label="Finance" collapsed={false} iconClassName="text-amber-600" />

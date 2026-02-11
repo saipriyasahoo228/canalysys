@@ -13,6 +13,17 @@ const tabs = [
   { key: 'pricing', label: 'Category pricing' },
 ]
 
+const CONDITION_OPTIONS = [
+  { value: 'new', label: 'New' },
+  { value: 'pre_owned', label: 'Pre-Owned' },
+]
+
+function conditionLabel(v) {
+  if (v === 'new') return 'New'
+  if (v === 'pre_owned') return 'Pre-Owned'
+  return '—'
+}
+
 function TabButton({ active, children, ...props }) {
   return (
     <button
@@ -38,7 +49,6 @@ export function VehicleMasterPage() {
   })
 
   const vm = data || {
-    types: [],
     makes: [],
     models: [],
     variants: [],
@@ -50,7 +60,6 @@ export function VehicleMasterPage() {
 
   const [dialog, setDialog] = useState(null)
 
-  const typeById = useMemo(() => new Map(vm.types.map((x) => [x.id, x])), [vm.types])
   const makeById = useMemo(() => new Map(vm.makes.map((x) => [x.id, x])), [vm.makes])
   const modelById = useMemo(() => new Map(vm.models.map((x) => [x.id, x])), [vm.models])
   const variantById = useMemo(() => new Map(vm.variants.map((x) => [x.id, x])), [vm.variants])
@@ -68,10 +77,13 @@ export function VehicleMasterPage() {
         { key: 'kind', label: 'Kind', value: kindLabel || '—' },
         { key: 'id', label: 'ID', value: it?.id || '—' },
         ...(dialog.kind === 'model'
-          ? [{ key: 'make', label: 'Make', value: makeById.get(it?.makeId)?.name || it?.makeId || '—' }]
+          ? [{ key: 'make', label: 'Brand', value: makeById.get(it?.makeId)?.name || it?.makeId || '—' }]
           : []),
         ...(dialog.kind === 'variant'
-          ? [{ key: 'model', label: 'Model', value: modelById.get(it?.modelId)?.name || it?.modelId || '—' }]
+          ? [
+              { key: 'brand', label: 'Brand', value: makeById.get(modelById.get(it?.modelId)?.makeId)?.name || '—' },
+              { key: 'model', label: 'Model', value: modelById.get(it?.modelId)?.name || it?.modelId || '—' },
+            ]
           : []),
         { key: 'name', label: 'Name', value: it?.name || '—', fullWidth: true },
       ]
@@ -81,8 +93,8 @@ export function VehicleMasterPage() {
       const it = dialog.item
       return [
         { key: 'mappingId', label: 'Mapping ID', value: it?.id || '—' },
-        { key: 'type', label: 'Vehicle Type', value: typeById.get(it?.typeId)?.name || it?.typeId || '—' },
-        { key: 'make', label: 'Make', value: makeById.get(it?.makeId)?.name || it?.makeId || '—' },
+        { key: 'condition', label: 'Condition', value: conditionLabel(it?.condition) },
+        { key: 'make', label: 'Brand', value: makeById.get(it?.makeId)?.name || it?.makeId || '—' },
         { key: 'model', label: 'Model', value: modelById.get(it?.modelId)?.name || it?.modelId || '—' },
         { key: 'variant', label: 'Variant', value: variantById.get(it?.variantId)?.name || it?.variantId || '—' },
         { key: 'category', label: 'Category', value: categoryById.get(it?.categoryId)?.name || it?.categoryId || '—' },
@@ -102,7 +114,7 @@ export function VehicleMasterPage() {
     }
 
     return []
-  }, [categoryById, dialog, makeById, modelById, typeById, variantById, vm.mappingPricingByMappingId])
+  }, [categoryById, dialog, makeById, modelById, variantById, vm.mappingPricingByMappingId])
 
   const modelsForMake = useMemo(() => {
     const m = new Map()
@@ -142,7 +154,7 @@ export function VehicleMasterPage() {
         key: 'combo',
         header: 'Vehicle combo',
         exportValue: (r) => {
-          const t = typeById.get(r.typeId)?.name || '—'
+          const t = conditionLabel(r.condition) || '—'
           const mk = makeById.get(r.makeId)?.name || '—'
           const md = modelById.get(r.modelId)?.name || '—'
           const v = variantById.get(r.variantId)?.name || '—'
@@ -151,7 +163,7 @@ export function VehicleMasterPage() {
         cell: (r) => (
           <div className="max-w-[520px] whitespace-normal text-xs text-slate-700">
             <div className="font-semibold text-slate-900">
-              {typeById.get(r.typeId)?.name || '—'}
+              {conditionLabel(r.condition) || '—'}
               {' / '}
               {makeById.get(r.makeId)?.name || '—'}
             </div>
@@ -206,7 +218,7 @@ export function VehicleMasterPage() {
         tdClassName: 'text-right',
       },
     ],
-    [categoryById, makeById, modelById, permissions.managePricing, typeById, variantById]
+    [categoryById, makeById, modelById, permissions.managePricing, variantById]
   )
 
   const pricingRows = vm.mappings || []
@@ -217,7 +229,7 @@ export function VehicleMasterPage() {
         key: 'combo',
         header: 'Vehicle combo',
         exportValue: (r) => {
-          const t = typeById.get(r.typeId)?.name || '—'
+          const t = conditionLabel(r.condition) || '—'
           const mk = makeById.get(r.makeId)?.name || '—'
           const md = modelById.get(r.modelId)?.name || '—'
           const v = variantById.get(r.variantId)?.name || '—'
@@ -226,7 +238,7 @@ export function VehicleMasterPage() {
         cell: (r) => (
           <div className="max-w-[520px] whitespace-normal text-xs text-slate-700">
             <div className="font-semibold text-slate-900">
-              {typeById.get(r.typeId)?.name || '—'}
+              {conditionLabel(r.condition) || '—'}
               {' / '}
               {makeById.get(r.makeId)?.name || '—'}
             </div>
@@ -308,7 +320,7 @@ export function VehicleMasterPage() {
         tdClassName: 'text-center',
       },
     ],
-    [categoryById, makeById, modelById, permissions.managePricing, typeById, variantById, vm.mappingPricingByMappingId]
+    [categoryById, makeById, modelById, permissions.managePricing, variantById, vm.mappingPricingByMappingId]
   )
 
   return (
@@ -338,8 +350,7 @@ export function VehicleMasterPage() {
           <div className={cx('space-y-3', loading && !data ? 'opacity-60' : '')}>
             <div className="columns-1 gap-3 lg:columns-2">
               {[
-                { kind: 'type', title: 'Types', items: vm.types },
-                { kind: 'make', title: 'Makes', items: vm.makes },
+                { kind: 'make', title: 'Brands', items: vm.makes },
                 { kind: 'model', title: 'Models', items: vm.models },
                 { kind: 'variant', title: 'Variants', items: vm.variants },
                 { kind: 'category', title: 'Categories', items: vm.categories },
@@ -371,6 +382,18 @@ export function VehicleMasterPage() {
                         cell: (r) => (
                           <div className="min-w-0">
                             <div className="truncate text-sm font-semibold text-slate-900">{r.name}</div>
+                            {block.kind === 'model' ? (
+                              <div className="truncate text-[11px] text-slate-500">{makeById.get(r.makeId)?.name || '—'}</div>
+                            ) : null}
+                            {block.kind === 'variant' ? (
+                              <div className="truncate text-[11px] text-slate-500">
+                                {(() => {
+                                  const md = modelById.get(r.modelId)
+                                  const mk = md?.makeId ? makeById.get(md.makeId) : null
+                                  return `${mk?.name || '—'} / ${md?.name || '—'}`
+                                })()}
+                              </div>
+                            ) : null}
                             <div className="truncate text-[11px] text-slate-500">{r.id}</div>
                           </div>
                         ),
@@ -432,7 +455,7 @@ export function VehicleMasterPage() {
           <div className={cx('space-y-3', loading && !data ? 'opacity-60' : '')}>
             <Card
               title="Map vehicle to category"
-              subtitle="Vehicle Type + Make + Model + Variant → Category"
+              subtitle="Condition + Brand + Model + Variant → Category"
               accent="violet"
               right={
                 <Button
@@ -475,7 +498,7 @@ export function VehicleMasterPage() {
               right={<Badge tone="slate">Demo</Badge>}
             >
               <div className="text-xs text-slate-600">
-                Pricing is stored per mapping (Type + Make + Model + Variant). If distance is above threshold, extra amount is added.
+                Pricing is stored per mapping (Condition + Brand + Model + Variant). If distance is above threshold, extra amount is added.
               </div>
             </Card>
 
@@ -535,7 +558,7 @@ export function VehicleMasterPage() {
           dialog?.type?.startsWith('delete')
             ? 'Are you sure you want to delete?'
             : dialog?.type === 'createMapping'
-              ? 'Select Make → Model → Variant and map to a Category.'
+              ? 'Select Brand → Model → Variant and map to a Category.'
               : null
         }
         submitLabel={dialog?.type?.startsWith('delete') ? 'Delete' : 'Apply'}
@@ -550,7 +573,7 @@ export function VehicleMasterPage() {
                 ? [
                     {
                       name: 'makeId',
-                      label: 'Make',
+                      label: 'Brand',
                       type: 'select',
                       defaultValue: dialog?.item?.makeId || '',
                       options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
@@ -560,6 +583,14 @@ export function VehicleMasterPage() {
                 : []),
               ...(dialog?.kind === 'variant'
                 ? [
+                    {
+                      name: 'makeId',
+                      label: 'Brand',
+                      type: 'select',
+                      defaultValue: modelById.get(dialog?.item?.modelId)?.makeId || '',
+                      options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
+                      disabled: true,
+                    },
                     {
                       name: 'modelId',
                       label: 'Model',
@@ -579,7 +610,7 @@ export function VehicleMasterPage() {
               return [
                 {
                   name: 'makeId',
-                  label: 'Make',
+                  label: 'Brand',
                   type: 'select',
                   defaultValue: vm.makes?.[0]?.id || '',
                   options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
@@ -594,7 +625,7 @@ export function VehicleMasterPage() {
               return [
                 {
                   name: 'makeId',
-                  label: 'Make',
+                  label: 'Brand',
                   type: 'select',
                   defaultValue: firstMakeId,
                   options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
@@ -629,7 +660,7 @@ export function VehicleMasterPage() {
               return [
                 {
                   name: 'makeId',
-                  label: 'Make',
+                  label: 'Brand',
                   type: 'select',
                   defaultValue: dialog?.item?.makeId || vm.makes?.[0]?.id || '',
                   options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
@@ -649,7 +680,7 @@ export function VehicleMasterPage() {
               return [
                 {
                   name: 'makeId',
-                  label: 'Make',
+                  label: 'Brand',
                   type: 'select',
                   defaultValue: defaultMakeId,
                   options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
@@ -684,16 +715,16 @@ export function VehicleMasterPage() {
             const it = dialog?.item
             return [
               {
-                name: 'typeId',
-                label: 'Vehicle Type',
+                name: 'condition',
+                label: 'Condition',
                 type: 'select',
-                defaultValue: it?.typeId || '',
-                options: (vm.types || []).map((t) => ({ value: t.id, label: t.name })),
+                defaultValue: it?.condition || '',
+                options: CONDITION_OPTIONS,
                 disabled: true,
               },
               {
                 name: 'makeId',
-                label: 'Make',
+                label: 'Brand',
                 type: 'select',
                 defaultValue: it?.makeId || '',
                 options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
@@ -729,15 +760,15 @@ export function VehicleMasterPage() {
           if (dialog?.type === 'createMapping') {
             return [
               {
-                name: 'typeId',
-                label: 'Vehicle Type',
+                name: 'condition',
+                label: 'Condition',
                 type: 'select',
-                defaultValue: '',
-                options: (vm.types || []).map((t) => ({ value: t.id, label: t.name })),
+                defaultValue: CONDITION_OPTIONS?.[0]?.value || 'new',
+                options: CONDITION_OPTIONS,
               },
               {
                 name: 'makeId',
-                label: 'Make',
+                label: 'Brand',
                 type: 'select',
                 defaultValue: '',
                 options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
@@ -805,15 +836,15 @@ export function VehicleMasterPage() {
 
             return [
               {
-                name: 'typeId',
-                label: 'Vehicle Type',
+                name: 'condition',
+                label: 'Condition',
                 type: 'select',
-                defaultValue: it?.typeId || vm.types?.[0]?.id || '',
-                options: (vm.types || []).map((t) => ({ value: t.id, label: t.name })),
+                defaultValue: it?.condition || CONDITION_OPTIONS?.[0]?.value || 'new',
+                options: CONDITION_OPTIONS,
               },
               {
                 name: 'makeId',
-                label: 'Make',
+                label: 'Brand',
                 type: 'select',
                 defaultValue: defaultMakeId,
                 options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
@@ -967,7 +998,7 @@ export function VehicleMasterPage() {
             if (dialog.type === 'createMapping') {
               await mockApi.upsertVehicleMapping({
                 actor,
-                typeId: form.typeId,
+                condition: form.condition,
                 makeId: form.makeId,
                 modelId: form.modelId,
                 variantId: form.variantId,
@@ -980,7 +1011,7 @@ export function VehicleMasterPage() {
                 actor,
                 id: dialog.item.id,
                 patch: {
-                  typeId: form.typeId,
+                  condition: form.condition,
                   makeId: form.makeId,
                   modelId: form.modelId,
                   variantId: form.variantId,

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Eye, Gauge, MapPin, MoreVertical, Pencil, Plus, User, UserCheck, UserX } from 'lucide-react'
+import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Pencil, Plus, User, UserCheck, UserX, XCircle } from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
 import { mockApi } from '../mock/mockApi'
 import { useRbac } from '../rbac/RbacContext'
@@ -8,16 +8,42 @@ import { ReasonDialog } from '../ui/ReasonDialog'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { formatMinutes, minutesSince } from '../utils/format'
 
+function leaveStatusTone(s) {
+  if (s === 'approved') return 'emerald'
+  if (s === 'rejected') return 'rose'
+  return 'amber'
+}
+
+function statusLabel(v) {
+  if (v === 'active') return 'Active'
+  if (v === 'inactive') return 'Inactive'
+  if (v === 'suspended') return 'Suspended'
+  return '—'
+}
+
 export function InspectorsPage() {
   const { locationId, permissions, actor } = useRbac()
+
+  useEffect(() => {
+    document.title = 'Inspector Onboarding · PDI Admin'
+  }, [])
+
   const { data, loading, error } = usePolling(
     ['inspectors', locationId].join(':'),
     () => mockApi.getInspectors({ locationId: locationId || undefined }),
     { intervalMs: 10_000 }
   )
 
+  const { data: leaveData, loading: leaveLoading, error: leaveError, refresh: refreshLeave } = usePolling(
+    'inspector-leave-requests',
+    () => mockApi.getInspectorLeaveRequests(),
+    { intervalMs: 15_000 }
+  )
+
   const inspectors = data?.items || []
   const locations = data?.locations || []
+
+  const leaveRequests = leaveData?.items || []
 
   const locationById = useMemo(() => {
     const m = new Map()
@@ -32,12 +58,18 @@ export function InspectorsPage() {
     : 0
 
   const [dialog, setDialog] = useState(null)
+  const [leaveDialog, setLeaveDialog] = useState(null)
   const [actionsMenu, setActionsMenu] = useState(null)
+  const [nextInspectorId, setNextInspectorId] = useState('')
   const actionsBoxRef = useRef(null)
   const actionsMenuRef = useRef(null)
 
   const viewOpen = dialog?.type === 'view'
   const toggleActiveOpen = dialog?.type === 'toggleActive'
+
+  const leaveViewOpen = leaveDialog?.type === 'view'
+  const leaveApproveOpen = leaveDialog?.type === 'approve'
+  const leaveRejectOpen = leaveDialog?.type === 'reject'
 
   useEffect(() => {
     const onDown = (e) => {
@@ -82,17 +114,34 @@ export function InspectorsPage() {
   const viewItems = useMemo(() => {
     if (!dialog || dialog.type !== 'view') return []
     const it = dialog.item
+    const photo = String(it?.profilePhotoUrl || '').trim()
+    const isDataUrl = /^data:image\//i.test(photo)
     return [
       { key: 'id', label: 'Inspector ID', value: it?.id || '—' },
-      { key: 'name', label: 'Name', value: it?.name || '—' },
+      { key: 'name', label: 'Full name', value: it?.name || '—' },
+      { key: 'phone', label: 'Mobile number', value: it?.phone || '—' },
+      { key: 'email', label: 'Email ID', value: it?.email || '—' },
       {
-        key: 'locations',
-        label: 'Locations',
-        value: (it?.locationIds || []).map((id) => locationById.get(id)?.name || id).join(', ') || '—',
+        key: 'profilePhotoUrl',
+        label: 'Profile photo',
         fullWidth: true,
+        value: photo
+          ? isDataUrl
+            ? (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={photo}
+                    alt="Inspector profile"
+                    className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
+                  />
+                </div>
+              )
+            : 'Uploaded'
+          : '—',
       },
-      { key: 'skills', label: 'Skills', value: (it?.skills || []).join(', ') || '—', fullWidth: true },
-      { key: 'active', label: 'Active', value: it?.active ? 'Yes' : 'No' },
+      { key: 'joinDate', label: 'Date of joining', value: it?.joinDate || '—' },
+      { key: 'employmentType', label: 'Employment type', value: it?.employmentType || '—' },
+      { key: 'status', label: 'Status', value: statusLabel(it?.status) },
       { key: 'state', label: 'State', value: it?.state || '—' },
       { key: 'util', label: 'Utilization (%)', value: it?.utilizationPct ?? '—' },
       {
@@ -103,25 +152,105 @@ export function InspectorsPage() {
     ]
   }, [dialog, locationById])
 
-  const locationOptions = useMemo(
-    () => locations.map((l) => ({ value: l.id, label: l.name })),
-    [locations]
-  )
+  const inspectorById = useMemo(() => new Map(inspectors.map((i) => [i.id, i])), [inspectors])
 
-  const columns = useMemo(
+  const leaveColumns = useMemo(
     () => [
       {
-        key: 'locations',
-        header: 'Locations',
-        exportValue: (r) => (r.locationIds || []).map((id) => locationById.get(id)?.name || id).join(' | '),
+        key: 'inspector',
+        header: 'Inspector',
+        exportValue: (r) => inspectorById.get(r.inspectorId)?.name || r.inspectorId,
         cell: (r) => (
-          <div className="max-w-[280px] whitespace-normal text-xs text-slate-700">
-            {(r.locationIds || []).map((id) => (
-              <div key={id}>{locationById.get(id)?.name || id}</div>
-            ))}
+          <div>
+            <div className="text-sm font-semibold">{inspectorById.get(r.inspectorId)?.name || '—'}</div>
+            <div className="text-xs text-slate-500">{r.inspectorId}</div>
           </div>
         ),
       },
+      {
+        key: 'dates',
+        header: 'Leave dates',
+        exportValue: (r) => `${r.fromDate} -> ${r.toDate}`,
+        cell: (r) => (
+          <div className="text-sm text-slate-700">
+            {r.fromDate}
+            <span className="mx-1 text-slate-400">→</span>
+            {r.toDate}
+          </div>
+        ),
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        exportValue: (r) => r.status,
+        cell: (r) => <Badge tone={leaveStatusTone(r.status)}>{r.status}</Badge>,
+      },
+      {
+        key: 'requestedAt',
+        header: 'Requested at',
+        exportValue: (r) => r.requestedAt,
+        cell: (r) => <div className="text-xs text-slate-600">{r.requestedAt || '—'}</div>,
+      },
+      {
+        key: 'decision',
+        header: 'Decision',
+        exportValue: (r) => (r.status === 'rejected' ? r.rejectionReason || '' : ''),
+        cell: (r) => {
+          if (r.status !== 'rejected') return <div className="text-xs text-slate-500">—</div>
+          return <div className="max-w-[260px] whitespace-normal text-xs text-rose-700">{r.rejectionReason || '—'}</div>
+        },
+      },
+      {
+        key: 'actions',
+        header: <div className="w-full text-right">Actions</div>,
+        cell: (r) => (
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="icon" size="icon" onClick={() => setLeaveDialog({ type: 'view', item: r })} title={'View'}>
+              <Eye className="h-4 w-4 text-slate-700" />
+            </Button>
+            <Button
+              disabled={!permissions.manageInspectors || r.status !== 'pending'}
+              onClick={() => setLeaveDialog({ type: 'approve', item: r })}
+              title={permissions.manageInspectors ? 'Approve' : 'Insufficient permission'}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Approve
+            </Button>
+            <Button
+              disabled={!permissions.manageInspectors || r.status !== 'pending'}
+              onClick={() => setLeaveDialog({ type: 'reject', item: r })}
+              title={permissions.manageInspectors ? 'Reject' : 'Insufficient permission'}
+            >
+              <XCircle className="h-4 w-4" />
+              Reject
+            </Button>
+          </div>
+        ),
+        className: 'text-right',
+        tdClassName: 'text-right',
+      },
+    ],
+    [inspectorById, permissions.manageInspectors]
+  )
+
+  const leaveViewItems = useMemo(() => {
+    if (!leaveDialog || leaveDialog.type !== 'view') return []
+    const it = leaveDialog.item
+    return [
+      { key: 'id', label: 'Request ID', value: it?.id || '—' },
+      { key: 'inspector', label: 'Inspector', value: inspectorById.get(it?.inspectorId)?.name || it?.inspectorId || '—' },
+      { key: 'from', label: 'From date', value: it?.fromDate || '—' },
+      { key: 'to', label: 'To date', value: it?.toDate || '—' },
+      { key: 'reason', label: 'Reason', value: it?.reason || '—', fullWidth: true },
+      { key: 'status', label: 'Status', value: it?.status || '—' },
+      { key: 'requestedAt', label: 'Requested at', value: it?.requestedAt || '—' },
+      { key: 'decidedAt', label: 'Decided at', value: it?.decidedAt || '—' },
+      { key: 'rejectionReason', label: 'Rejection reason', value: it?.rejectionReason || '—', fullWidth: true },
+    ]
+  }, [inspectorById, leaveDialog])
+
+  const columns = useMemo(
+    () => [
       {
         key: 'identity',
         header: 'Inspector',
@@ -130,19 +259,6 @@ export function InspectorsPage() {
           <div>
             <div className="text-sm font-semibold">{r.name}</div>
             <div className="text-xs text-slate-500">{r.id}</div>
-          </div>
-        ),
-      },
-      {
-        key: 'skills',
-        header: 'Skills',
-        cell: (r) => (
-          <div className="flex flex-wrap gap-1">
-            {r.skills.map((s) => (
-              <Badge key={s} tone={s === 'new' ? 'cyan' : 'slate'}>
-                {s === 'new' ? 'New' : 'Pre-owned'}
-              </Badge>
-            ))}
           </div>
         ),
       },
@@ -156,9 +272,14 @@ export function InspectorsPage() {
         ),
       },
       {
-        key: 'active',
-        header: 'Active',
-        cell: (r) => <Badge tone={r.active ? 'emerald' : 'slate'}>{r.active ? 'Yes' : 'No'}</Badge>,
+        key: 'status',
+        header: 'Status',
+        exportValue: (r) => statusLabel(r.status),
+        cell: (r) => (
+          <Badge tone={r.status === 'active' ? 'emerald' : r.status === 'suspended' ? 'rose' : 'slate'}>
+            {statusLabel(r.status)}
+          </Badge>
+        ),
       },
       {
         key: 'util',
@@ -218,7 +339,7 @@ export function InspectorsPage() {
         tdClassName: 'text-right',
       },
     ],
-    [locationById, permissions.manageInspectors]
+    [permissions.manageInspectors]
   )
 
   return (
@@ -268,6 +389,35 @@ export function InspectorsPage() {
         </Card>
       </div>
 
+      <Card
+        title="Leave requests"
+        subtitle="Requested from the mobile app · Approve or reject (rejection requires reason)"
+        accent="cyan"
+        right={
+          <Button onClick={async () => refreshLeave()} className="ml-1">
+            Refresh
+          </Button>
+        }
+      >
+        {leaveError ? (
+          <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Failed to load leave requests.</div>
+        ) : null}
+
+        <div className={leaveLoading && !leaveData ? 'opacity-60' : ''}>
+          <PaginatedTable
+            columns={leaveColumns}
+            rows={leaveRequests}
+            rowKey={(r) => r.id}
+            initialRowsPerPage={10}
+            rowsPerPageOptions={[10, 20, 50, 'all']}
+            enableSearch
+            searchPlaceholder="Search leave requests…"
+            enableExport
+            exportFilename="inspector-leave-requests.csv"
+          />
+        </div>
+      </Card>
+
       {error ? (
         <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
           Failed to load inspectors.
@@ -287,13 +437,17 @@ export function InspectorsPage() {
               </div>
               <Button
                 variant="primary"
-                className="ml-2"
+                size="sm"
                 disabled={!permissions.manageInspectors}
-                onClick={() => setDialog({ type: 'create' })}
-                title={permissions.manageInspectors ? 'Create inspector' : 'Insufficient permission'}
+                onClick={() => {
+                  if (!permissions.manageInspectors) return
+                  const id = mockApi.generateInspectorId()
+                  setNextInspectorId(id)
+                  setDialog({ type: 'create', inspectorId: id })
+                }}
               >
                 <Plus className="h-4 w-4" />
-                Add
+                Add inspector
               </Button>
             </div>
           }
@@ -336,6 +490,58 @@ export function InspectorsPage() {
       </div>
 
       <ViewDetailsDialog open={viewOpen} title="View inspector" onClose={() => setDialog(null)} items={viewItems} accent="cyan" />
+
+      <ViewDetailsDialog
+        open={leaveViewOpen}
+        title="View leave request"
+        onClose={() => setLeaveDialog(null)}
+        items={leaveViewItems}
+        accent="cyan"
+      />
+
+      <ReasonDialog
+        open={leaveApproveOpen}
+        title="Approve leave request"
+        description="This will approve the inspector leave request."
+        submitLabel="Approve"
+        onClose={() => setLeaveDialog(null)}
+        showReason={false}
+        requireReason={false}
+        fields={[]}
+        onSubmit={async () => {
+          try {
+            if (!permissions.manageInspectors) throw new Error('Insufficient permission')
+            await mockApi.approveInspectorLeaveRequest({ actor, requestId: leaveDialog?.item?.id })
+            setLeaveDialog(null)
+          } catch (e) {
+            // eslint-disable-next-line no-alert
+            alert(e.message || 'Action failed')
+          }
+        }}
+      />
+
+      <ReasonDialog
+        open={leaveRejectOpen}
+        title="Reject leave request"
+        description="This reason will be shown to the inspector in the mobile app."
+        submitLabel="Reject"
+        onClose={() => setLeaveDialog(null)}
+        showReason={true}
+        requireReason={true}
+        reasonLabel="Rejection reason (shown to inspector)"
+        reasonPlaceholder="Eg: Leave not possible due to high workload"
+        fields={[]}
+        onSubmit={async (form) => {
+          try {
+            if (!permissions.manageInspectors) throw new Error('Insufficient permission')
+            await mockApi.rejectInspectorLeaveRequest({ actor, requestId: leaveDialog?.item?.id, reason: form.reason })
+            setLeaveDialog(null)
+          } catch (e) {
+            // eslint-disable-next-line no-alert
+            alert(e.message || 'Action failed')
+          }
+        }}
+      />
 
       {actionsMenu ? (
         <div
@@ -399,7 +605,7 @@ export function InspectorsPage() {
             : dialog?.type === 'edit'
               ? 'Edit inspector'
               : dialog?.type === 'toggleActive'
-                ? dialog?.item?.active
+                ? dialog?.item?.status === 'active'
                   ? 'Deactivate inspector account'
                   : 'Activate inspector account'
                 : ''
@@ -411,7 +617,7 @@ export function InspectorsPage() {
             : dialog?.type === 'edit'
               ? 'Update'
               : dialog?.type === 'toggleActive'
-                ? dialog?.item?.active
+                ? dialog?.item?.status === 'active'
                   ? 'Deactivate'
                   : 'Activate'
                 : 'Submit'
@@ -419,73 +625,88 @@ export function InspectorsPage() {
         onClose={() => setDialog(null)}
         showReason={true}
         requireReason={true}
+        reasonLabel="Audit reason"
+        reasonPlaceholder="Required for audit log"
         fields={
           dialog?.type === 'create'
             ? [
-                { name: 'name', label: 'Name', type: 'text', defaultValue: '' },
                 {
-                  name: 'locationId',
-                  label: 'Primary location',
-                  type: 'select',
-                  defaultValue: locationOptions[0]?.value || '',
-                  options: locationOptions.length ? locationOptions : [{ value: '', label: 'No locations' }],
+                  name: 'id',
+                  label: 'Inspector ID (Auto-generated)',
+                  type: 'text',
+                  defaultValue: dialog?.inspectorId || nextInspectorId || '—',
+                  disabled: true,
                 },
+                { name: 'name', label: 'Full Name', type: 'text', defaultValue: '' },
+                { name: 'phone', label: 'Mobile Number', type: 'text', defaultValue: '' },
+                { name: 'email', label: 'Email ID', type: 'text', defaultValue: '' },
                 {
-                  name: 'skills',
-                  label: 'Skills',
+                  name: 'profilePhotoUrl',
+                  label: 'Profile Photo',
+                  type: 'file',
+                  fileMode: 'dataUrl',
+                  accept: 'image/*',
+                  defaultValue: '',
+                },
+                { name: 'joinDate', label: 'Date of Joining', type: 'date', defaultValue: '' },
+                {
+                  name: 'employmentType',
+                  label: 'Employment Type',
                   type: 'select',
-                  defaultValue: 'both',
+                  defaultValue: 'full_time',
                   options: [
-                    { value: 'both', label: 'New + Pre-owned' },
-                    { value: 'new', label: 'New only' },
-                    { value: 'pre_owned', label: 'Pre-owned only' },
+                    { value: 'full_time', label: 'Full-time' },
+                    { value: 'contract', label: 'Contract' },
+                    { value: 'freelancer', label: 'Freelancer' },
                   ],
                 },
                 {
-                  name: 'active',
-                  label: 'Active',
+                  name: 'status',
+                  label: 'Status',
                   type: 'select',
-                  defaultValue: 'true',
+                  defaultValue: 'active',
                   options: [
-                    { value: 'true', label: 'Yes' },
-                    { value: 'false', label: 'No' },
+                    { value: 'active', label: 'Active' },
+                    { value: 'inactive', label: 'Inactive' },
+                    { value: 'suspended', label: 'Suspended' },
                   ],
                 },
               ]
             : dialog?.type === 'edit'
               ? [
-                  { name: 'name', label: 'Name', type: 'text', defaultValue: dialog?.item?.name || '' },
+                  { name: 'id', label: 'Inspector ID', type: 'text', defaultValue: dialog?.item?.id || '', disabled: true },
+                  { name: 'name', label: 'Full Name', type: 'text', defaultValue: dialog?.item?.name || '' },
+                  { name: 'phone', label: 'Mobile Number', type: 'text', defaultValue: dialog?.item?.phone || '' },
+                  { name: 'email', label: 'Email ID', type: 'text', defaultValue: dialog?.item?.email || '' },
                   {
-                    name: 'locationId',
-                    label: 'Primary location',
-                    type: 'select',
-                    defaultValue: dialog?.item?.locationIds?.[0] || locationOptions[0]?.value || '',
-                    options: locationOptions.length ? locationOptions : [{ value: '', label: 'No locations' }],
+                    name: 'profilePhotoUrl',
+                    label: 'Profile Photo',
+                    type: 'file',
+                    fileMode: 'dataUrl',
+                    accept: 'image/*',
+                    defaultValue: dialog?.item?.profilePhotoUrl || '',
                   },
+                  { name: 'joinDate', label: 'Date of Joining', type: 'date', defaultValue: dialog?.item?.joinDate || '' },
                   {
-                    name: 'skills',
-                    label: 'Skills',
+                    name: 'employmentType',
+                    label: 'Employment Type',
                     type: 'select',
-                    defaultValue:
-                      dialog?.item?.skills?.includes('new') && dialog?.item?.skills?.includes('pre_owned')
-                        ? 'both'
-                        : dialog?.item?.skills?.includes('new')
-                          ? 'new'
-                          : 'pre_owned',
+                    defaultValue: dialog?.item?.employmentType || 'full_time',
                     options: [
-                      { value: 'both', label: 'New + Pre-owned' },
-                      { value: 'new', label: 'New only' },
-                      { value: 'pre_owned', label: 'Pre-owned only' },
+                      { value: 'full_time', label: 'Full-time' },
+                      { value: 'contract', label: 'Contract' },
+                      { value: 'freelancer', label: 'Freelancer' },
                     ],
                   },
                   {
-                    name: 'active',
-                    label: 'Active',
+                    name: 'status',
+                    label: 'Status',
                     type: 'select',
-                    defaultValue: dialog?.item?.active ? 'true' : 'false',
+                    defaultValue: dialog?.item?.status || (dialog?.item?.active ? 'active' : 'inactive'),
                     options: [
-                      { value: 'true', label: 'Yes' },
-                      { value: 'false', label: 'No' },
+                      { value: 'active', label: 'Active' },
+                      { value: 'inactive', label: 'Inactive' },
+                      { value: 'suspended', label: 'Suspended' },
                     ],
                   },
                 ]
@@ -498,17 +719,18 @@ export function InspectorsPage() {
             if (!dialog) return
             if (!permissions.manageInspectors) throw new Error('Insufficient permission')
 
-            const skillsArr =
-              form.skills === 'both' ? ['new', 'pre_owned'] : form.skills === 'new' ? ['new'] : ['pre_owned']
-
             if (dialog.type === 'create') {
               await mockApi.createInspector({
                 actor,
                 inspector: {
+                  id: dialog?.inspectorId || nextInspectorId,
                   name: form.name,
-                  locationIds: form.locationId ? [form.locationId] : [],
-                  skills: skillsArr,
-                  active: form.active === 'true',
+                  phone: form.phone,
+                  email: form.email,
+                  profilePhotoUrl: form.profilePhotoUrl,
+                  joinDate: form.joinDate,
+                  employmentType: form.employmentType,
+                  status: form.status,
                 },
                 reason: form.reason,
               })
@@ -520,9 +742,12 @@ export function InspectorsPage() {
                 inspectorId: dialog.item.id,
                 patch: {
                   name: form.name,
-                  locationIds: form.locationId ? [form.locationId] : [],
-                  skills: skillsArr,
-                  active: form.active === 'true',
+                  phone: form.phone,
+                  email: form.email,
+                  profilePhotoUrl: form.profilePhotoUrl,
+                  joinDate: form.joinDate,
+                  employmentType: form.employmentType,
+                  status: form.status,
                 },
                 reason: form.reason,
               })
@@ -532,7 +757,7 @@ export function InspectorsPage() {
               await mockApi.updateInspector({
                 actor,
                 inspectorId: dialog.item.id,
-                patch: { active: !dialog.item.active },
+                patch: { status: dialog.item.status === 'active' ? 'inactive' : 'active' },
                 reason: form.reason,
               })
             }

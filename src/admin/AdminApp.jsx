@@ -7,6 +7,7 @@ import { InspectorsPage } from './pages/InspectorsPage'
 import { FinancePage } from './pages/FinancePage'
 import { AuditLogsPage } from './pages/AuditLogsPage'
 import { VehicleMasterPage } from './pages/VehicleMasterPage'
+import { ChecklistBuilderPage } from './pages/ChecklistBuilderPage'
 
 export default function AdminApp() {
   return (
@@ -20,6 +21,7 @@ export default function AdminApp() {
             <Route path="/inspectors" element={<InspectorsPage />} />
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/vehicle-master" element={<VehicleMasterPage />} />
+            <Route path="/checklists" element={<ChecklistBuilderPage />} />
             <Route path="/audit" element={<AuditLogsPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

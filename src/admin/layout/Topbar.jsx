@@ -1,16 +1,14 @@
-import { Bell, CarFront, LogOut, Menu, MapPin, Moon, PanelLeft, RefreshCcw, Sun } from 'lucide-react'
+import { Bell, CarFront, LogOut, Menu, Moon, RefreshCcw, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePolling } from '../hooks/usePolling'
 import { mockApi } from '../mock/mockApi'
 import { useRbac } from '../rbac/RbacContext'
 
 export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
-  const { locationId, setLocationId, user } = useRbac()
+  const { user } = useRbac()
   const { data, refresh } = usePolling('bootstrap', () => mockApi.getBootstrap(), {
     intervalMs: 15_000,
   })
-
-  const locations = data?.locations || []
 
   const projectName = 'Carnalysis'
 
@@ -70,20 +68,11 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/85 backdrop-blur">
       <div className="relative flex items-center gap-2 px-3 py-3 sm:px-4">
         <button
-          className="rounded-full p-2 text-slate-700 hover:bg-slate-100 md:hidden"
+          className="cursor-pointer rounded-full p-2 text-slate-700 hover:bg-slate-100 md:hidden"
           onClick={onOpenMenu}
           aria-label="Open menu"
         >
           <Menu className="h-4 w-4" />
-        </button>
-
-        <button
-          className="hidden rounded-full p-2 text-slate-700 hover:bg-slate-100 md:inline-flex"
-          onClick={() => setCollapsed((v) => !v)}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <PanelLeft className="h-4 w-4" />
         </button>
 
         <div className="min-w-0 flex-1">
@@ -120,7 +109,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
 
           <div className="relative shrink-0" ref={notifRef}>
             <button
-              className="relative inline-flex items-center justify-center rounded-full border border-slate-200 bg-white p-2 text-slate-700 shadow-sm hover:bg-slate-50"
+              className="relative inline-flex cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white p-2 text-slate-700 shadow-sm hover:bg-slate-50"
               onClick={() => setNotifOpen((v) => !v)}
               aria-label="Notifications"
               title="Notifications"
@@ -151,7 +140,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
 
           <div className="relative shrink-0" ref={userRef}>
             <button
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
               onClick={() => setUserOpen((v) => !v)}
               aria-label="User menu"
               title="User menu"
@@ -166,30 +155,11 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
               <div className="absolute right-0 top-full z-50 mt-2 w-[280px] max-w-[92vw] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
                 <div className="border-b border-slate-200 px-3 py-2">
                   <div className="text-sm font-semibold text-slate-900">{user?.name || 'Admin'}</div>
-                  <div className="text-xs text-slate-500">{user?.userId || 'USR-ADMIN'}</div>
-                </div>
-                <div className="space-y-2 px-3 py-2">
-                  <div className="text-xs font-medium text-slate-900">Location</div>
-                  <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                    <MapPin className="h-4 w-4 text-slate-600" />
-                    <select
-                      className="min-w-0 flex-1 bg-transparent text-xs text-slate-700 outline-none"
-                      value={locationId}
-                      onChange={(e) => setLocationId(e.target.value)}
-                      aria-label="Location"
-                    >
-                      <option value="">All locations</option>
-                      {locations.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {l.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <div className="text-xs text-slate-500">{user?.role || user?.userId || 'USR-ADMIN'}</div>
                 </div>
                 <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-3 py-2">
                   <button
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
                     onClick={onLogout}
                     aria-label="Logout"
                   >
@@ -202,7 +172,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
           </div>
 
           <button
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
             onClick={() => {
               refresh()
             }}
@@ -226,7 +196,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
 
         <div className="relative shrink-0" ref={notifRef}>
           <button
-            className="relative inline-flex items-center justify-center rounded-full border border-slate-200 bg-white p-2 text-slate-700 shadow-sm hover:bg-slate-50"
+            className="relative inline-flex cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white p-2 text-slate-700 shadow-sm hover:bg-slate-50"
             onClick={() => setNotifOpen((v) => !v)}
             aria-label="Notifications"
             title="Notifications"
@@ -257,7 +227,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
 
         <div className="relative shrink-0" ref={userRef}>
           <button
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
+            className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
             onClick={() => setUserOpen((v) => !v)}
             aria-label="User menu"
             title="User menu"
@@ -271,30 +241,11 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
             <div className="absolute right-0 top-full z-50 mt-2 w-[280px] max-w-[92vw] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
               <div className="border-b border-slate-200 px-3 py-2">
                 <div className="text-sm font-semibold text-slate-900">{user?.name || 'Admin'}</div>
-                <div className="text-xs text-slate-500">{user?.userId || 'USR-ADMIN'}</div>
-              </div>
-              <div className="space-y-2 px-3 py-2">
-                <div className="text-xs font-medium text-slate-900">Location</div>
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-                  <MapPin className="h-4 w-4 text-slate-600" />
-                  <select
-                    className="min-w-0 flex-1 bg-transparent text-xs text-slate-700 outline-none"
-                    value={locationId}
-                    onChange={(e) => setLocationId(e.target.value)}
-                    aria-label="Location"
-                  >
-                    <option value="">All locations</option>
-                    {locations.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <div className="text-xs text-slate-500">{user?.role || user?.userId || 'USR-ADMIN'}</div>
               </div>
               <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-3 py-2">
                 <button
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
                   onClick={onLogout}
                   aria-label="Logout"
                 >
@@ -307,7 +258,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
         </div>
 
         <button
-          className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
+          className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
           onClick={() => {
             refresh()
           }}

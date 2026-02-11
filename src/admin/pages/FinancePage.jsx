@@ -4,9 +4,10 @@ import { usePolling } from '../hooks/usePolling'
 import { mockApi } from '../mock/mockApi'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, Select } from '../ui/Ui'
+import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
-import { formatInr } from '../utils/format'
+import { formatDateTime, formatInr } from '../utils/format'
 
 export function FinancePage() {
   const { locationId, permissions, actor } = useRbac()
@@ -46,8 +47,8 @@ export function FinancePage() {
       { key: 'location', label: 'Location', value: loc?.name || it?.locationId || '—' },
       { key: 'amountInr', label: 'Amount (INR)', value: formatInr(it?.amountInr) },
       { key: 'status', label: 'Status', value: it?.status || '—' },
-      { key: 'visitAt', label: 'Visit at', value: it?.visitAt ? new Date(it.visitAt).toLocaleString() : '—' },
-      { key: 'paymentAt', label: 'Payment at', value: it?.paymentAt ? new Date(it.paymentAt).toLocaleString() : '—' },
+      { key: 'visitAt', label: 'Visit at', value: formatDateTime(it?.visitAt) },
+      { key: 'paymentAt', label: 'Payment at', value: formatDateTime(it?.paymentAt) },
     ]
   }, [data?.locations, dialog, inspectorById])
 
@@ -112,12 +113,12 @@ export function FinancePage() {
         key: 'visitAt',
         header: 'Visit at',
         exportValue: (r) => new Date(r.visitAt).toISOString(),
-        cell: (r) => new Date(r.visitAt).toLocaleString(),
+        cell: (r) => formatDateTime(r.visitAt),
       },
       {
         key: 'paymentAt',
         header: 'Payment at',
-        cell: (r) => (r.paymentAt ? new Date(r.paymentAt).toLocaleString() : '—'),
+        cell: (r) => formatDateTime(r.paymentAt),
       },
       {
         key: 'actions',
@@ -250,13 +251,13 @@ export function FinancePage() {
             <div>
               <div className="text-xs font-medium text-slate-900">From</div>
               <div className="mt-1">
-                <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                <CustomDatePicker value={fromDate} onChange={(iso) => setFromDate(iso)} />
               </div>
             </div>
             <div>
               <div className="text-xs font-medium text-slate-900">To</div>
               <div className="mt-1">
-                <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                <CustomDatePicker value={toDate} onChange={(iso) => setToDate(iso)} />
               </div>
             </div>
             <div className="flex items-end">

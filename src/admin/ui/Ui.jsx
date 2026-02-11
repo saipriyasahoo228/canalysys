@@ -189,14 +189,14 @@ export function PaginatedTable({
 
           <div className="flex items-center gap-1">
             <button
-              className="rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 shadow-sm hover:bg-slate-200 disabled:opacity-50"
+              className="cursor-pointer rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 shadow-sm hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => setPage(1)}
               disabled={normalizedRpp === 'all' || safePage <= 1}
             >
               First
             </button>
             <button
-              className="rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 shadow-sm hover:bg-slate-200 disabled:opacity-50"
+              className="cursor-pointer rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 shadow-sm hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={normalizedRpp === 'all' || safePage <= 1}
             >
@@ -206,14 +206,14 @@ export function PaginatedTable({
               Page <span className="font-semibold text-slate-900">{safePage}</span> / {totalPages}
             </div>
             <button
-              className="rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 shadow-sm hover:bg-slate-200 disabled:opacity-50"
+              className="cursor-pointer rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 shadow-sm hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={normalizedRpp === 'all' || safePage >= totalPages}
             >
               Next
             </button>
             <button
-              className="rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 shadow-sm hover:bg-slate-200 disabled:opacity-50"
+              className="cursor-pointer rounded-xl border border-slate-300 bg-slate-100 px-3 py-1.5 shadow-sm hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => setPage(totalPages)}
               disabled={normalizedRpp === 'all' || safePage >= totalPages}
             >
@@ -317,8 +317,8 @@ export function Button({ children, className, variant = 'default', size = 'sm', 
     <button
       className={cx(
         variant === 'icon'
-          ? 'inline-flex items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-50'
-          : 'inline-flex items-center justify-center gap-2 rounded-full border shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-50',
+          ? 'inline-flex cursor-pointer items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-50'
+          : 'inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-50',
         variants[variant] || variants.default,
         sizes[size] || sizes.sm,
         className

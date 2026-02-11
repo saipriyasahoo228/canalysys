@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, Loader2, X } from 'lucide-react'
 import { Button, Input, Select } from './Ui'
+import { CustomDatePicker } from './CustomDatePicker'
 
 export function ReasonDialog({
   open,
@@ -219,6 +220,19 @@ export function ReasonDialog({
                             return next
                           })
                         }}
+                      />
+                    ) : f.type === 'date' ? (
+                      <CustomDatePicker
+                        value={form[f.name]}
+                        disabled={!!f.disabled || submitting}
+                        onChange={(iso) => {
+                          setForm((s) => {
+                            const next = { ...s, [f.name]: iso }
+                            if (typeof f.onChange === 'function') return f.onChange(iso, next) || next
+                            return next
+                          })
+                        }}
+                        placeholder={f.placeholder || 'dd/mm/yyyy'}
                       />
                     ) : (
                       <Input

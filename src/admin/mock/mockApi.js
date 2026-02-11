@@ -22,6 +22,16 @@ const todayKey = (iso) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+const checklistSectionId = (() => {
+  let n = 10
+  return () => `CHK-SEC-${++n}`
+})()
+
+const checklistFieldId = (() => {
+  let n = 100
+  return () => `CHK-FLD-${++n}`
+})()
+
 const state = {
   rbac: {
     roles: [
@@ -163,10 +173,218 @@ const state = {
     permissionsByUser: {},
   },
   locations: [
-    { id: 'LOC-BLR-01', name: 'Bengaluru - HSR', slaMinutes: 45, capacityPerHour: 18 },
-    { id: 'LOC-HYD-01', name: 'Hyderabad - Gachibowli', slaMinutes: 50, capacityPerHour: 14 },
-    { id: 'LOC-PUN-01', name: 'Pune - Hinjewadi', slaMinutes: 55, capacityPerHour: 12 },
+    { id: 'LOC-BLR-01', name: 'Odisha Region - Bhubaneswar', slaMinutes: 45, capacityPerHour: 18 },
+    { id: 'LOC-HYD-01', name: 'Odisha Region - Cuttack', slaMinutes: 50, capacityPerHour: 14 },
+    { id: 'LOC-PUN-01', name: 'Odisha Region - Puri', slaMinutes: 55, capacityPerHour: 12 },
   ],
+  checklists: {
+    pre_owned: {
+      sections: [
+        {
+          id: 'CHK-SEC-001',
+          title: 'Exterior Condition',
+          order: 1,
+          fields: [
+            {
+              id: 'CHK-FLD-001',
+              label: 'Panel Alignment',
+              inputType: 'dropdown',
+              options: ['Good', 'Average', 'Poor'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-002',
+              label: 'Scratches',
+              inputType: 'dropdown',
+              options: ['None', 'Minor', 'Major'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-003',
+              label: 'Dents',
+              inputType: 'dropdown',
+              options: ['None', 'Minor', 'Major'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-004',
+              label: 'Repainted Panels',
+              inputType: 'multi_select',
+              options: [],
+              required: false,
+            },
+            {
+              id: 'CHK-FLD-005',
+              label: 'Rust / Corrosion',
+              inputType: 'dropdown',
+              options: ['None', 'Minor', 'Severe'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-006',
+              label: 'Windshield Damage',
+              inputType: 'yes_no',
+              options: ['Yes', 'No'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-007',
+              label: 'Headlamp Condition',
+              inputType: 'dropdown',
+              options: ['Good', 'Average', 'Poor'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-008',
+              label: 'Taillamp Condition',
+              inputType: 'dropdown',
+              options: ['Good', 'Average', 'Poor'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-009',
+              label: 'ORVM Condition',
+              inputType: 'dropdown',
+              options: ['Good', 'Average', 'Poor'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-010',
+              label: 'Exterior Photos',
+              inputType: 'photos',
+              options: [],
+              required: true,
+              minPhotos: 4,
+            },
+          ],
+        },
+        {
+          id: 'CHK-SEC-002',
+          title: 'Tyres & Wheels',
+          order: 2,
+          fields: [
+            {
+              id: 'CHK-FLD-011',
+              label: 'Tyre Brand Match',
+              inputType: 'yes_no',
+              options: ['Yes', 'No'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-012',
+              label: 'Tyre Manufacturing Year',
+              inputType: 'numeric',
+              options: [],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-013',
+              label: 'Tread Depth (mm)',
+              inputType: 'numeric',
+              options: [],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-014',
+              label: 'Uneven Wear',
+              inputType: 'yes_no',
+              options: ['Yes', 'No'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-015',
+              label: 'Spare Tyre Condition',
+              inputType: 'dropdown',
+              options: ['Good', 'Average', 'Poor'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-016',
+              label: 'Wheel Damage',
+              inputType: 'yes_no',
+              options: ['Yes', 'No'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-017',
+              label: 'Tyre Photos',
+              inputType: 'photos',
+              options: [],
+              required: true,
+              minPhotos: 1,
+            },
+          ],
+        },
+        {
+          id: 'CHK-SEC-003',
+          title: 'Engine & Transmission',
+          order: 3,
+          fields: [
+            {
+              id: 'CHK-FLD-018',
+              label: 'Cold Start Behavior',
+              inputType: 'dropdown',
+              options: ['Normal', 'Hard'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-019',
+              label: 'Engine Noise',
+              inputType: 'dropdown',
+              options: ['Normal', 'Abnormal'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-020',
+              label: 'Oil Leakage',
+              inputType: 'yes_no',
+              options: ['Yes', 'No'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-021',
+              label: 'Coolant Level',
+              inputType: 'dropdown',
+              options: ['Normal', 'Low'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-022',
+              label: 'Transmission Type',
+              inputType: 'dropdown',
+              options: ['MT', 'AT', 'CVT'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-023',
+              label: 'Gear Shift Smoothness',
+              inputType: 'dropdown',
+              options: ['Good', 'Average', 'Poor'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-024',
+              label: 'Clutch Wear',
+              inputType: 'dropdown',
+              options: ['Normal', 'High', 'NA'],
+              required: true,
+            },
+            {
+              id: 'CHK-FLD-025',
+              label: 'Engine Bay Photos',
+              inputType: 'photos',
+              options: [],
+              required: false,
+              minPhotos: 1,
+            },
+          ],
+        },
+      ],
+    },
+    new: {
+      sections: [],
+    },
+  },
   inspectors: [
     {
       id: 'INSP-001',
@@ -727,6 +945,168 @@ export const mockApi = {
   generateInspectorId,
   roles,
   COMMISSION_DEFAULT_INR,
+
+  async getInspectionChecklist({ condition }) {
+    await simulateNetwork()
+    applySmallDrift()
+    const key = condition === 'new' ? 'new' : 'pre_owned'
+    const bucket = state.checklists?.[key] || { sections: [] }
+    return {
+      condition: key,
+      sections: (bucket.sections || [])
+        .slice()
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map((s) => ({
+          ...s,
+          fields: (s.fields || []).slice(),
+        })),
+    }
+  },
+
+  async upsertChecklistSection({ actor, condition, section, reason }) {
+    await simulateNetwork()
+    const key = condition === 'new' ? 'new' : 'pre_owned'
+    if (!state.checklists[key]) state.checklists[key] = { sections: [] }
+    const title = String(section?.title || '').trim()
+    if (!title) throw new Error('Section title is required')
+
+    const order = Number(section?.order || 0)
+    const cleanedOrder = Number.isFinite(order) ? order : 0
+
+    const sections = state.checklists[key].sections
+    const existingIndex = sections.findIndex((s) => s.id === section?.id)
+
+    if (existingIndex >= 0) {
+      const prev = sections[existingIndex]
+      sections[existingIndex] = { ...prev, title, order: cleanedOrder }
+      recordAudit({
+        actor,
+        locationId: null,
+        entity: { type: 'checklist_section', id: prev.id },
+        action: 'update_checklist_section',
+        diff: { title: { from: prev.title, to: title }, order: { from: prev.order, to: cleanedOrder }, condition: { from: key, to: key } },
+        reason: reason || 'Updated checklist section',
+      })
+      return { section: sections[existingIndex] }
+    }
+
+    const next = { id: section?.id || checklistSectionId(), title, order: cleanedOrder, fields: [] }
+    sections.push(next)
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'checklist_section', id: next.id },
+      action: 'create_checklist_section',
+      diff: { title: { from: null, to: title }, condition: { from: null, to: key } },
+      reason: reason || 'Created checklist section',
+    })
+    return { section: next }
+  },
+
+  async deleteChecklistSection({ actor, condition, sectionId, reason }) {
+    await simulateNetwork()
+    const key = condition === 'new' ? 'new' : 'pre_owned'
+    const sections = state.checklists?.[key]?.sections || []
+    const idx = sections.findIndex((s) => s.id === sectionId)
+    if (idx < 0) throw new Error('Section not found')
+    const prev = sections[idx]
+    sections.splice(idx, 1)
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'checklist_section', id: sectionId },
+      action: 'delete_checklist_section',
+      diff: { title: { from: prev.title, to: null }, condition: { from: key, to: null } },
+      reason: reason || 'Deleted checklist section',
+    })
+    return { ok: true }
+  },
+
+  async upsertChecklistField({ actor, condition, sectionId, field, reason }) {
+    await simulateNetwork()
+    const key = condition === 'new' ? 'new' : 'pre_owned'
+    const sections = state.checklists?.[key]?.sections || []
+    const sec = sections.find((s) => s.id === sectionId)
+    if (!sec) throw new Error('Section not found')
+
+    const label = String(field?.label || '').trim()
+    if (!label) throw new Error('Field label is required')
+
+    const inputType = String(field?.inputType || '').trim()
+    if (!inputType) throw new Error('Input type is required')
+
+    const required = String(field?.required || '') === 'true' ? true : !!field?.required
+    const options = Array.isArray(field?.options)
+      ? field.options
+      : String(field?.options || '')
+          .split(',')
+          .map((s) => String(s || '').trim())
+          .filter(Boolean)
+
+    const minPhotosRaw = field?.minPhotos
+    const minPhotos = minPhotosRaw === '' || minPhotosRaw === null || minPhotosRaw === undefined ? undefined : Number(minPhotosRaw)
+    const cleanedMinPhotos = Number.isFinite(minPhotos) ? Math.max(0, minPhotos) : undefined
+
+    const nextCore = {
+      id: field?.id || checklistFieldId(),
+      label,
+      inputType,
+      options,
+      required,
+      ...(cleanedMinPhotos != null ? { minPhotos: cleanedMinPhotos } : {}),
+    }
+
+    const fields = sec.fields || []
+    const idx = fields.findIndex((f) => f.id === field?.id)
+    if (idx >= 0) {
+      const prev = fields[idx]
+      fields[idx] = { ...prev, ...nextCore }
+      recordAudit({
+        actor,
+        locationId: null,
+        entity: { type: 'checklist_field', id: prev.id },
+        action: 'update_checklist_field',
+        diff: { label: { from: prev.label, to: label }, inputType: { from: prev.inputType, to: inputType } },
+        reason: reason || 'Updated checklist field',
+      })
+      return { field: fields[idx] }
+    }
+
+    fields.push(nextCore)
+    sec.fields = fields
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'checklist_field', id: nextCore.id },
+      action: 'create_checklist_field',
+      diff: { label: { from: null, to: label }, sectionId: { from: null, to: sectionId }, condition: { from: null, to: key } },
+      reason: reason || 'Created checklist field',
+    })
+    return { field: nextCore }
+  },
+
+  async deleteChecklistField({ actor, condition, sectionId, fieldId, reason }) {
+    await simulateNetwork()
+    const key = condition === 'new' ? 'new' : 'pre_owned'
+    const sections = state.checklists?.[key]?.sections || []
+    const sec = sections.find((s) => s.id === sectionId)
+    if (!sec) throw new Error('Section not found')
+    const fields = sec.fields || []
+    const idx = fields.findIndex((f) => f.id === fieldId)
+    if (idx < 0) throw new Error('Field not found')
+    const prev = fields[idx]
+    fields.splice(idx, 1)
+    sec.fields = fields
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'checklist_field', id: fieldId },
+      action: 'delete_checklist_field',
+      diff: { label: { from: prev.label, to: null }, sectionId: { from: sectionId, to: null }, condition: { from: key, to: null } },
+      reason: reason || 'Deleted checklist field',
+    })
+    return { ok: true }
+  },
 
   async getVehicleMaster() {
     await simulateNetwork()

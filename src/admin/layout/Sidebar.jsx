@@ -7,21 +7,24 @@ import {
   IndianRupee,
   ScrollText,
   LayoutDashboard,
+  PanelLeft,
+  ListChecks,
   X,
 } from 'lucide-react'
 import { useRbac } from '../rbac/RbacContext'
 import { cx } from '../ui/Ui'
 
-const linkBase = 'flex items-center gap-2 rounded-xl px-3 py-2 text-sm min-w-0'
+const linkBase =
+  'flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm min-w-0 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50'
 
-const activeClass = 'bg-cyan-600 text-white shadow-sm'
+const activeClass = 'bg-cyan-700 text-white shadow-sm ring-1 ring-cyan-700/20'
 
 function NavItem({ to, icon: Icon, label, collapsed, iconClassName = '' }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `${linkBase} group ${collapsed ? 'justify-center gap-0 px-3' : ''} ${isActive ? activeClass : 'text-slate-700 hover:bg-slate-100'}`
+        `${linkBase} ${collapsed ? 'justify-center gap-0 px-3' : ''} ${isActive ? activeClass : 'text-slate-700'}`
       }
       title={label}
     >
@@ -31,10 +34,17 @@ function NavItem({ to, icon: Icon, label, collapsed, iconClassName = '' }) {
             className={cx(
               'h-4 w-4',
               isActive ? 'text-white' : iconClassName,
-              isActive ? '' : 'group-hover:text-white'
+              isActive ? '' : ''
             )}
           />
-          {!collapsed ? <span className="min-w-0 truncate">{label}</span> : null}
+          <span
+            className={cx(
+              'min-w-0 truncate transition-all duration-300',
+              collapsed ? 'w-0 opacity-0 translate-x-1 pointer-events-none' : 'w-auto opacity-100 translate-x-0'
+            )}
+          >
+            {label}
+          </span>
         </>
       )}
     </NavLink>
@@ -48,21 +58,42 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
     <>
       <div
         className={cx(
-          'hidden h-full shrink-0 border-r border-slate-200 bg-white md:block',
+          'relative hidden h-full shrink-0 border-r border-slate-200 bg-gradient-to-b from-cyan-50/70 via-white to-slate-50/70 md:block shadow-sm transition-[width] duration-300 ease-in-out',
           collapsed ? 'w-[76px]' : 'w-64'
         )}
       >
         <div className="flex h-full flex-col">
-          <div className={cx('flex items-center gap-2 px-4 py-4', collapsed ? 'justify-center px-2' : '')}>
-            <Activity className="h-5 w-5 text-cyan-600" />
-            {!collapsed ? (
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-slate-900">PDI Admin</div>
-                <div className="truncate text-xs text-slate-500">Queue + Workforce + Finance</div>
-              </div>
-            ) : null}
+          <div
+            className={cx(
+              'flex items-center gap-2 border-b border-slate-200/70 bg-white/55 px-4 py-4 backdrop-blur-sm',
+              collapsed ? 'justify-center px-2' : ''
+            )}
+          >
+            <Activity className="h-5 w-5 text-cyan-700" />
+            <div
+              className={cx(
+                'min-w-0 flex-1 transition-all duration-300',
+                collapsed ? 'w-0 opacity-0 -translate-x-1 pointer-events-none' : 'w-auto opacity-100 translate-x-0'
+              )}
+            >
+              <div className="truncate text-sm font-semibold text-slate-900">PDI Admin</div>
+              <div className="truncate text-xs text-slate-500">Queue + Workforce + Finance</div>
+            </div>
+
+            <button
+              type="button"
+              className={cx(
+                'cursor-pointer rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 active:scale-95',
+                collapsed ? '' : 'ml-auto'
+              )}
+              onClick={() => setCollapsed((v) => !v)}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <PanelLeft className={cx('h-4 w-4 transition-transform duration-300', collapsed ? '-scale-x-100' : '')} />
+            </button>
           </div>
-          <div className={cx('flex-1 space-y-1 px-2', collapsed ? 'px-2' : '')}>
+          <div className={cx('flex-1 space-y-1 px-2 py-2', collapsed ? 'px-2' : '')}>
             <div className={collapsed ? 'mx-auto w-fit' : ''}>
               <NavItem
                 to="/dashboard"
@@ -101,6 +132,15 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
             </div>
             <div className={collapsed ? 'mx-auto w-fit' : ''}>
               <NavItem
+                to="/checklists"
+                icon={ListChecks}
+                label="Checklist Builder"
+                collapsed={collapsed}
+                iconClassName="text-cyan-700"
+              />
+            </div>
+            <div className={collapsed ? 'mx-auto w-fit' : ''}>
+              <NavItem
                 to="/finance"
                 icon={IndianRupee}
                 label="Finance"
@@ -119,21 +159,8 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
             </div>
           </div>
           {!collapsed ? (
-            <div className="border-t border-slate-200 p-3 text-xs text-slate-500">
-              Admin console · Demo mode
-            </div>
-          ) : (
-            <div className="border-t border-slate-200 p-2">
-              <button
-                className="mx-auto flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white p-2 text-slate-700 shadow-sm hover:bg-slate-50"
-                onClick={() => setCollapsed(false)}
-                aria-label="Expand sidebar"
-                title="Expand sidebar"
-              >
-                <Activity className="h-4 w-4 text-cyan-600" />
-              </button>
-            </div>
-          )}
+            <div className="border-t border-slate-200 p-3 text-xs text-slate-500">Admin console · Demo mode</div>
+          ) : null}
         </div>
       </div>
 
@@ -147,7 +174,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
                 <div className="text-sm font-semibold text-slate-900">PDI Admin</div>
               </div>
               <button
-                className="rounded-xl p-2 text-slate-700 hover:bg-slate-100"
+                className="cursor-pointer rounded-xl p-2 text-slate-700"
                 onClick={() => setMobileOpen(false)}
                 aria-label="Close menu"
               >
@@ -165,6 +192,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               />
               <NavItem to="/queue" icon={ClipboardList} label="Queue Control" collapsed={false} iconClassName="text-cyan-600" />
               <NavItem to="/vehicle-master" icon={Layers3} label="Vehicle Master" collapsed={false} iconClassName="text-indigo-600" />
+              <NavItem to="/checklists" icon={ListChecks} label="Checklist Builder" collapsed={false} iconClassName="text-cyan-700" />
               <NavItem to="/finance" icon={IndianRupee} label="Finance" collapsed={false} iconClassName="text-amber-600" />
               <NavItem to="/audit" icon={ScrollText} label="Audit Log" collapsed={false} iconClassName="text-slate-600" />
             </div>

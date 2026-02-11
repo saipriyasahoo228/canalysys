@@ -6,7 +6,7 @@ import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, PaginatedTable, Select, cx } from '../ui/Ui'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
-import { formatInr, formatMinutes, minutesSince } from '../utils/format'
+import { formatDateTime, formatInr, formatMinutes, minutesSince } from '../utils/format'
 
 function priorityTone(p) {
   if (p === 'P0') return 'rose'
@@ -115,17 +115,17 @@ export function QueueControlPage() {
       {
         key: 'createdAt',
         label: 'Created at',
-        value: it?.createdAt ? new Date(it.createdAt).toLocaleString() : '—',
+        value: formatDateTime(it?.createdAt),
       },
       {
         key: 'paymentAt',
         label: 'Payment at',
-        value: it?.paymentAt ? new Date(it.paymentAt).toLocaleString() : '—',
+        value: formatDateTime(it?.paymentAt),
       },
       {
         key: 'closedAt',
         label: 'Closed at',
-        value: it?.closedAt ? new Date(it.closedAt).toLocaleString() : '—',
+        value: formatDateTime(it?.closedAt),
       },
     ]
   }, [dialog, inspectorById, locationById])
@@ -675,7 +675,7 @@ export function QueueControlPage() {
                         name: 'paymentAt',
                         label: 'Payment time',
                         type: 'text',
-                        defaultValue: dialog?.item?.paymentAt ? new Date(dialog.item.paymentAt).toLocaleString() : 'Now',
+                        defaultValue: dialog?.item?.paymentAt ? formatDateTime(dialog.item.paymentAt) : 'Now',
                         placeholder: 'Recorded automatically',
                       },
                     ]

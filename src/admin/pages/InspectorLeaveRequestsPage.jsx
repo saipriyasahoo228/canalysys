@@ -6,6 +6,7 @@ import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, PaginatedTable, cx } from '../ui/Ui'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
+import { formatDate, formatDateTime } from '../utils/format'
 
 function statusTone(s) {
   if (s === 'approved') return 'emerald'
@@ -51,9 +52,9 @@ export function InspectorLeaveRequestsPage() {
         exportValue: (r) => `${r.fromDate} → ${r.toDate}`,
         cell: (r) => (
           <div className="text-sm text-slate-700">
-            {r.fromDate}
+            {formatDate(r.fromDate)}
             <span className="mx-1 text-slate-400">→</span>
-            {r.toDate}
+            {formatDate(r.toDate)}
           </div>
         ),
       },
@@ -67,7 +68,7 @@ export function InspectorLeaveRequestsPage() {
         key: 'requestedAt',
         header: 'Requested at',
         exportValue: (r) => r.requestedAt,
-        cell: (r) => <div className="text-xs text-slate-600">{r.requestedAt || '—'}</div>,
+        cell: (r) => <div className="text-xs text-slate-600">{formatDateTime(r.requestedAt)}</div>,
       },
       {
         key: 'decision',
@@ -117,12 +118,12 @@ export function InspectorLeaveRequestsPage() {
     return [
       { key: 'id', label: 'Request ID', value: it?.id || '—' },
       { key: 'inspector', label: 'Inspector', value: inspectorById.get(it?.inspectorId)?.name || it?.inspectorId || '—' },
-      { key: 'from', label: 'From date', value: it?.fromDate || '—' },
-      { key: 'to', label: 'To date', value: it?.toDate || '—' },
+      { key: 'from', label: 'From date', value: formatDate(it?.fromDate) },
+      { key: 'to', label: 'To date', value: formatDate(it?.toDate) },
       { key: 'reason', label: 'Reason', value: it?.reason || '—', fullWidth: true },
       { key: 'status', label: 'Status', value: it?.status || '—' },
-      { key: 'requestedAt', label: 'Requested at', value: it?.requestedAt || '—' },
-      { key: 'decidedAt', label: 'Decided at', value: it?.decidedAt || '—' },
+      { key: 'requestedAt', label: 'Requested at', value: formatDateTime(it?.requestedAt) },
+      { key: 'decidedAt', label: 'Decided at', value: formatDateTime(it?.decidedAt) },
       { key: 'rejectionReason', label: 'Rejection reason', value: it?.rejectionReason || '—', fullWidth: true },
     ]
   }, [dialog, inspectorById])

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Filter, Shield } from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
+import { formatDateTime, formatInr } from '../utils/format'
 import { mockApi } from '../mock/mockApi'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Card, PaginatedTable } from '../ui/Ui'
@@ -35,7 +36,7 @@ export function AuditLogsPage() {
         key: 'at',
         header: 'When',
         exportValue: (r) => new Date(r.at).toISOString(),
-        cell: (r) => new Date(r.at).toLocaleString(),
+        cell: (r) => formatDateTime(r.at),
       },
       {
         key: 'actor',

@@ -1,10 +1,14 @@
 import { Bell, CarFront, LogOut, Menu, Moon, RefreshCcw, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { usePolling } from '../hooks/usePolling'
 import { mockApi } from '../mock/mockApi'
 import { useRbac } from '../rbac/RbacContext'
+import { useAuth } from '../auth/AuthContext'
 
 export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
+  const navigate = useNavigate()
+  const { logout } = useAuth()
   const { user } = useRbac()
   const { data, refresh } = usePolling('bootstrap', () => mockApi.getBootstrap(), {
     intervalMs: 15_000,
@@ -61,7 +65,8 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
   const onLogout = () => {
     setNotifOpen(false)
     setUserOpen(false)
-    window.location.reload()
+    logout()
+    navigate('/login', { replace: true })
   }
 
   return (

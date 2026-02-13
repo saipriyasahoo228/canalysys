@@ -45,7 +45,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <Card accent="cyan" className="p-0">
+        <Card accent="cyan" className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <ClipboardCheck className="h-4 w-4 text-cyan-700" />
@@ -56,7 +56,7 @@ export function DashboardPage() {
           </div>
         </Card>
 
-        <Card accent={k?.queueLength >= 8 ? 'amber' : 'slate'} className="p-0">
+        <Card accent={k?.queueLength >= 8 ? 'amber' : 'slate'} className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <ClipboardList className={cx('h-4 w-4', k?.queueLength >= 8 ? 'text-amber-700' : 'text-slate-700')} />
@@ -67,7 +67,7 @@ export function DashboardPage() {
           </div>
         </Card>
 
-        <Card accent={k?.avgWaitMinutes >= 40 ? 'amber' : 'slate'} className="p-0">
+        <Card accent={k?.avgWaitMinutes >= 40 ? 'amber' : 'slate'} className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <Clock className={cx('h-4 w-4', (k?.avgWaitMinutes ?? 0) >= 40 ? 'text-amber-700' : 'text-slate-700')} />
@@ -78,7 +78,7 @@ export function DashboardPage() {
           </div>
         </Card>
 
-        <Card accent={k?.inspectorUtilizationPct >= 85 ? 'amber' : 'emerald'} className="p-0">
+        <Card accent={k?.inspectorUtilizationPct >= 85 ? 'amber' : 'emerald'} className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <Gauge
@@ -94,7 +94,7 @@ export function DashboardPage() {
           </div>
         </Card>
 
-        <Card accent={k?.idleInspectorsCount >= 2 ? 'amber' : 'slate'} className="p-0">
+        <Card accent={k?.idleInspectorsCount >= 2 ? 'amber' : 'slate'} className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <UserX className={cx('h-4 w-4', k?.idleInspectorsCount >= 2 ? 'text-amber-700' : 'text-slate-700')} />
@@ -108,6 +108,7 @@ export function DashboardPage() {
         <Card
           accent={(k?.slaBreachesCount ?? 0) + (k?.postponedCount ?? 0) >= 3 ? 'amber' : 'slate'}
           className="p-0"
+          kpi
         >
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">

@@ -158,7 +158,7 @@ export function FinancePage() {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Card accent="cyan" className="p-0">
+        <Card accent="cyan" className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <IndianRupee className="h-4 w-4 text-cyan-700" />
@@ -170,7 +170,7 @@ export function FinancePage() {
             <div className="mt-1 text-xs text-slate-500">Used for new items</div>
           </div>
         </Card>
-        <Card accent="emerald" className="p-0">
+        <Card accent="emerald" className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <Wallet className="h-4 w-4 text-emerald-700" />
@@ -180,7 +180,7 @@ export function FinancePage() {
             <div className="mt-1 text-xs text-slate-500">Selected scope</div>
           </div>
         </Card>
-        <Card accent={pending > 0 ? 'amber' : 'slate'} className="p-0">
+        <Card accent={pending > 0 ? 'amber' : 'slate'} className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <CheckCircle2
@@ -192,7 +192,7 @@ export function FinancePage() {
             <div className="mt-1 text-xs text-slate-500">Needs approval</div>
           </div>
         </Card>
-        <Card accent="violet" className="p-0">
+        <Card accent="violet" className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <ReceiptText className="h-4 w-4 text-violet-700" />

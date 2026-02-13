@@ -235,13 +235,25 @@ const accentMap = {
   emerald: 'from-emerald-50/80 to-slate-50 border-emerald-200 ring-emerald-200/40',
 }
 
-export function Card({ title, subtitle, right, children, className, accent = 'slate' }) {
+const kpiBorderMap = {
+  slate: 'border-l-slate-600',
+  cyan: 'border-l-cyan-700',
+  violet: 'border-l-violet-700',
+  amber: 'border-l-amber-700',
+  rose: 'border-l-rose-700',
+  emerald: 'border-l-emerald-700',
+}
+
+export function Card({ title, subtitle, right, children, className, accent = 'slate', kpi = false }) {
   const a = accentMap[accent] || accentMap.slate
+  const k = kpi ? kpiBorderMap[accent] || kpiBorderMap.slate : ''
   return (
     <section
       className={cx(
         'rounded-2xl border bg-gradient-to-b shadow-sm ring-1 transition hover:shadow-md',
         a,
+        kpi ? 'border-l-4' : '',
+        k,
         className
       )}
     >
@@ -259,18 +271,30 @@ export function Card({ title, subtitle, right, children, className, accent = 'sl
   )
 }
 
-export function StatCard({ label, value, hint, tone = 'default' }) {
+export function StatCard({ label, value, hint, tone = 'default', kpi = false }) {
   const toneMap = {
     default: 'from-slate-50/80 to-slate-50 border-slate-200 ring-slate-200/40',
     good: 'from-emerald-50/80 to-slate-50 border-emerald-200 ring-emerald-200/40',
     warn: 'from-amber-50/80 to-slate-50 border-amber-200 ring-amber-200/40',
     bad: 'from-rose-50/80 to-slate-50 border-rose-200 ring-rose-200/40',
   }
+
+  const k = kpi
+    ? tone === 'good'
+      ? 'border-l-4 border-l-emerald-700'
+      : tone === 'warn'
+        ? 'border-l-4 border-l-amber-700'
+        : tone === 'bad'
+          ? 'border-l-4 border-l-rose-700'
+          : 'border-l-4 border-l-slate-600'
+    : ''
+
   return (
     <div
       className={cx(
         'rounded-2xl border bg-gradient-to-b p-3 shadow-sm ring-1 transition hover:shadow-md',
-        toneMap[tone] || toneMap.default
+        toneMap[tone] || toneMap.default,
+        k
       )}
     >
       <div className="text-xs font-medium text-slate-900">{label}</div>

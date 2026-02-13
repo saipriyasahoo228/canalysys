@@ -32,6 +32,47 @@ const checklistFieldId = (() => {
   return () => `CHK-FLD-${++n}`
 })()
 
+const checklistScoreRuleId = (() => {
+  let n = 0
+  return () => `CHK-SCR-${++n}`
+})()
+
+const calcChecklistScorePct = (rules, checkedCount) => {
+  const c = Number(checkedCount || 0)
+  if (!Number.isFinite(c) || c <= 0) return 0
+  const list = Array.isArray(rules) ? rules : []
+
+  const normalized = list
+    .map((r) => ({
+      id: r?.id,
+      minChecked: Number(r?.minChecked),
+      scorePct: Number(r?.scorePct),
+    }))
+    .filter((r) => Number.isFinite(r.minChecked) && Number.isFinite(r.scorePct))
+    .sort((a, b) => a.minChecked - b.minChecked)
+
+  if (!normalized.length) return 0
+
+  if (c < normalized[0].minChecked) return 0
+
+  const last = normalized[normalized.length - 1]
+  if (c >= last.minChecked) return Math.max(0, Math.min(100, Math.round(last.scorePct)))
+
+  for (let i = 0; i < normalized.length - 1; i++) {
+    const a = normalized[i]
+    const b = normalized[i + 1]
+    if (c === a.minChecked) return Math.max(0, Math.min(100, Math.round(a.scorePct)))
+    if (c > a.minChecked && c < b.minChecked) {
+      const span = b.minChecked - a.minChecked
+      const t = span <= 0 ? 0 : (c - a.minChecked) / span
+      const pct = a.scorePct + t * (b.scorePct - a.scorePct)
+      return Math.max(0, Math.min(100, Math.round(pct)))
+    }
+  }
+
+  return 0
+}
+
 const state = {
   rbac: {
     roles: [
@@ -179,6 +220,12 @@ const state = {
   ],
   checklists: {
     pre_owned: {
+      scoringRules: [
+        { id: 'CHK-SCR-001', minChecked: 3, scorePct: 30 },
+        { id: 'CHK-SCR-002', minChecked: 5, scorePct: 50 },
+        { id: 'CHK-SCR-003', minChecked: 8, scorePct: 80 },
+        { id: 'CHK-SCR-004', minChecked: 10, scorePct: 100 },
+      ],
       sections: [
         {
           id: 'CHK-SEC-001',
@@ -382,6 +429,12 @@ const state = {
       ],
     },
     new: {
+      scoringRules: [
+        { id: 'CHK-SCR-005', minChecked: 3, scorePct: 30 },
+        { id: 'CHK-SCR-006', minChecked: 5, scorePct: 50 },
+        { id: 'CHK-SCR-007', minChecked: 8, scorePct: 80 },
+        { id: 'CHK-SCR-008', minChecked: 10, scorePct: 100 },
+      ],
       sections: [],
     },
   },
@@ -537,6 +590,12 @@ const state = {
       paymentAt: minutesAgo(10),
       closedAt: null,
       commissionOverrideInr: null,
+      checklist: {
+        submittedAt: minutesAgo(5),
+        checkedCount: 5,
+        totalCount: 10,
+        scorePct: 50,
+      },
     },
     {
       id: 'PDI-24004',
@@ -953,6 +1012,7 @@ export const mockApi = {
     const bucket = state.checklists?.[key] || { sections: [] }
     return {
       condition: key,
+      scoringRules: (bucket.scoringRules || []).slice().sort((a, b) => (a.minChecked || 0) - (b.minChecked || 0)),
       sections: (bucket.sections || [])
         .slice()
         .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -961,6 +1021,135 @@ export const mockApi = {
           fields: (s.fields || []).slice(),
         })),
     }
+  },
+
+  async upsertChecklistScoringRule({ actor, condition, rule, reason }) {
+    await simulateNetwork()
+    const key = condition === 'new' ? 'new' : 'pre_owned'
+    if (!state.checklists[key]) state.checklists[key] = { sections: [], scoringRules: [] }
+    if (!state.checklists[key].scoringRules) state.checklists[key].scoringRules = []
+
+    const minChecked = Number(rule?.minChecked)
+    if (!Number.isFinite(minChecked) || minChecked < 0) throw new Error('Min checked must be a valid number')
+
+    const scorePct = Number(rule?.scorePct)
+    if (!Number.isFinite(scorePct) || scorePct < 0 || scorePct > 100) throw new Error('Score % must be between 0 and 100')
+
+    const rules = state.checklists[key].scoringRules
+    const idx = rules.findIndex((r) => r.id === rule?.id)
+
+    if (idx >= 0) {
+      const prev = rules[idx]
+      rules[idx] = { ...prev, minChecked, scorePct }
+      recordAudit({
+        actor,
+        locationId: null,
+        entity: { type: 'checklist_scoring_rule', id: prev.id },
+        action: 'update_checklist_scoring_rule',
+        diff: { minChecked: { from: prev.minChecked, to: minChecked }, scorePct: { from: prev.scorePct, to: scorePct }, condition: { from: key, to: key } },
+        reason: reason || 'Updated checklist scoring rule',
+      })
+      return { rule: rules[idx] }
+    }
+
+    const next = { id: rule?.id || checklistScoreRuleId(), minChecked, scorePct }
+    rules.push(next)
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'checklist_scoring_rule', id: next.id },
+      action: 'create_checklist_scoring_rule',
+      diff: { created: { from: null, to: next }, condition: { from: null, to: key } },
+      reason: reason || 'Created checklist scoring rule',
+    })
+    return { rule: next }
+  },
+
+  async deleteChecklistScoringRule({ actor, condition, ruleId, reason }) {
+    await simulateNetwork()
+    const key = condition === 'new' ? 'new' : 'pre_owned'
+    const rules = state.checklists?.[key]?.scoringRules || []
+    const idx = rules.findIndex((r) => r.id === ruleId)
+    if (idx < 0) throw new Error('Scoring rule not found')
+    const prev = rules[idx]
+    rules.splice(idx, 1)
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'checklist_scoring_rule', id: ruleId },
+      action: 'delete_checklist_scoring_rule',
+      diff: { deleted: { from: prev, to: null }, condition: { from: key, to: null } },
+      reason: reason || 'Deleted checklist scoring rule',
+    })
+    return { ok: true }
+  },
+
+  async setChecklistScoringRulesBulk({ actor, condition, rules, reason }) {
+    await simulateNetwork()
+    const key = condition === 'new' ? 'new' : 'pre_owned'
+    if (!state.checklists[key]) state.checklists[key] = { sections: [], scoringRules: [] }
+
+    const input = Array.isArray(rules) ? rules : []
+    const next = input
+      .map((r) => ({
+        id: r?.id || checklistScoreRuleId(),
+        minChecked: Number(r?.minChecked),
+        scorePct: Number(r?.scorePct),
+      }))
+      .filter((r) => Number.isFinite(r.minChecked) && Number.isFinite(r.scorePct))
+      .map((r) => ({
+        ...r,
+        minChecked: Math.max(0, Math.floor(r.minChecked)),
+        scorePct: Math.max(0, Math.min(100, Math.round(r.scorePct))),
+      }))
+      .sort((a, b) => a.minChecked - b.minChecked)
+
+    const seen = new Set()
+    for (const r of next) {
+      if (seen.has(r.minChecked)) throw new Error('Duplicate min checked values are not allowed')
+      seen.add(r.minChecked)
+    }
+
+    const before = (state.checklists[key].scoringRules || []).slice()
+    state.checklists[key].scoringRules = next
+
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'checklist_scoring_rules', id: key },
+      action: 'set_checklist_scoring_rules_bulk',
+      diff: { before, after: next, condition: { from: key, to: key } },
+      reason: reason || 'Updated checklist scoring rules (bulk)',
+    })
+
+    return { ok: true, rules: next }
+  },
+
+  // Mobile app: submit inspection checklist and compute score
+  async submitInspectionChecklist({ inspectorId, pdiId, checkedCount, totalCount }) {
+    await simulateNetwork()
+    const insp = state.inspectors.find((i) => i.id === inspectorId)
+    if (!insp) throw new Error('Inspector not found')
+    const item = state.queue.find((q) => q.id === pdiId)
+    if (!item) throw new Error('PDI request not found')
+
+    const key = item.vehicleType === 'new' ? 'new' : 'pre_owned'
+    const rules = state.checklists?.[key]?.scoringRules || []
+
+    const c = Number(checkedCount || 0)
+    const t = Number(totalCount || 0)
+    const cleanedC = Number.isFinite(c) ? Math.max(0, Math.floor(c)) : 0
+    const cleanedT = Number.isFinite(t) ? Math.max(0, Math.floor(t)) : 0
+
+    const scorePct = calcChecklistScorePct(rules, cleanedC)
+    item.checklist = {
+      submittedAt: nowIso(),
+      checkedCount: cleanedC,
+      totalCount: cleanedT,
+      scorePct,
+    }
+
+    return { ok: true, checklist: item.checklist }
   },
 
   async upsertChecklistSection({ actor, condition, section, reason }) {
@@ -2020,13 +2209,12 @@ export const mockApi = {
     const email = String(inspector?.email || '').trim()
     const joinDate = String(inspector?.joinDate || '').trim()
     const employmentType = String(inspector?.employmentType || '').trim()
-    const status = String(inspector?.status || '').trim()
+    const status = String(inspector?.status || 'active').trim()
     const profilePhotoUrl = String(inspector?.profilePhotoUrl || '').trim()
     const providedId = String(inspector?.id || '').trim()
 
     if (!name) throw new Error('Full name is required')
     if (!phone) throw new Error('Mobile number is required')
-    if (!email) throw new Error('Email is required')
     if (!joinDate) throw new Error('Date of joining is required')
     if (!employmentType) throw new Error('Employment type is required')
     if (!['full_time', 'contract', 'freelancer'].includes(employmentType)) throw new Error('Invalid employment type')
@@ -2076,12 +2264,11 @@ export const mockApi = {
     const email = String(next.email || '').trim()
     const joinDate = String(next.joinDate || '').trim()
     const employmentType = String(next.employmentType || '').trim()
-    const status = String(next.status || '').trim()
+    const status = String(next.status || item.status || 'active').trim()
     const profilePhotoUrl = String(next.profilePhotoUrl || '').trim()
 
     if (!name) throw new Error('Full name is required')
     if (!phone) throw new Error('Mobile number is required')
-    if (!email) throw new Error('Email is required')
     if (!joinDate) throw new Error('Date of joining is required')
     if (!employmentType) throw new Error('Employment type is required')
     if (!['full_time', 'contract', 'freelancer'].includes(employmentType)) throw new Error('Invalid employment type')

@@ -8,25 +8,38 @@ import { FinancePage } from './pages/FinancePage'
 import { AuditLogsPage } from './pages/AuditLogsPage'
 import { VehicleMasterPage } from './pages/VehicleMasterPage'
 import { ChecklistBuilderPage } from './pages/ChecklistBuilderPage'
+import { AuthProvider } from './auth/AuthContext'
+import { ProtectedRoute } from './auth/ProtectedRoute'
+import { LoginPage } from './pages/LoginPage'
 
 export default function AdminApp() {
   return (
-    <RbacProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<AdminLayout />}>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/queue" element={<QueueControlPage />} />
-            <Route path="/inspectors" element={<InspectorsPage />} />
-            <Route path="/finance" element={<FinancePage />} />
-            <Route path="/vehicle-master" element={<VehicleMasterPage />} />
-            <Route path="/checklists" element={<ChecklistBuilderPage />} />
-            <Route path="/audit" element={<AuditLogsPage />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </RbacProvider>
+    <AuthProvider>
+      <RbacProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<LoginPage />} />
+
+            <Route
+              element={
+                <ProtectedRoute>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/queue" element={<QueueControlPage />} />
+              <Route path="/inspectors" element={<InspectorsPage />} />
+              <Route path="/finance" element={<FinancePage />} />
+              <Route path="/vehicle-master" element={<VehicleMasterPage />} />
+              <Route path="/checklists" element={<ChecklistBuilderPage />} />
+              <Route path="/audit" element={<AuditLogsPage />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </RbacProvider>
+    </AuthProvider>
   )
 }

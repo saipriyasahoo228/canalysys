@@ -1,11 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Pencil, Plus, User, UserCheck, UserX, XCircle } from 'lucide-react'
+import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Plus, User, UserCheck, UserX, XCircle } from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
 import { mockApi } from '../mock/mockApi'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, PaginatedTable, cx } from '../ui/Ui'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
+import { InspectorProfileDialog } from '../ui/InspectorProfileDialog'
 import { formatDate, formatDateTime, formatMinutes, minutesSince } from '../utils/format'
 
 function leaveStatusTone(s) {
@@ -60,11 +61,11 @@ export function InspectorsPage() {
   const [dialog, setDialog] = useState(null)
   const [leaveDialog, setLeaveDialog] = useState(null)
   const [actionsMenu, setActionsMenu] = useState(null)
-  const [nextInspectorId, setNextInspectorId] = useState('')
   const actionsBoxRef = useRef(null)
   const actionsMenuRef = useRef(null)
 
-  const viewOpen = dialog?.type === 'view'
+  const profileOpen = dialog?.type === 'profile'
+  const createOpen = dialog?.type === 'create'
   const toggleActiveOpen = dialog?.type === 'toggleActive'
 
   const leaveViewOpen = leaveDialog?.type === 'view'
@@ -110,47 +111,6 @@ export function InspectorsPage() {
     if (Math.abs((actionsMenu.top || 0) - nextTop) < 1) return
     setActionsMenu((s) => (s ? { ...s, top: nextTop } : s))
   }, [actionsMenu])
-
-  const viewItems = useMemo(() => {
-    if (!dialog || dialog.type !== 'view') return []
-    const it = dialog.item
-    const photo = String(it?.profilePhotoUrl || '').trim()
-    const isDataUrl = /^data:image\//i.test(photo)
-    return [
-      { key: 'id', label: 'Inspector ID', value: it?.id || '—' },
-      { key: 'name', label: 'Full name', value: it?.name || '—' },
-      { key: 'phone', label: 'Mobile number', value: it?.phone || '—' },
-      { key: 'email', label: 'Email ID', value: it?.email || '—' },
-      {
-        key: 'profilePhotoUrl',
-        label: 'Profile photo',
-        fullWidth: true,
-        value: photo
-          ? isDataUrl
-            ? (
-                <div className="flex items-center gap-3">
-                  <img
-                    src={photo}
-                    alt="Inspector profile"
-                    className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
-                  />
-                </div>
-              )
-            : 'Uploaded'
-          : '—',
-      },
-      { key: 'joinDate', label: 'Date of joining', value: formatDate(it?.joinDate) },
-      { key: 'employmentType', label: 'Employment type', value: it?.employmentType || '—' },
-      { key: 'status', label: 'Status', value: statusLabel(it?.status) },
-      { key: 'state', label: 'State', value: it?.state || '—' },
-      { key: 'util', label: 'Utilization (%)', value: it?.utilizationPct ?? '—' },
-      {
-        key: 'idleFor',
-        label: 'Idle for',
-        value: it?.state === 'idle' ? formatMinutes(minutesSince(it.lastStateChangeAt)) : '—',
-      },
-    ]
-  }, [dialog, locationById])
 
   const inspectorById = useMemo(() => new Map(inspectors.map((i) => [i.id, i])), [inspectors])
 
@@ -263,6 +223,12 @@ export function InspectorsPage() {
         ),
       },
       {
+        key: 'joinDate',
+        header: 'Date of joining',
+        exportValue: (r) => r.joinDate,
+        cell: (r) => <div className="text-xs text-slate-600">{formatDate(r.joinDate)}</div>,
+      },
+      {
         key: 'state',
         header: 'State',
         cell: (r) => (
@@ -345,7 +311,7 @@ export function InspectorsPage() {
   return (
     <div className="space-y-3" ref={actionsBoxRef}>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Card accent="emerald" className="p-0">
+        <Card accent="emerald" className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-emerald-700" />
@@ -355,7 +321,7 @@ export function InspectorsPage() {
             <div className="mt-1 text-xs text-slate-500">Currently enabled</div>
           </div>
         </Card>
-        <Card accent={idle.length >= 2 ? 'amber' : 'slate'} className="p-0">
+        <Card accent={idle.length >= 2 ? 'amber' : 'slate'} className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <UserX className={cx('h-4 w-4', idle.length >= 2 ? 'text-amber-700' : 'text-slate-700')} />
@@ -365,7 +331,7 @@ export function InspectorsPage() {
             <div className="mt-1 text-xs text-slate-500">Potentially re-allocatable</div>
           </div>
         </Card>
-        <Card accent={avgUtil >= 85 ? 'amber' : 'cyan'} className="p-0">
+        <Card accent={avgUtil >= 85 ? 'amber' : 'cyan'} className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <Gauge className={cx('h-4 w-4', avgUtil >= 85 ? 'text-amber-700' : 'text-cyan-700')} />
@@ -375,7 +341,7 @@ export function InspectorsPage() {
             <div className="mt-1 text-xs text-slate-500">Workload</div>
           </div>
         </Card>
-        <Card accent="violet" className="p-0">
+        <Card accent="violet" className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <MapPin className="h-4 w-4 text-violet-700" />
@@ -442,7 +408,6 @@ export function InspectorsPage() {
                 onClick={() => {
                   if (!permissions.manageInspectors) return
                   const id = mockApi.generateInspectorId()
-                  setNextInspectorId(id)
                   setDialog({ type: 'create', inspectorId: id })
                 }}
               >
@@ -488,8 +453,6 @@ export function InspectorsPage() {
           </div>
         </Card>
       </div>
-
-      <ViewDetailsDialog open={viewOpen} title="View inspector" onClose={() => setDialog(null)} items={viewItems} accent="cyan" />
 
       <ViewDetailsDialog
         open={leaveViewOpen}
@@ -551,18 +514,6 @@ export function InspectorsPage() {
         >
           <button
             type="button"
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-900 hover:bg-slate-100"
-            onClick={() => {
-              setDialog({ type: 'view', item: actionsMenu.row })
-              setActionsMenu(null)
-            }}
-          >
-            <Eye className="h-4 w-4" />
-            View
-          </button>
-
-          <button
-            type="button"
             disabled={!permissions.manageInspectors}
             className={cx(
               'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-100',
@@ -570,12 +521,12 @@ export function InspectorsPage() {
             )}
             onClick={() => {
               if (!permissions.manageInspectors) return
-              setDialog({ type: 'edit', item: actionsMenu.row })
+              setDialog({ type: 'profile', item: actionsMenu.row })
               setActionsMenu(null)
             }}
           >
-            <Pencil className="h-4 w-4" />
-            Update
+            <User className="h-4 w-4" />
+            Manage Profile
           </button>
 
           <button
@@ -597,171 +548,106 @@ export function InspectorsPage() {
         </div>
       ) : null}
 
+      <InspectorProfileDialog
+        open={profileOpen}
+        inspector={dialog?.item || null}
+        onClose={() => setDialog(null)}
+        onSave={async (form) => {
+          if (!permissions.manageInspectors) throw new Error('Insufficient permission')
+          await mockApi.updateInspector({
+            actor,
+            inspectorId: form.id,
+            patch: {
+              name: form.name,
+              phone: form.phone,
+              email: form.email,
+              profilePhotoUrl: form.profilePhotoUrl,
+              joinDate: form.joinDate,
+              employmentType: form.employmentType,
+              status: form.status,
+            },
+            reason: form.reason,
+          })
+        }}
+      />
+
       <ReasonDialog
-        open={!!dialog && !viewOpen}
-        title={
-          dialog?.type === 'create'
-            ? 'Create inspector'
-            : dialog?.type === 'edit'
-              ? 'Edit inspector'
-              : dialog?.type === 'toggleActive'
-                ? dialog?.item?.status === 'active'
-                  ? 'Deactivate inspector account'
-                  : 'Activate inspector account'
-                : ''
-        }
-        description={'Inspector profile changes are audited. Reason is mandatory.'}
-        submitLabel={
-          dialog?.type === 'create'
-            ? 'Create'
-            : dialog?.type === 'edit'
-              ? 'Update'
-              : dialog?.type === 'toggleActive'
-                ? dialog?.item?.status === 'active'
-                  ? 'Deactivate'
-                  : 'Activate'
-                : 'Submit'
-        }
+        open={createOpen}
+        title="Add inspector"
+        description="Create inspector credentials. You can complete the remaining profile details later in Manage Profile."
+        submitLabel="Create"
         onClose={() => setDialog(null)}
         showReason={true}
         requireReason={true}
         reasonLabel="Audit reason"
         reasonPlaceholder="Required for audit log"
-        fields={
-          dialog?.type === 'create'
-            ? [
-                {
-                  name: 'id',
-                  label: 'Inspector ID (Auto-generated)',
-                  type: 'text',
-                  defaultValue: dialog?.inspectorId || nextInspectorId || '—',
-                  disabled: true,
-                },
-                { name: 'name', label: 'Full Name', type: 'text', defaultValue: '' },
-                { name: 'phone', label: 'Mobile Number', type: 'text', defaultValue: '' },
-                { name: 'email', label: 'Email ID', type: 'text', defaultValue: '' },
-                {
-                  name: 'profilePhotoUrl',
-                  label: 'Profile Photo',
-                  type: 'file',
-                  fileMode: 'dataUrl',
-                  accept: 'image/*',
-                  defaultValue: '',
-                },
-                { name: 'joinDate', label: 'Date of Joining', type: 'date', defaultValue: '' },
-                {
-                  name: 'employmentType',
-                  label: 'Employment Type',
-                  type: 'select',
-                  defaultValue: 'full_time',
-                  options: [
-                    { value: 'full_time', label: 'Full-time' },
-                    { value: 'contract', label: 'Contract' },
-                    { value: 'freelancer', label: 'Freelancer' },
-                  ],
-                },
-                {
-                  name: 'status',
-                  label: 'Status',
-                  type: 'select',
-                  defaultValue: 'active',
-                  options: [
-                    { value: 'active', label: 'Active' },
-                    { value: 'inactive', label: 'Inactive' },
-                    { value: 'suspended', label: 'Suspended' },
-                  ],
-                },
-              ]
-            : dialog?.type === 'edit'
-              ? [
-                  { name: 'id', label: 'Inspector ID', type: 'text', defaultValue: dialog?.item?.id || '', disabled: true },
-                  { name: 'name', label: 'Full Name', type: 'text', defaultValue: dialog?.item?.name || '' },
-                  { name: 'phone', label: 'Mobile Number', type: 'text', defaultValue: dialog?.item?.phone || '' },
-                  { name: 'email', label: 'Email ID', type: 'text', defaultValue: dialog?.item?.email || '' },
-                  {
-                    name: 'profilePhotoUrl',
-                    label: 'Profile Photo',
-                    type: 'file',
-                    fileMode: 'dataUrl',
-                    accept: 'image/*',
-                    defaultValue: dialog?.item?.profilePhotoUrl || '',
-                  },
-                  { name: 'joinDate', label: 'Date of Joining', type: 'date', defaultValue: dialog?.item?.joinDate || '' },
-                  {
-                    name: 'employmentType',
-                    label: 'Employment Type',
-                    type: 'select',
-                    defaultValue: dialog?.item?.employmentType || 'full_time',
-                    options: [
-                      { value: 'full_time', label: 'Full-time' },
-                      { value: 'contract', label: 'Contract' },
-                      { value: 'freelancer', label: 'Freelancer' },
-                    ],
-                  },
-                  {
-                    name: 'status',
-                    label: 'Status',
-                    type: 'select',
-                    defaultValue: dialog?.item?.status || (dialog?.item?.active ? 'active' : 'inactive'),
-                    options: [
-                      { value: 'active', label: 'Active' },
-                      { value: 'inactive', label: 'Inactive' },
-                      { value: 'suspended', label: 'Suspended' },
-                    ],
-                  },
-                ]
-              : dialog?.type === 'toggleActive'
-                ? []
-              : []
-        }
+        fields={[
+          {
+            name: 'id',
+            label: 'Inspector ID (Auto-generated)',
+            type: 'text',
+            defaultValue: dialog?.inspectorId || '—',
+            disabled: true,
+          },
+          { name: 'name', label: 'Full Name', type: 'text', defaultValue: '' },
+          { name: 'phone', label: 'Phone Number', type: 'text', defaultValue: '' },
+          { name: 'joinDate', label: 'Date of Joining', type: 'date', defaultValue: '' },
+          {
+            name: 'employmentType',
+            label: 'Employment Type',
+            type: 'select',
+            defaultValue: 'full_time',
+            options: [
+              { value: 'full_time', label: 'Full-time' },
+              { value: 'contract', label: 'Contract' },
+              { value: 'freelancer', label: 'Freelancer' },
+            ],
+          },
+        ]}
         onSubmit={async (form) => {
           try {
-            if (!dialog) return
             if (!permissions.manageInspectors) throw new Error('Insufficient permission')
+            await mockApi.createInspector({
+              actor,
+              inspector: {
+                id: dialog?.inspectorId,
+                name: form.name,
+                phone: form.phone,
+                joinDate: form.joinDate,
+                employmentType: form.employmentType,
+                status: 'active',
+              },
+              reason: form.reason,
+            })
+            setDialog(null)
+          } catch (e) {
+            // eslint-disable-next-line no-alert
+            alert(e.message || 'Action failed')
+          }
+        }}
+      />
 
-            if (dialog.type === 'create') {
-              await mockApi.createInspector({
-                actor,
-                inspector: {
-                  id: dialog?.inspectorId || nextInspectorId,
-                  name: form.name,
-                  phone: form.phone,
-                  email: form.email,
-                  profilePhotoUrl: form.profilePhotoUrl,
-                  joinDate: form.joinDate,
-                  employmentType: form.employmentType,
-                  status: form.status,
-                },
-                reason: form.reason,
-              })
-            }
-
-            if (dialog.type === 'edit') {
-              await mockApi.updateInspector({
-                actor,
-                inspectorId: dialog.item.id,
-                patch: {
-                  name: form.name,
-                  phone: form.phone,
-                  email: form.email,
-                  profilePhotoUrl: form.profilePhotoUrl,
-                  joinDate: form.joinDate,
-                  employmentType: form.employmentType,
-                  status: form.status,
-                },
-                reason: form.reason,
-              })
-            }
-
-            if (dialog.type === 'toggleActive') {
-              await mockApi.updateInspector({
-                actor,
-                inspectorId: dialog.item.id,
-                patch: { status: dialog.item.status === 'active' ? 'inactive' : 'active' },
-                reason: form.reason,
-              })
-            }
-
+      <ReasonDialog
+        open={toggleActiveOpen}
+        title={dialog?.item?.status === 'active' ? 'Deactivate inspector account' : 'Activate inspector account'}
+        description={'Inspector profile changes are audited. Reason is mandatory.'}
+        submitLabel={dialog?.item?.status === 'active' ? 'Deactivate' : 'Activate'}
+        onClose={() => setDialog(null)}
+        showReason={true}
+        requireReason={true}
+        reasonLabel="Audit reason"
+        reasonPlaceholder="Required for audit log"
+        fields={[]}
+        onSubmit={async (form) => {
+          try {
+            if (!dialog || dialog.type !== 'toggleActive') return
+            if (!permissions.manageInspectors) throw new Error('Insufficient permission')
+            await mockApi.updateInspector({
+              actor,
+              inspectorId: dialog.item.id,
+              patch: { status: dialog.item.status === 'active' ? 'inactive' : 'active' },
+              reason: form.reason,
+            })
             setDialog(null)
           } catch (e) {
             // eslint-disable-next-line no-alert

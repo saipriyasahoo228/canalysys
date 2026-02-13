@@ -46,6 +46,7 @@ export function ChecklistBuilderPage() {
   )
 
   const sections = (data?.sections || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+  const scoringRules = (data?.scoringRules || []).slice().sort((a, b) => (a.minChecked || 0) - (b.minChecked || 0))
 
   const sectionById = useMemo(() => new Map(sections.map((s) => [s.id, s])), [sections])
 
@@ -200,6 +201,8 @@ export function ChecklistBuilderPage() {
     dialog?.type === 'createSection' || dialog?.type === 'editSection' || dialog?.type === 'deleteSection'
   const fieldDialogOpen =
     dialog?.type === 'createField' || dialog?.type === 'editField' || dialog?.type === 'deleteField'
+  const scoringDialogOpen =
+    dialog?.type === 'createScoreRule' || dialog?.type === 'editScoreRule' || dialog?.type === 'deleteScoreRule'
 
   return (
     <div className="space-y-3">
@@ -279,6 +282,75 @@ export function ChecklistBuilderPage() {
             />
           </div>
         ) : null}
+
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white/70 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">Score management</div>
+              <div className="text-xs text-slate-500">Define how checklist completion translates to a PDI score</div>
+            </div>
+            <Button
+              onClick={() => setDialog({ type: 'createScoreRule' })}
+              disabled={!canEdit}
+              title={canEdit ? 'Add score rule' : 'Insufficient permission'}
+            >
+              <Plus className="h-4 w-4" />
+              Rule
+            </Button>
+          </div>
+
+          {scoringRules.length ? (
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
+              <table className="w-full text-left text-[13px]">
+                <thead className="bg-slate-200/70 text-[11px] uppercase tracking-wide text-slate-700">
+                  <tr>
+                    <th className="whitespace-nowrap px-3 py-2.5">Min checked</th>
+                    <th className="whitespace-nowrap px-3 py-2.5">Score %</th>
+                    <th className="whitespace-nowrap px-3 py-2.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scoringRules.map((r) => (
+                    <tr key={r.id} className="border-t border-slate-200/80">
+                      <td className="whitespace-nowrap px-3 py-2.5 text-slate-800">
+                        <span className="font-semibold">{r.minChecked}</span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-slate-800">
+                        <Badge tone="cyan">{r.scorePct}%</Badge>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="icon"
+                            size="icon"
+                            title="Edit rule"
+                            onClick={() => setDialog({ type: 'editScoreRule', ruleId: r.id })}
+                            disabled={!canEdit}
+                          >
+                            <Pencil className="h-4 w-4 text-slate-700" />
+                          </Button>
+                          <Button
+                            variant="icon"
+                            size="icon"
+                            title="Delete rule"
+                            onClick={() => setDialog({ type: 'deleteScoreRule', ruleId: r.id })}
+                            disabled={!canEdit}
+                          >
+                            <Trash2 className="h-4 w-4 text-rose-700" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
+              No scoring rules configured.
+            </div>
+          )}
+        </div>
       </Card>
 
       <ReasonDialog
@@ -339,6 +411,75 @@ export function ChecklistBuilderPage() {
           }
 
           await mockApi.upsertChecklistSection({ actor, condition, section: base, reason: form.reason })
+          setDialog(null)
+          await refresh()
+        }}
+      />
+
+      <ReasonDialog
+        open={scoringDialogOpen}
+        title={
+          dialog?.type === 'createScoreRule'
+            ? 'Add scoring rule'
+            : dialog?.type === 'editScoreRule'
+              ? 'Edit scoring rule'
+              : 'Delete scoring rule'
+        }
+        description={
+          dialog?.type === 'deleteScoreRule'
+            ? 'This will remove the scoring rule.'
+            : 'If checked items are at least this number, the score % can be awarded. In-between counts interpolate automatically.'
+        }
+        submitLabel={dialog?.type === 'deleteScoreRule' ? 'Delete' : 'Save'}
+        onClose={() => setDialog(null)}
+        showReason={true}
+        requireReason={true}
+        fields={
+          dialog?.type === 'deleteScoreRule'
+            ? []
+            : [
+                {
+                  name: 'minChecked',
+                  label: 'Min checked items',
+                  type: 'text',
+                  defaultValue:
+                    dialog?.type === 'editScoreRule'
+                      ? String(scoringRules.find((r) => r.id === dialog.ruleId)?.minChecked ?? '')
+                      : '',
+                  placeholder: 'e.g. 3',
+                },
+                {
+                  name: 'scorePct',
+                  label: 'Score (%)',
+                  type: 'text',
+                  defaultValue:
+                    dialog?.type === 'editScoreRule'
+                      ? String(scoringRules.find((r) => r.id === dialog.ruleId)?.scorePct ?? '')
+                      : '',
+                  placeholder: 'e.g. 30',
+                },
+              ]
+        }
+        onSubmit={async (form) => {
+          if (!canEdit) throw new Error('Insufficient permission')
+
+          if (dialog?.type === 'deleteScoreRule') {
+            await mockApi.deleteChecklistScoringRule({ actor, condition, ruleId: dialog.ruleId, reason: form.reason })
+            setDialog(null)
+            await refresh()
+            return
+          }
+
+          await mockApi.upsertChecklistScoringRule({
+            actor,
+            condition,
+            rule: {
+              id: dialog?.type === 'editScoreRule' ? dialog.ruleId : undefined,
+              minChecked: form.minChecked,
+              scorePct: form.scorePct,
+            },
+            reason: form.reason,
+          })
           setDialog(null)
           await refresh()
         }}

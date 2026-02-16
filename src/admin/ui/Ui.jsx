@@ -326,8 +326,8 @@ export function Badge({ children, tone = 'slate' }) {
 
 export function Button({ children, className, variant = 'default', size = 'sm', ...props }) {
   const variants = {
-    default: 'border-slate-300 bg-slate-100 text-slate-900 hover:bg-slate-200',
-    primary: 'border-cyan-600/30 bg-cyan-700 text-white hover:bg-cyan-800',
+    default: 'border-slate-300 bg-amber-50 text-slate-900 hover:bg-amber-100',
+    primary: 'border-amber-950/30 bg-amber-950 text-amber-50 hover:bg-amber-900',
     danger: 'border-rose-600/30 bg-rose-700 text-white hover:bg-rose-800',
     ghost: 'border-transparent bg-transparent text-slate-900 hover:bg-slate-200',
     icon: 'border-transparent bg-transparent text-slate-900 hover:bg-slate-200',

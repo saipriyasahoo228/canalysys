@@ -93,7 +93,7 @@ export function VehicleMasterPage() {
       const it = dialog.item
       return [
         { key: 'mappingId', label: 'Mapping ID', value: it?.id || '—' },
-        { key: 'condition', label: 'Condition', value: conditionLabel(it?.condition) },
+        { key: 'condition', label: 'Vehicle Type', value: conditionLabel(it?.condition) },
         { key: 'make', label: 'Brand', value: makeById.get(it?.makeId)?.name || it?.makeId || '—' },
         { key: 'model', label: 'Model', value: modelById.get(it?.modelId)?.name || it?.modelId || '—' },
         { key: 'variant', label: 'Variant', value: variantById.get(it?.variantId)?.name || it?.variantId || '—' },
@@ -221,37 +221,10 @@ export function VehicleMasterPage() {
     [categoryById, makeById, modelById, permissions.managePricing, variantById]
   )
 
-  const pricingRows = vm.mappings || []
-
   const pricingColumns = useMemo(
     () => [
       {
-        key: 'combo',
-        header: 'Vehicle combo',
-        exportValue: (r) => {
-          const t = conditionLabel(r.condition) || '—'
-          const mk = makeById.get(r.makeId)?.name || '—'
-          const md = modelById.get(r.modelId)?.name || '—'
-          const v = variantById.get(r.variantId)?.name || '—'
-          return `${t} / ${mk} / ${md} / ${v}`
-        },
-        cell: (r) => (
-          <div className="max-w-[520px] whitespace-normal text-xs text-slate-700">
-            <div className="font-semibold text-slate-900">
-              {conditionLabel(r.condition) || '—'}
-              {' / '}
-              {makeById.get(r.makeId)?.name || '—'}
-            </div>
-            <div className="mt-0.5 text-slate-600">
-              {modelById.get(r.modelId)?.name || '—'}
-              {' / '}
-              {variantById.get(r.variantId)?.name || '—'}
-            </div>
-          </div>
-        ),
-      },
-      {
-        key: 'category',
+        key: 'categoryId',
         header: 'Category',
         exportValue: (r) => categoryById.get(r.categoryId)?.name || r.categoryId,
         cell: (r) => <Badge tone="cyan">{categoryById.get(r.categoryId)?.name || '—'}</Badge>,
@@ -320,14 +293,14 @@ export function VehicleMasterPage() {
         tdClassName: 'text-center',
       },
     ],
-    [categoryById, makeById, modelById, permissions.managePricing, variantById, vm.mappingPricingByMappingId]
+    [categoryById, permissions.managePricing, vm.mappingPricingByMappingId]
   )
 
   return (
     <div className="space-y-3">
       <Card
         title="Vehicle Master"
-        subtitle="Create base data → map combos → set category pricing"
+        subtitle="Create base data → map to category → set pricing"
         accent="cyan"
         right={
           <div className="flex flex-wrap items-center gap-2">
@@ -455,7 +428,7 @@ export function VehicleMasterPage() {
           <div className={cx('space-y-3', loading && !data ? 'opacity-60' : '')}>
             <Card
               title="Map vehicle to category"
-              subtitle="Condition + Brand + Model + Variant → Category"
+              subtitle="Vehicle Type + Brand + Model + Variant → Category"
               accent="violet"
               right={
                 <Button
@@ -498,14 +471,14 @@ export function VehicleMasterPage() {
               right={<Badge tone="slate">Demo</Badge>}
             >
               <div className="text-xs text-slate-600">
-                Pricing is stored per mapping (Condition + Brand + Model + Variant). If distance is above threshold, extra amount is added.
+                Pricing is stored per mapping (Vehicle Type + Brand + Model + Variant). If distance is above threshold, extra amount is added.
               </div>
             </Card>
 
             <Card title="Pricing table" subtitle="Per mapping" accent="cyan">
               <PaginatedTable
                 columns={pricingColumns}
-                rows={pricingRows}
+                rows={vm.mappings || []}
                 rowKey={(r) => r.id}
                 initialRowsPerPage={5}
                 rowsPerPageOptions={[5, 10, 20, 'all']}
@@ -716,7 +689,7 @@ export function VehicleMasterPage() {
             return [
               {
                 name: 'condition',
-                label: 'Condition',
+                label: 'Vehicle Type',
                 type: 'select',
                 defaultValue: it?.condition || '',
                 options: CONDITION_OPTIONS,
@@ -761,7 +734,7 @@ export function VehicleMasterPage() {
             return [
               {
                 name: 'condition',
-                label: 'Condition',
+                label: 'Vehicle Type',
                 type: 'select',
                 defaultValue: CONDITION_OPTIONS?.[0]?.value || 'new',
                 options: CONDITION_OPTIONS,
@@ -837,7 +810,7 @@ export function VehicleMasterPage() {
             return [
               {
                 name: 'condition',
-                label: 'Condition',
+                label: 'Vehicle Type',
                 type: 'select',
                 defaultValue: it?.condition || CONDITION_OPTIONS?.[0]?.value || 'new',
                 options: CONDITION_OPTIONS,

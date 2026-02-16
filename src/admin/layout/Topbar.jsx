@@ -1,4 +1,4 @@
-import { Bell, CarFront, LogOut, Menu, Moon, RefreshCcw, Sun } from 'lucide-react'
+import { Bell, LogOut, Menu, Moon, RefreshCcw, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePolling } from '../hooks/usePolling'
@@ -14,7 +14,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
     intervalMs: 15_000,
   })
 
-  const projectName = 'Carnalysis'
+  const projectName = 'CARNALYSYS'
 
   const timeMeta = useMemo(() => {
     const h = new Date().getHours()
@@ -70,8 +70,8 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/85 backdrop-blur">
-      <div className="relative flex items-center gap-2 px-3 py-3 sm:px-4">
+    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur">
+      <div className="relative flex items-center gap-3 px-3 py-3 sm:px-5">
         <button
           className="cursor-pointer rounded-full p-2 text-slate-700 hover:bg-slate-100 md:hidden"
           onClick={onOpenMenu}
@@ -81,13 +81,10 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
         </button>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <CarFront className="h-5 w-5 text-cyan-700" />
-            </span>
+          <div className="flex items-center gap-3">
             <div className="min-w-0">
               <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">
-                <span className="bg-gradient-to-r from-slate-900 via-cyan-800 to-indigo-800 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-slate-900 via-amber-900 to-orange-800 bg-clip-text text-transparent">
                   {projectName}
                 </span>
               </div>
@@ -102,12 +99,12 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
 
         <div className="hidden items-center gap-2 sm:flex">
           <div className="min-w-0 flex-1">
-            <div className="max-w-[520px]">
+            <div className="max-w-[460px]">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search…"
-                className="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-500 focus:border-cyan-500/70 focus:ring-2 focus:ring-cyan-200/70"
+                className="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-500 focus:border-amber-950/35 focus:ring-2 focus:ring-amber-200/70"
               />
             </div>
           </div>
@@ -120,7 +117,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
               title="Notifications"
             >
               <Bell className="h-4 w-4" />
-              <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-cyan-600 px-1 text-[10px] font-semibold text-white">
+              <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-950 px-1 text-[10px] font-semibold text-amber-50">
                 {notifications.length}
               </span>
             </button>
@@ -195,7 +192,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search…"
-            className="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-500 focus:border-cyan-500/70 focus:ring-2 focus:ring-cyan-200/70"
+            className="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-500 focus:border-amber-950/35 focus:ring-2 focus:ring-amber-200/70"
           />
         </div>
 
@@ -207,7 +204,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
             title="Notifications"
           >
             <Bell className="h-4 w-4" />
-            <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-cyan-600 px-1 text-[10px] font-semibold text-white">
+            <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-950 px-1 text-[10px] font-semibold text-amber-50">
               {notifications.length}
             </span>
           </button>

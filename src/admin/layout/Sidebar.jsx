@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom'
 import {
-  Activity,
   ClipboardList,
   Layers3,
   Users,
@@ -15,9 +14,9 @@ import { useRbac } from '../rbac/RbacContext'
 import { cx } from '../ui/Ui'
 
 const linkBase =
-  'flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm min-w-0 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50'
+  'flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm min-w-0 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-950/30'
 
-const activeClass = 'bg-cyan-700 text-white shadow-sm ring-1 ring-cyan-700/20'
+const activeClass = 'bg-amber-950 text-amber-50 shadow-sm ring-1 ring-amber-950/20'
 
 function NavItem({ to, icon: Icon, label, collapsed, iconClassName = '' }) {
   return (
@@ -58,7 +57,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
     <>
       <div
         className={cx(
-          'relative hidden h-full shrink-0 border-r border-slate-200 bg-gradient-to-b from-cyan-50/70 via-white to-slate-50/70 md:block shadow-sm transition-[width] duration-300 ease-in-out',
+          'relative hidden h-full shrink-0 border-r border-slate-200 bg-gradient-to-b from-amber-50/70 via-white to-slate-50/70 md:block shadow-sm transition-[width] duration-300 ease-in-out',
           collapsed ? 'w-[76px]' : 'w-64'
         )}
       >
@@ -69,14 +68,18 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               collapsed ? 'justify-center px-2' : ''
             )}
           >
-            <Activity className="h-5 w-5 text-cyan-700" />
+            <img
+              src="/carnalysysnew.jpg"
+              alt="CARNALYSYS"
+              className={cx('rounded-xl object-contain', collapsed ? 'h-9 w-9' : 'h-9 w-9')}
+            />
             <div
               className={cx(
                 'min-w-0 flex-1 transition-all duration-300',
                 collapsed ? 'w-0 opacity-0 -translate-x-1 pointer-events-none' : 'w-auto opacity-100 translate-x-0'
               )}
             >
-              <div className="truncate text-sm font-semibold text-slate-900">PDI Admin</div>
+              <div className="truncate text-sm font-semibold text-slate-900">CARNALYSYS</div>
               <div className="truncate text-xs text-slate-500">Queue + Workforce + Finance</div>
             </div>
 
@@ -118,7 +121,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
                 icon={ClipboardList}
                 label="Queue Control"
                 collapsed={collapsed}
-                iconClassName="text-cyan-600"
+                iconClassName="text-orange-700"
               />
             </div>
             <div className={collapsed ? 'mx-auto w-fit' : ''}>
@@ -136,7 +139,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
                 icon={ListChecks}
                 label="Checklist Builder"
                 collapsed={collapsed}
-                iconClassName="text-cyan-700"
+                iconClassName="text-orange-800"
               />
             </div>
             <div className={collapsed ? 'mx-auto w-fit' : ''}>
@@ -170,8 +173,11 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
           <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] border-r border-slate-200 bg-white">
             <div className="flex items-center justify-between px-4 py-4">
               <div className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-cyan-600" />
-                <div className="text-sm font-semibold text-slate-900">PDI Admin</div>
+                <img src="/carnalysysnew.jpg" alt="CARNALYSYS" className="h-9 w-9 rounded-xl object-contain" />
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">CARNALYSYS</div>
+                  <div className="text-xs text-slate-500">Queue + Workforce + Finance</div>
+                </div>
               </div>
               <button
                 className="cursor-pointer rounded-xl p-2 text-slate-700"
@@ -190,9 +196,9 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
                 collapsed={false}
                 iconClassName="text-emerald-600"
               />
-              <NavItem to="/queue" icon={ClipboardList} label="Queue Control" collapsed={false} iconClassName="text-cyan-600" />
+              <NavItem to="/queue" icon={ClipboardList} label="Queue Control" collapsed={false} iconClassName="text-orange-700" />
               <NavItem to="/vehicle-master" icon={Layers3} label="Vehicle Master" collapsed={false} iconClassName="text-indigo-600" />
-              <NavItem to="/checklists" icon={ListChecks} label="Checklist Builder" collapsed={false} iconClassName="text-cyan-700" />
+              <NavItem to="/checklists" icon={ListChecks} label="Checklist Builder" collapsed={false} iconClassName="text-orange-800" />
               <NavItem to="/finance" icon={IndianRupee} label="Finance" collapsed={false} iconClassName="text-amber-600" />
               <NavItem to="/audit" icon={ScrollText} label="Audit Log" collapsed={false} iconClassName="text-slate-600" />
             </div>

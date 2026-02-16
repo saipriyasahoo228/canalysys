@@ -114,6 +114,24 @@ function downloadDummyChecklistPdf({ queueItem, inspector, location }) {
   const pageW = pdf.internal.pageSize.getWidth()
   const pageH = pdf.internal.pageSize.getHeight()
 
+  const answerFillColor = (v) => {
+    const s = String(v || '').trim().toUpperCase()
+    if (s === 'YES') return [5, 150, 105]
+    if (s === 'NO') return [225, 29, 72]
+    if (s === 'NA') return [2, 132, 199]
+    return null
+  }
+
+  const styleAnswerCell = (data) => {
+    if (data.section !== 'body') return
+    if (data.column.index !== 1) return
+    const fill = answerFillColor(data.cell.raw)
+    if (!fill) return
+    data.cell.styles.fillColor = fill
+    data.cell.styles.textColor = [255, 255, 255]
+    data.cell.styles.fontStyle = 'bold'
+  }
+
   const header = () => {
     pdf.setFontSize(13)
     pdf.setTextColor(0)
@@ -187,19 +205,20 @@ function downloadDummyChecklistPdf({ queueItem, inspector, location }) {
     theme: 'grid',
     head: [['Vehicle Inspection', `${Math.min(checkedCount, 55)} / ${Math.min(totalCount, 61)} (${scorePct == null ? '—' : `${Math.min(99.99, Number(scorePct)).toFixed(2)}%`})`]],
     body: [
-      ['Do you wish to check the exterior of this vehicle in this inspection?', 'Yes'],
+      ['Do you wish to check the exterior of this vehicle in this inspection?', 'YES'],
       ['External Check', `${Math.min(checkedCount, 30)} / ${Math.min(totalCount, 30)} (100%)`],
-      ['Front Windscreen free from damage?', 'Yes'],
-      ['Front Lights free from damage?', 'Yes'],
-      ['Front Bumper in good condition?', 'Yes'],
-      ['Front Hood/Bonnet in good condition?', 'Yes'],
-      ['Front right hand side Fender in good condition?', 'Yes'],
-      ['Front left hand side Fender in good condition?', 'Yes'],
-      ['Rear Windshield in good condition?', 'Yes'],
+      ['Front Windscreen free from damage?', 'YES'],
+      ['Front Lights free from damage?', 'NO'],
+      ['Front Bumper in good condition?', 'YES'],
+      ['Front Hood/Bonnet in good condition?', 'NA'],
+      ['Front right hand side Fender in good condition?', 'YES'],
+      ['Front left hand side Fender in good condition?', 'YES'],
+      ['Rear Windshield in good condition?', 'NO'],
     ],
     styles: { fontSize: 9, cellPadding: 6 },
     headStyles: { fillColor: [15, 118, 110] },
     columnStyles: { 0: { cellWidth: 360 }, 1: { cellWidth: pageW - 40 - 40 - 360 } },
+    didParseCell: styleAnswerCell,
   })
 
   const buildSectionRows = (prefix, count, yesCount) => {
@@ -207,7 +226,8 @@ function downloadDummyChecklistPdf({ queueItem, inspector, location }) {
     const n = Math.max(0, Math.floor(count))
     const y = Math.max(0, Math.floor(yesCount))
     for (let i = 1; i <= n; i++) {
-      rows.push([`${prefix}${i}`, i <= y ? 'Yes' : 'No'])
+      const value = i <= y ? 'YES' : i % 7 === 0 ? 'NA' : 'NO'
+      rows.push([`${prefix}${i}`, value])
     }
     return rows
   }
@@ -220,6 +240,7 @@ function downloadDummyChecklistPdf({ queueItem, inspector, location }) {
     styles: { fontSize: 9, cellPadding: 6 },
     headStyles: { fillColor: [15, 118, 110] },
     columnStyles: { 0: { cellWidth: 380 }, 1: { cellWidth: pageW - 40 - 40 - 380 } },
+    didParseCell: styleAnswerCell,
   })
 
   autoTable(pdf, {
@@ -230,6 +251,7 @@ function downloadDummyChecklistPdf({ queueItem, inspector, location }) {
     styles: { fontSize: 9, cellPadding: 6 },
     headStyles: { fillColor: [15, 118, 110] },
     columnStyles: { 0: { cellWidth: 380 }, 1: { cellWidth: pageW - 40 - 40 - 380 } },
+    didParseCell: styleAnswerCell,
   })
 
   autoTable(pdf, {
@@ -240,6 +262,7 @@ function downloadDummyChecklistPdf({ queueItem, inspector, location }) {
     styles: { fontSize: 9, cellPadding: 6 },
     headStyles: { fillColor: [15, 118, 110] },
     columnStyles: { 0: { cellWidth: 380 }, 1: { cellWidth: pageW - 40 - 40 - 380 } },
+    didParseCell: styleAnswerCell,
   })
 
   const filename = `inspection-report-${String(it.id || 'pdi').replace(/[^a-z0-9_-]+/gi, '-')}.pdf`

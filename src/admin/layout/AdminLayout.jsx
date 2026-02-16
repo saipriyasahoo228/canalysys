@@ -16,7 +16,7 @@ export function AdminLayout() {
   }, [])
 
   return (
-    <div className="h-screen overflow-x-hidden bg-slate-50 text-slate-900">
+    <div className="h-screen overflow-x-hidden bg-amber-50/70 text-slate-900">
       <div className="flex h-full overflow-x-hidden">
         <Sidebar
           mobileOpen={mobileOpen}

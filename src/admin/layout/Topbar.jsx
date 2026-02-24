@@ -26,10 +26,12 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
   const [search, setSearch] = useState('')
 
   const [notifOpen, setNotifOpen] = useState(false)
-  const notifRef = useRef(null)
+  const notifRefDesktop = useRef(null)
+  const notifRefMobile = useRef(null)
 
   const [userOpen, setUserOpen] = useState(false)
-  const userRef = useRef(null)
+  const userRefDesktop = useRef(null)
+  const userRefMobile = useRef(null)
 
   const notifications = useMemo(() => {
     const name = user?.name || 'Admin'
@@ -49,10 +51,16 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
       }
     }
     const onClick = (e) => {
-      const n = notifRef.current
-      const u = userRef.current
-      if (n && !n.contains(e.target)) setNotifOpen(false)
-      if (u && !u.contains(e.target)) setUserOpen(false)
+      const nd = notifRefDesktop.current
+      const nm = notifRefMobile.current
+      const ud = userRefDesktop.current
+      const um = userRefMobile.current
+
+      const inNotif = (nd && nd.contains(e.target)) || (nm && nm.contains(e.target))
+      const inUser = (ud && ud.contains(e.target)) || (um && um.contains(e.target))
+
+      if (!inNotif) setNotifOpen(false)
+      if (!inUser) setUserOpen(false)
     }
     window.addEventListener('keydown', onDown)
     window.addEventListener('mousedown', onClick)
@@ -109,7 +117,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
             </div>
           </div>
 
-          <div className="relative shrink-0" ref={notifRef}>
+          <div className="relative shrink-0" ref={notifRefDesktop}>
             <button
               className="relative inline-flex cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white p-2 text-slate-700 shadow-sm hover:bg-slate-50"
               onClick={() => setNotifOpen((v) => !v)}
@@ -140,7 +148,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
             ) : null}
           </div>
 
-          <div className="relative shrink-0" ref={userRef}>
+          <div className="relative shrink-0" ref={userRefDesktop}>
             <button
               className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
               onClick={() => setUserOpen((v) => !v)}
@@ -196,7 +204,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
           />
         </div>
 
-        <div className="relative shrink-0" ref={notifRef}>
+        <div className="relative shrink-0" ref={notifRefMobile}>
           <button
             className="relative inline-flex cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white p-2 text-slate-700 shadow-sm hover:bg-slate-50"
             onClick={() => setNotifOpen((v) => !v)}
@@ -227,7 +235,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
           ) : null}
         </div>
 
-        <div className="relative shrink-0" ref={userRef}>
+        <div className="relative shrink-0" ref={userRefMobile}>
           <button
             className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
             onClick={() => setUserOpen((v) => !v)}

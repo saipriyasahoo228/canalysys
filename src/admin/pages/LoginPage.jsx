@@ -50,6 +50,11 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="relative isolate">
+        <div
+          className="absolute inset-0 -z-20 bg-cover bg-center opacity-[0.08] grayscale pointer-events-none"
+          style={{ backgroundImage: 'url(/carnalysysnew.jpg)' }}
+          aria-hidden="true"
+        />
         <div className="absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute -left-24 -top-24 h-[420px] w-[420px] rounded-full bg-cyan-200/40 blur-3xl" />
           <div className="absolute -right-24 top-24 h-[520px] w-[520px] rounded-full bg-indigo-200/40 blur-3xl" />

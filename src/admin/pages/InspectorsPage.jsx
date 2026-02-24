@@ -29,7 +29,7 @@ export function InspectorsPage() {
     document.title = 'Inspector Onboarding · PDI Admin'
   }, [])
 
-  const { data, loading, error } = usePolling(
+  const { data, loading, error, refresh } = usePolling(
     ['inspectors', locationId].join(':'),
     () => mockApi.getInspectors({ locationId: locationId || undefined }),
     { intervalMs: 10_000 }
@@ -59,6 +59,8 @@ export function InspectorsPage() {
     : 0
 
   const [dialog, setDialog] = useState(null)
+  const [recentCreated, setRecentCreated] = useState(null)
+  const [tableNonce, setTableNonce] = useState(0)
   const [leaveDialog, setLeaveDialog] = useState(null)
   const [actionsMenu, setActionsMenu] = useState(null)
   const actionsBoxRef = useRef(null)
@@ -113,6 +115,13 @@ export function InspectorsPage() {
   }, [actionsMenu])
 
   const inspectorById = useMemo(() => new Map(inspectors.map((i) => [i.id, i])), [inspectors])
+
+  const displayInspectors = useMemo(() => {
+    if (!recentCreated) return inspectors
+    const exists = inspectors.some((i) => i.id === recentCreated.id)
+    if (exists) return inspectors
+    return [recentCreated, ...inspectors]
+  }, [inspectors, recentCreated])
 
   const leaveColumns = useMemo(
     () => [
@@ -419,8 +428,9 @@ export function InspectorsPage() {
         >
           <div className={loading && !data ? 'opacity-60' : ''}>
             <PaginatedTable
+              key={`inspectors-${tableNonce}`}
               columns={columns}
-              rows={inspectors}
+              rows={displayInspectors}
               rowKey={(r) => r.id}
               initialRowsPerPage={10}
               enableSearch
@@ -607,7 +617,7 @@ export function InspectorsPage() {
         onSubmit={async (form) => {
           try {
             if (!permissions.manageInspectors) throw new Error('Insufficient permission')
-            await mockApi.createInspector({
+            const res = await mockApi.createInspector({
               actor,
               inspector: {
                 id: dialog?.inspectorId,
@@ -619,7 +629,10 @@ export function InspectorsPage() {
               },
               reason: form.reason,
             })
+            if (res?.item) setRecentCreated(res.item)
             setDialog(null)
+            await refresh()
+            setTableNonce((n) => n + 1)
           } catch (e) {
             // eslint-disable-next-line no-alert
             alert(e.message || 'Action failed')

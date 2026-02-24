@@ -59,6 +59,7 @@ export function VehicleMasterPage() {
   }
 
   const [dialog, setDialog] = useState(null)
+  const [tableNonce, setTableNonce] = useState(0)
 
   const makeById = useMemo(() => new Map(vm.makes.map((x) => [x.id, x])), [vm.makes])
   const modelById = useMemo(() => new Map(vm.models.map((x) => [x.id, x])), [vm.models])
@@ -224,45 +225,16 @@ export function VehicleMasterPage() {
   const pricingColumns = useMemo(
     () => [
       {
-        key: 'categoryId',
+        key: 'category',
         header: 'Category',
-        exportValue: (r) => categoryById.get(r.categoryId)?.name || r.categoryId,
-        cell: (r) => <Badge tone="cyan">{categoryById.get(r.categoryId)?.name || '—'}</Badge>,
+        exportValue: (r) => r.name,
+        cell: (r) => <Badge tone="amber">{r.name || '—'}</Badge>,
       },
       {
-        key: 'base',
-        header: 'Base (INR)',
-        exportValue: (r) => String(vm.mappingPricingByMappingId?.[r.id]?.baseInr ?? ''),
-        cell: (r) => (
-          <div className="text-sm text-slate-700 text-center">{vm.mappingPricingByMappingId?.[r.id]?.baseInr ?? '—'}</div>
-        ),
-        className: 'text-center',
-        tdClassName: 'text-center',
-      },
-      {
-        key: 'distance',
-        header: 'Distance rule',
-        exportValue: (r) => {
-          const p = vm.mappingPricingByMappingId?.[r.id]
-          if (!p) return ''
-          return `>=${p.distantAfterKm}km +${p.distantExtraInr}`
-        },
-        cell: (r) => {
-          const p = vm.mappingPricingByMappingId?.[r.id]
-          return (
-            <div className="text-xs text-slate-600 text-center">
-              {p ? (
-                <>
-                  {`>=${p.distantAfterKm} km`}
-                  <span className="mx-1 text-slate-400">·</span>
-                  {`+₹${p.distantExtraInr}`}
-                </>
-              ) : (
-                '—'
-              )}
-            </div>
-          )
-        },
+        key: 'price',
+        header: 'Price (INR)',
+        exportValue: (r) => String(vm.pricingByCategoryId?.[r.id] ?? ''),
+        cell: (r) => <div className="text-sm text-slate-700 text-center">{vm.pricingByCategoryId?.[r.id] ?? '—'}</div>,
         className: 'text-center',
         tdClassName: 'text-center',
       },
@@ -276,13 +248,10 @@ export function VehicleMasterPage() {
         ),
         cell: (r) => (
           <div className="flex items-center justify-center gap-2">
-            <Button variant="icon" size="icon" onClick={() => setDialog({ type: 'viewPricing', item: r })} title={'View'}>
-              <Eye className="h-4 w-4 text-slate-700" />
-            </Button>
             <Button
               disabled={!permissions.managePricing}
-              onClick={() => setDialog({ type: 'setPricing', item: r })}
-              title={permissions.managePricing ? 'Set mapping pricing' : 'Insufficient permission'}
+              onClick={() => setDialog({ type: 'setCategoryPricing', item: r })}
+              title={permissions.managePricing ? 'Set category pricing' : 'Insufficient permission'}
             >
               <Tag className="h-4 w-4" />
               Set
@@ -293,7 +262,7 @@ export function VehicleMasterPage() {
         tdClassName: 'text-center',
       },
     ],
-    [categoryById, permissions.managePricing, vm.mappingPricingByMappingId]
+    [permissions.managePricing, vm.pricingByCategoryId]
   )
 
   return (
@@ -346,7 +315,7 @@ export function VehicleMasterPage() {
                   }
                 >
                   <PaginatedTable
-                    key={`base-${block.kind}`}
+                    key={`base-${block.kind}-${tableNonce}`}
                     columns={[
                       {
                         key: 'name',
@@ -448,6 +417,7 @@ export function VehicleMasterPage() {
 
             <Card title="Current mappings" subtitle="Search/export supported" accent="cyan">
               <PaginatedTable
+                key={`mappings-${tableNonce}`}
                 columns={mappingColumns}
                 rows={mappingRows}
                 rowKey={(r) => r.id}
@@ -477,15 +447,16 @@ export function VehicleMasterPage() {
 
             <Card title="Pricing table" subtitle="Per mapping" accent="cyan">
               <PaginatedTable
+                key={`pricing-${tableNonce}`}
                 columns={pricingColumns}
-                rows={vm.mappings || []}
+                rows={vm.categories || []}
                 rowKey={(r) => r.id}
                 initialRowsPerPage={5}
                 rowsPerPageOptions={[5, 10, 20, 'all']}
                 enableSearch
-                searchPlaceholder="Search mappings…"
+                searchPlaceholder="Search categories…"
                 enableExport
-                exportFilename="mapping-pricing.csv"
+                exportFilename="category-pricing.csv"
               />
             </Card>
           </div>
@@ -525,6 +496,8 @@ export function VehicleMasterPage() {
                 ? 'Delete mapping'
                 : dialog?.type === 'setPricing'
                   ? 'Set mapping pricing'
+                  : dialog?.type === 'setCategoryPricing'
+                    ? 'Set category pricing'
                   : ''
         }
         description={
@@ -730,13 +703,27 @@ export function VehicleMasterPage() {
             ]
           }
 
+          if (dialog?.type === 'setCategoryPricing') {
+            const catId = dialog?.item?.id || ''
+            const current = vm.pricingByCategoryId?.[catId] ?? null
+            return [
+              {
+                name: 'priceInr',
+                label: 'Category price (INR)',
+                type: 'number',
+                defaultValue: current ?? 500,
+                placeholder: 'e.g. 650',
+              },
+            ]
+          }
+
           if (dialog?.type === 'createMapping') {
             return [
               {
                 name: 'condition',
                 label: 'Vehicle Type',
                 type: 'select',
-                defaultValue: CONDITION_OPTIONS?.[0]?.value || 'new',
+                defaultValue: '',
                 options: CONDITION_OPTIONS,
               },
               {
@@ -746,6 +733,7 @@ export function VehicleMasterPage() {
                 defaultValue: '',
                 options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
                 onChange: (nextMakeId, next) => {
+                  if (!nextMakeId) return { ...next, modelId: '', variantId: '' }
                   const models = modelsForMake.get(nextMakeId) || []
                   const nextModelId = models?.[0]?.id || ''
                   const variants = variantsForModel.get(nextModelId) || []
@@ -767,6 +755,7 @@ export function VehicleMasterPage() {
                   return list.map((m) => ({ value: m.id, label: m.name }))
                 },
                 onChange: (nextModelId, next) => {
+                  if (!nextModelId) return { ...next, variantId: '' }
                   const model = vm.models?.find((m) => m.id === nextModelId)
                   const makeId = model?.makeId || next.makeId
                   const variants = variantsForModel.get(nextModelId) || []
@@ -784,6 +773,7 @@ export function VehicleMasterPage() {
                   return list.map((v) => ({ value: v.id, label: v.name }))
                 },
                 onChange: (nextVariantId, next) => {
+                  if (!nextVariantId) return next
                   const variant = vm.variants?.find((v) => v.id === nextVariantId)
                   const modelId = variant?.modelId || next.modelId
                   const model = vm.models?.find((m) => m.id === modelId)
@@ -969,13 +959,25 @@ export function VehicleMasterPage() {
             }
 
             if (dialog.type === 'createMapping') {
+              const fallbackCondition = CONDITION_OPTIONS?.[0]?.value || 'new'
+              const safeCondition = String(form.condition || '').trim() || fallbackCondition
+
+              const fallbackMakeId = firstMakeIdWithModels
+              const safeMakeId = String(form.makeId || '').trim() || fallbackMakeId
+              const fallbackModelId = (modelsForMake.get(safeMakeId) || [])?.[0]?.id || ''
+              const safeModelId = String(form.modelId || '').trim() || fallbackModelId
+              const fallbackVariantId = (variantsForModel.get(safeModelId) || [])?.[0]?.id || ''
+              const safeVariantId = String(form.variantId || '').trim() || fallbackVariantId
+              const fallbackCategoryId = vm.categories?.[0]?.id || ''
+              const safeCategoryId = String(form.categoryId || '').trim() || fallbackCategoryId
+
               await mockApi.upsertVehicleMapping({
                 actor,
-                condition: form.condition,
-                makeId: form.makeId,
-                modelId: form.modelId,
-                variantId: form.variantId,
-                categoryId: form.categoryId,
+                condition: safeCondition,
+                makeId: safeMakeId,
+                modelId: safeModelId,
+                variantId: safeVariantId,
+                categoryId: safeCategoryId,
               })
             }
 
@@ -1010,8 +1012,17 @@ export function VehicleMasterPage() {
               })
             }
 
+            if (dialog.type === 'setCategoryPricing') {
+              await mockApi.setCategoryPricing({
+                actor,
+                categoryId: dialog.item.id,
+                priceInr: Number(form.priceInr),
+              })
+            }
+
             setDialog(null)
-            refresh()
+            await refresh()
+            setTableNonce((n) => n + 1)
           } catch (e) {
             // eslint-disable-next-line no-alert
             alert(e.message || 'Action failed')

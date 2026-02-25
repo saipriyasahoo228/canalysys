@@ -8,8 +8,8 @@ export function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
 
-  const demoEmail = 'demo@carnalysis.com'
-  const demoPassword = 'Carnalysis@123'
+  const demoEmail = 'demo@carnalysys.com'
+  const demoPassword = 'Carnalysys@123'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -69,7 +69,7 @@ export function LoginPage() {
                   <CarFront className="h-6 w-6 text-cyan-700" />
                 </span>
                 <div>
-                  <div className="text-lg font-extrabold tracking-tight text-slate-900">Carnalysis</div>
+                  <div className="text-lg font-extrabold tracking-tight text-slate-900">Carnalysys</div>
                   <div className="text-sm text-slate-600">Inspection, queue, and operations analytics</div>
                 </div>
               </div>
@@ -100,7 +100,7 @@ export function LoginPage() {
                       </span>
                       <div>
                         <div className="text-base font-extrabold tracking-tight text-slate-900">Sign in</div>
-                        <div className="mt-0.5 text-xs text-slate-600">Use your Carnalysis credentials</div>
+                        <div className="mt-0.5 text-xs text-slate-600">Use your Carnalysys credentials</div>
                       </div>
                     </div>
                   </div>

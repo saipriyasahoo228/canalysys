@@ -37,6 +37,11 @@ const checklistScoreRuleId = (() => {
   return () => `CHK-SCR-${++n}`
 })()
 
+const customerId = (() => {
+  let n = 0
+  return () => `CUST-${++n}`
+})()
+
 const calcChecklistScorePct = (rules, checkedCount) => {
   const c = Number(checkedCount || 0)
   if (!Number.isFinite(c) || c <= 0) return 0
@@ -217,6 +222,16 @@ const state = {
     { id: 'LOC-BLR-01', name: 'Odisha Region - Bhubaneswar', slaMinutes: 45, capacityPerHour: 18 },
     { id: 'LOC-HYD-01', name: 'Odisha Region - Cuttack', slaMinutes: 50, capacityPerHour: 14 },
     { id: 'LOC-PUN-01', name: 'Odisha Region - Puri', slaMinutes: 55, capacityPerHour: 12 },
+  ],
+  customers: [
+    {
+      id: 'CUST-1',
+      fullName: 'Walk-in Customer',
+      email: 'walkin@example.com',
+      mobile: '9000000000',
+      password: 'customer123',
+      createdAt: minutesAgo(240),
+    },
   ],
   checklists: {
     pre_owned: {
@@ -1004,6 +1019,156 @@ export const mockApi = {
   generateInspectorId,
   roles,
   COMMISSION_DEFAULT_INR,
+
+  async getLocations() {
+    await simulateNetwork()
+    return state.locations
+  },
+
+  async getCustomers() {
+    await simulateNetwork()
+    return state.customers
+  },
+
+  async getQueueItemById({ pdiId }) {
+    await simulateNetwork()
+    const id = String(pdiId || '').trim()
+    if (!id) return null
+    return state.queue.find((q) => q.id === id) || null
+  },
+
+  async getCustomerBookings({ customerId }) {
+    await simulateNetwork()
+    const id = String(customerId || '').trim()
+    if (!id) return []
+    return state.queue.filter((q) => q.customerId === id)
+  },
+
+  async createCustomer({ actor, customer, reason }) {
+    await simulateNetwork()
+    const fullName = String(customer?.fullName || '').trim()
+    const email = String(customer?.email || '').trim()
+    const rawMobile = String(customer?.mobile || '').replace(/\s+/g, '')
+    const mobile = rawMobile.match(/^\d{10}$/) ? `+91${rawMobile}` : rawMobile.match(/^91\d{10}$/) ? `+${rawMobile}` : rawMobile
+    const password = String(customer?.password || '').trim()
+
+    if (!fullName) throw new Error('Full name is required')
+    if (!mobile) throw new Error('Mobile number is required')
+    if (!password) throw new Error('Password is required')
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Invalid email')
+
+    if (!/^\+91\d{10}$/.test(mobile)) throw new Error('Mobile number must be in +91XXXXXXXXXX format')
+
+    const mobileExists = state.customers.some((c) => String(c.mobile || '').replace(/\s+/g, '') === mobile)
+    if (mobileExists) throw new Error('Mobile number already registered')
+
+    const id = customerId()
+    const next = {
+      id,
+      fullName,
+      email,
+      mobile,
+      password,
+      createdAt: nowIso(),
+    }
+
+    state.customers.unshift(next)
+
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'customer', id },
+      action: 'create',
+      diff: { id: { from: null, to: id }, mobile: { from: null, to: mobile } },
+      reason,
+    })
+
+    return next
+  },
+
+  async createPdiRequestFromCustomer({
+    actor,
+    customerId,
+    paymentMethod,
+    paymentProvider,
+    priceInr,
+    advancePaidInr,
+    dueInr,
+    vehicleType,
+    make,
+    model,
+    variant,
+    category,
+    locationId,
+    dealer,
+    slotAt,
+    address,
+    reason,
+  }) {
+    await simulateNetwork()
+    const cust = state.customers.find((c) => c.id === customerId)
+    if (!cust) throw new Error('Customer not found')
+
+    const safeVehicleType = vehicleType === 'pre_owned' ? 'pre_owned' : 'new'
+    const safeLocationId = String(locationId || '').trim()
+    if (!safeLocationId) throw new Error('Location is required')
+
+    const id = `PDI-${24000 + Math.floor(Math.random() * 9000)}`
+    const safeMake = String(make || '').trim()
+    const safeModel = String(model || '').trim()
+    const safeVariant = String(variant || '').trim()
+    const safeCategory = String(category || '').trim()
+    const safeDealer = String(dealer || '').trim()
+    const safeSlotAt = String(slotAt || '').trim()
+    const safeAddress = String(address || '').trim()
+
+    state.queue.unshift({
+      id,
+      createdAt: nowIso(),
+      locationId: safeLocationId,
+      vehicleType: safeVehicleType,
+      customerId: cust.id,
+      customerName: cust.fullName,
+      customerPhone: cust.mobile,
+      customerEmail: cust.email,
+      vehicleNumber: null,
+      vehicleSummary: `${safeMake || '—'} ${safeModel || ''}`.trim(),
+      priority: 'P2',
+      status: 'pending',
+      assignedInspectorId: null,
+      customerEtaMinutes: 0,
+      expectedDurationMinutes: 25,
+      priceInr: Number.isFinite(Number(priceInr)) ? Number(priceInr) : 500,
+      advancePaidInr: Number.isFinite(Number(advancePaidInr)) ? Number(advancePaidInr) : null,
+      dueInr: Number.isFinite(Number(dueInr)) ? Number(dueInr) : null,
+      paymentAt: null,
+      paymentMethod: String(paymentMethod || '').trim() || 'online',
+      paymentProvider: String(paymentProvider || '').trim() || 'razorpay',
+      requestedSlotAt: safeSlotAt || null,
+      requestedDealer: safeDealer || null,
+      requestedCategory: safeCategory || null,
+      requestedAddress: safeAddress || null,
+      requestedVehicle: {
+        make: safeMake || null,
+        model: safeModel || null,
+        variant: safeVariant || null,
+        category: safeCategory || null,
+      },
+      commissionOverrideInr: null,
+    })
+
+    recordAudit({
+      actor,
+      locationId: safeLocationId,
+      entity: { type: 'queue_item', id },
+      action: 'create',
+      diff: { id: { from: null, to: id }, customerId: { from: null, to: cust.id } },
+      reason,
+    })
+
+    return { ok: true, id }
+  },
 
   async getInspectionChecklist({ condition }) {
     await simulateNetwork()

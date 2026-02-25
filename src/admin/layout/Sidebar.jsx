@@ -3,6 +3,8 @@ import {
   ClipboardList,
   Layers3,
   Users,
+  UserPlus,
+  FilePlus2,
   IndianRupee,
   ScrollText,
   LayoutDashboard,
@@ -117,6 +119,24 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
             </div>
             <div className={collapsed ? 'mx-auto w-fit' : ''}>
               <NavItem
+                to="/register-customer"
+                icon={UserPlus}
+                label="Register Customer"
+                collapsed={collapsed}
+                iconClassName="text-orange-800"
+              />
+            </div>
+            <div className={collapsed ? 'mx-auto w-fit' : ''}>
+              <NavItem
+                to="/new-inspection"
+                icon={FilePlus2}
+                label="New Inspection"
+                collapsed={collapsed}
+                iconClassName="text-violet-600"
+              />
+            </div>
+            <div className={collapsed ? 'mx-auto w-fit' : ''}>
+              <NavItem
                 to="/queue"
                 icon={ClipboardList}
                 label="Queue Control"
@@ -195,6 +215,20 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
                 label="Inspector Onboarding"
                 collapsed={false}
                 iconClassName="text-emerald-600"
+              />
+              <NavItem
+                to="/register-customer"
+                icon={UserPlus}
+                label="Register Customer"
+                collapsed={false}
+                iconClassName="text-orange-800"
+              />
+              <NavItem
+                to="/new-inspection"
+                icon={FilePlus2}
+                label="New Inspection"
+                collapsed={false}
+                iconClassName="text-violet-600"
               />
               <NavItem to="/queue" icon={ClipboardList} label="Queue Control" collapsed={false} iconClassName="text-orange-700" />
               <NavItem to="/vehicle-master" icon={Layers3} label="Vehicle Master" collapsed={false} iconClassName="text-indigo-600" />

@@ -22,6 +22,14 @@ function statusLabel(v) {
   return '—'
 }
 
+function todayIso() {
+  const d = new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
 export function InspectorsPage() {
   const { locationId, permissions, actor } = useRbac()
 
@@ -45,6 +53,19 @@ export function InspectorsPage() {
   const locations = data?.locations || []
 
   const leaveRequests = leaveData?.items || []
+
+  const unavailableInspectorIdsToday = useMemo(() => {
+    const t = todayIso()
+    const set = new Set()
+    for (const r of leaveRequests) {
+      if (r.status !== 'approved') continue
+      const fd = String(r.fromDate || '').trim()
+      const td = String(r.toDate || '').trim()
+      if (!fd || !td) continue
+      if (fd <= t && t <= td) set.add(r.inspectorId)
+    }
+    return set
+  }, [leaveRequests])
 
   const locationById = useMemo(() => {
     const m = new Map()
@@ -239,10 +260,11 @@ export function InspectorsPage() {
       },
       {
         key: 'state',
-        header: 'State',
+        header: 'Availability',
+        exportValue: (r) => (unavailableInspectorIdsToday.has(r.id) ? 'Unavailable' : 'Available'),
         cell: (r) => (
-          <Badge tone={r.state === 'busy' ? 'emerald' : r.state === 'idle' ? 'amber' : 'slate'}>
-            {r.state}
+          <Badge tone={unavailableInspectorIdsToday.has(r.id) ? 'rose' : 'emerald'}>
+            {unavailableInspectorIdsToday.has(r.id) ? 'Unavailable' : 'Available'}
           </Badge>
         ),
       },

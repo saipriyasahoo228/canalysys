@@ -234,6 +234,29 @@ export function ReasonDialog({
                         }}
                         placeholder={f.placeholder || 'dd/mm/yyyy'}
                       />
+                    ) : f.type === 'phone_in' ? (
+                      <div className="flex items-stretch overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm focus-within:border-cyan-500/80 focus-within:ring-2 focus-within:ring-cyan-200/70">
+                        <div className="flex items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700">
+                          +91
+                        </div>
+                        <input
+                          value={String(form[f.name] || '')}
+                          disabled={!!f.disabled || submitting}
+                          onChange={(e) => {
+                            if (!!f.disabled || submitting) return
+                            const digits = String(e.target.value || '').replace(/\D+/g, '').slice(0, 10)
+                            setForm((s) => {
+                              const next = { ...s, [f.name]: digits }
+                              if (typeof f.onChange === 'function') return f.onChange(digits, next) || next
+                              return next
+                            })
+                          }}
+                          inputMode="numeric"
+                          placeholder={f.placeholder || '10 digit number'}
+                          maxLength={10}
+                          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        />
+                      </div>
                     ) : f.type === 'textarea' ? (
                       <textarea
                         value={form[f.name]}

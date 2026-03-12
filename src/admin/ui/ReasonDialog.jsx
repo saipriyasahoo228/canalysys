@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, Loader2, X } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Loader2, X } from 'lucide-react'
+import { formatDate } from '../utils/format'
 import { Button, Input, Select } from './Ui'
 import { CustomDatePicker } from './CustomDatePicker'
 
@@ -15,6 +16,7 @@ export function ReasonDialog({
   onClose,
   onSubmit,
   fields,
+  fieldErrors,
 }) {
   const initial = useMemo(() => {
     const o = {}
@@ -26,6 +28,7 @@ export function ReasonDialog({
   const [form, setForm] = useState(initial)
   const [comboText, setComboText] = useState({})
   const [comboOpen, setComboOpen] = useState(null)
+  const [calendarView, setCalendarView] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const boxRef = useRef(null)
   const prevOpenRef = useRef(false)
@@ -37,6 +40,7 @@ export function ReasonDialog({
       setForm(initial)
       setComboText({})
       setComboOpen(null)
+      setCalendarView({})
     }
   }, [open, initial])
 
@@ -51,13 +55,54 @@ export function ReasonDialog({
 
   if (!open) return null
 
+  const normalizeIso = (iso) => {
+    const s = String(iso || '').trim()
+    if (!s) return ''
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return ''
+    const d = new Date(`${s}T00:00:00`)
+    if (!Number.isFinite(d.getTime())) return ''
+    return s
+  }
+
+  const isoFromParts = (y, m, d) => {
+    const yyyy = String(y).padStart(4, '0')
+    const mm = String(m + 1).padStart(2, '0')
+    const dd = String(d).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  }
+
+  const monthLabel = (y, m) => {
+    const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    return `${names[m] || ''} ${y}`
+  }
+
+  const renderFieldLabel = (label) => {
+    const raw = String(label || '')
+    const trimmed = raw.trim()
+    if (!trimmed.endsWith('*')) return <span>{label}</span>
+    const base = trimmed.replace(/\*+\s*$/, '').trim()
+    return (
+      <span>
+        {base}{' '}
+        <span className="font-semibold text-rose-600">*</span>
+      </span>
+    )
+  }
+
   const canSubmit = !(requireReason && showReason) || !!String(form.reason || '').trim()
+
+	const getFieldError = (name) => {
+		if (!name) return ''
+		const m = fieldErrors && typeof fieldErrors === 'object' ? fieldErrors[name] : ''
+		if (!m) return ''
+		return String(m)
+	}
 
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/30" onClick={submitting ? undefined : onClose} />
       <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-lg">
-        <div className="relative border-b border-slate-200 px-4 py-3">
+        <div className="relative px-4 py-3">
           <Button
             variant="icon"
             size="icon"
@@ -73,9 +118,15 @@ export function ReasonDialog({
           {description ? <div className="mt-1 text-xs text-slate-500">{description}</div> : null}
         </div>
         <div className="max-h-[70vh] overflow-y-auto space-y-3 p-4" ref={boxRef}>
-          {(fields || []).map((f) => (
+          {(fields || []).map((f) => {
+            // Check if field should be shown based on condition
+            if (f.condition && typeof f.condition === 'function') {
+              if (!f.condition(form)) return null
+            }
+            
+            return (
             <div key={f.name}>
-              <div className="text-xs font-medium text-slate-900">{f.label}</div>
+              <div className="text-xs font-medium text-slate-900">{renderFieldLabel(f.label)}</div>
               <div className="mt-1">
                 {f.type === 'select' ? (
                   <div className="relative">
@@ -225,6 +276,8 @@ export function ReasonDialog({
                       <CustomDatePicker
                         value={form[f.name]}
                         disabled={!!f.disabled || submitting}
+                        min={f.min}
+                        max={f.max}
                         onChange={(iso) => {
                           setForm((s) => {
                             const next = { ...s, [f.name]: iso }
@@ -234,6 +287,149 @@ export function ReasonDialog({
                         }}
                         placeholder={f.placeholder || 'dd/mm/yyyy'}
                       />
+                    ) : f.type === 'multi_date_calendar' ? (
+                      <div className="space-y-2">
+                        {(() => {
+                          const selected = Array.isArray(form[f.name]) ? form[f.name].filter(Boolean) : []
+                          const minIso = normalizeIso(f.min)
+                          const maxIso = normalizeIso(f.max)
+
+                          const now = new Date()
+                          const defaultY = now.getFullYear()
+                          const defaultM = now.getMonth()
+                          const view = calendarView[f.name] || { y: defaultY, m: defaultM }
+                          const y = Number(view.y)
+                          const m = Number(view.m)
+
+                          const first = new Date(y, m, 1)
+                          const daysInMonth = new Date(y, m + 1, 0).getDate()
+                          const startDow = first.getDay() // 0..6 (Sun..Sat)
+                          const blanks = Array.from({ length: startDow })
+                          const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
+                          const cells = [...blanks.map(() => null), ...days]
+
+                          const setMonth = (delta) => {
+                            const dt = new Date(y, m + delta, 1)
+                            setCalendarView((s) => ({ ...s, [f.name]: { y: dt.getFullYear(), m: dt.getMonth() } }))
+                          }
+
+                          const isBlocked = (iso) => {
+                            if (!iso) return true
+                            if (minIso && iso < minIso) return true
+                            if (maxIso && iso > maxIso) return true
+                            return false
+                          }
+
+                          return (
+                            <div className="rounded-xl border border-slate-200 bg-white p-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <button
+                                  type="button"
+                                  disabled={!!f.disabled || submitting}
+                                  className="rounded-lg p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                  onClick={() => setMonth(-1)}
+                                  aria-label="Previous month"
+                                  title="Previous month"
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </button>
+
+                                <div className="text-sm font-semibold text-slate-900">{monthLabel(y, m)}</div>
+
+                                <button
+                                  type="button"
+                                  disabled={!!f.disabled || submitting}
+                                  className="rounded-lg p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                  onClick={() => setMonth(1)}
+                                  aria-label="Next month"
+                                  title="Next month"
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </button>
+                              </div>
+
+                              <div className="mt-2 grid grid-cols-7 gap-1 text-[11px] font-medium text-slate-500">
+                                <div className="text-center">Su</div>
+                                <div className="text-center">Mo</div>
+                                <div className="text-center">Tu</div>
+                                <div className="text-center">We</div>
+                                <div className="text-center">Th</div>
+                                <div className="text-center">Fr</div>
+                                <div className="text-center">Sa</div>
+                              </div>
+
+                              <div className="mt-1 grid grid-cols-7 gap-1">
+                                {cells.map((dayNum, idx) => {
+                                  if (!dayNum) return <div key={`b-${idx}`} className="h-8" />
+
+                                  const iso = isoFromParts(y, m, dayNum)
+                                  const blocked = isBlocked(iso)
+                                  const isSelected = selected.includes(iso)
+
+                                  return (
+                                    <button
+                                      key={iso}
+                                      type="button"
+                                      disabled={!!f.disabled || submitting || blocked}
+                                      className={
+                                        'h-8 rounded-lg text-sm font-medium ' +
+                                        (isSelected
+                                          ? 'bg-cyan-600 text-white hover:bg-cyan-700'
+                                          : blocked
+                                            ? 'text-slate-300'
+                                            : 'text-slate-700 hover:bg-slate-100')
+                                      }
+                                      onClick={() => {
+                                        setForm((s) => {
+                                          const current = Array.isArray(s[f.name]) ? s[f.name].filter(Boolean) : []
+                                          const exists = current.includes(iso)
+                                          const nextDates = exists ? current.filter((d) => d !== iso) : [...current, iso]
+                                          nextDates.sort()
+
+                                          const next = { ...s, [f.name]: nextDates }
+                                          if (typeof f.onChange === 'function') return f.onChange(nextDates, next) || next
+                                          return next
+                                        })
+                                      }}
+                                      title={iso}
+                                    >
+                                      {dayNum}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })()}
+
+                        {Array.isArray(form[f.name]) && form[f.name].length ? (
+                          <div className="flex flex-wrap gap-2">
+                            {form[f.name].map((iso) => (
+                              <button
+                                key={iso}
+                                type="button"
+                                disabled={!!f.disabled || submitting}
+                                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={() => {
+                                  setForm((s) => {
+                                    const current = Array.isArray(s[f.name]) ? s[f.name].filter(Boolean) : []
+                                    const nextDates = current.filter((d) => d !== iso)
+                                    const next = { ...s, [f.name]: nextDates }
+                                    if (typeof f.onChange === 'function') return f.onChange(nextDates, next) || next
+                                    return next
+                                  })
+                                }}
+                                title="Remove"
+                              >
+                                <span>{formatDate(iso)}</span>
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-slate-500">No dates selected</div>
+                        )}
+                      </div>
                     ) : f.type === 'phone_in' ? (
                       <div className="flex items-stretch overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm focus-within:border-cyan-500/80 focus-within:ring-2 focus-within:ring-cyan-200/70">
                         <div className="flex items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700">
@@ -273,6 +469,27 @@ export function ReasonDialog({
                         rows={f.rows || 8}
                         className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-500 shadow-sm focus:border-cyan-500/80 focus:ring-2 focus:ring-cyan-200/70 disabled:cursor-not-allowed disabled:opacity-60"
                       />
+                    ) : f.type === 'checkbox' ? (
+                      <div className={f.className || 'flex items-center space-x-2'}>
+                        <input
+                          type="checkbox"
+                          id={f.name}
+                          checked={!!form[f.name]}
+                          disabled={!!f.disabled || submitting}
+                          onChange={(e) => {
+                            const v = e.target.checked
+                            setForm((s) => {
+                              const next = { ...s, [f.name]: v }
+                              if (typeof f.onChange === 'function') return f.onChange(v, next) || next
+                              return next
+                            })
+                          }}
+                          className="h-4 w-4 rounded border-slate-300 bg-white text-cyan-600 focus:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        />
+                        <label htmlFor={f.name} className="text-sm text-slate-700 cursor-pointer">
+                          {f.checkboxLabel || f.label}
+                        </label>
+                      </div>
                     ) : (
                       <Input
                         type={f.type || 'text'}
@@ -287,6 +504,7 @@ export function ReasonDialog({
                           })
                         }}
                         placeholder={f.placeholder}
+                        className={getFieldError(f.name) ? 'border-rose-300 focus:border-rose-400/80 focus:ring-rose-200/70' : undefined}
                       />
                     )}
 
@@ -318,12 +536,17 @@ export function ReasonDialog({
                   </>
                 )}
               </div>
+              {getFieldError(f.name) ? (
+                <div className="mt-1 text-xs text-rose-700">{getFieldError(f.name)}</div>
+              ) : null}
             </div>
-          ))}
-
+            )
+          })}
           {showReason ? (
             <div>
-              <div className="text-xs font-medium text-slate-900">{reasonLabel || 'Reason (required)'}</div>
+              <div className="text-xs font-medium text-slate-900">
+                {renderFieldLabel(reasonLabel || 'Reason (required) *')}
+              </div>
               <div className="mt-1">
                 <Input
                   value={form.reason}
@@ -335,7 +558,7 @@ export function ReasonDialog({
             </div>
           ) : null}
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
+        <div className="flex items-center justify-end gap-2 px-4 py-3">
           <Button variant="ghost" onClick={submitting ? undefined : onClose} disabled={submitting}>
             Cancel
           </Button>

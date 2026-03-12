@@ -1087,9 +1087,82 @@ export const mockApi = {
     return next
   },
 
+  async createCustomerFromPdi({ actor, customerName, customerEmail, customerPhone, reason }) {
+    await simulateNetwork()
+    const fullName = String(customerName || '').trim()
+    const email = String(customerEmail || '').trim()
+    const rawMobile = String(customerPhone || '').replace(/\s+/g, '')
+    const mobile = rawMobile.match(/^\d{10}$/) ? `+91${rawMobile}` : rawMobile.match(/^91\d{10}$/) ? `+${rawMobile}` : rawMobile
+
+    if (!fullName) throw new Error('Customer name is required')
+    if (!mobile) throw new Error('Mobile number is required')
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Invalid email')
+    if (!/^\+91\d{10}$/.test(mobile)) throw new Error('Mobile number must be in +91XXXXXXXXXX format')
+
+    const mobileExists = state.customers.some((c) => String(c.mobile || '').replace(/\s+/g, '') === mobile)
+    if (mobileExists) throw new Error('Mobile number already registered')
+
+    const id = customerId()
+    const next = {
+      id,
+      fullName,
+      email,
+      mobile,
+      password: 'customer123',
+      createdAt: nowIso(),
+    }
+
+    state.customers.unshift(next)
+
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'customer', id },
+      action: 'create',
+      diff: { id: { from: null, to: id }, mobile: { from: null, to: mobile } },
+      reason: reason || 'Created customer from PDI',
+    })
+
+    return next
+  },
+
+  async deleteCustomer({ actor, customerId, reason }) {
+    await simulateNetwork()
+    const id = String(customerId || '').trim()
+    if (!id) throw new Error('Customer ID is required')
+
+    const idx = state.customers.findIndex((c) => c.id === id)
+    if (idx < 0) throw new Error('Customer not found')
+
+    const prev = state.customers[idx]
+    state.customers.splice(idx, 1)
+
+    const beforeQueueCount = state.queue.length
+    state.queue = state.queue.filter((q) => q.customerId !== id)
+    const removedQueue = Math.max(0, beforeQueueCount - state.queue.length)
+
+    recordAudit({
+      actor,
+      locationId: null,
+      entity: { type: 'customer', id },
+      action: 'delete',
+      diff: {
+        id: { from: id, to: null },
+        mobile: { from: prev?.mobile || null, to: null },
+        relatedQueueItemsDeleted: { from: removedQueue, to: 0 },
+      },
+      reason: reason || 'Deleted customer',
+    })
+
+    return { ok: true }
+  },
+
   async createPdiRequestFromCustomer({
     actor,
     customerId,
+    customerName,
+    customerEmail,
+    customerPhone,
     paymentMethod,
     paymentProvider,
     priceInr,
@@ -1123,15 +1196,19 @@ export const mockApi = {
     const safeSlotAt = String(slotAt || '').trim()
     const safeAddress = String(address || '').trim()
 
+    const safeCustomerName = String(customerName || '').trim() || cust.fullName
+    const safeCustomerEmail = String(customerEmail || '').trim() || cust.email
+    const safeCustomerPhone = String(customerPhone || '').trim() || cust.mobile
+
     state.queue.unshift({
       id,
       createdAt: nowIso(),
       locationId: safeLocationId,
       vehicleType: safeVehicleType,
       customerId: cust.id,
-      customerName: cust.fullName,
-      customerPhone: cust.mobile,
-      customerEmail: cust.email,
+      customerName: safeCustomerName,
+      customerPhone: safeCustomerPhone,
+      customerEmail: safeCustomerEmail,
       vehicleNumber: null,
       vehicleSummary: `${safeMake || '—'} ${safeModel || ''}`.trim(),
       priority: 'P2',

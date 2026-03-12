@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
-import { ListChecks, Plus, Trash2, Pencil } from 'lucide-react'
+import { ListChecks, Plus, Trash2, Pencil, FileText, Eye } from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
-import { mockApi } from '../mock/mockApi'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, PaginatedTable } from '../ui/Ui'
 import { ReasonDialog } from '../ui/ReasonDialog'
+import { listTemplates, createTemplate, updateTemplate, deleteTemplate, getTemplate } from '../../api/template'
 
 const CONDITION_TABS = [
   { key: 'pre_owned', label: 'Pre-Owned' },
@@ -12,22 +12,24 @@ const CONDITION_TABS = [
 ]
 
 function inputTypeLabel(t) {
-  if (t === 'dropdown') return 'Dropdown'
-  if (t === 'multi_select') return 'Multi-select'
-  if (t === 'numeric') return 'Numeric'
+  if (t === 'single_choice') return 'Single Choice'
+  if (t === 'multi_choice') return 'Multi Choice'
   if (t === 'yes_no') return 'Yes/No'
-  if (t === 'photos') return 'Photos'
-  if (t === 'toggle') return 'Toggle'
-  if (t === 'rating') return 'Rating'
+  if (t === 'short_text') return 'Short Text'
+  if (t === 'long_text') return 'Long Text'
+  if (t === 'number') return 'Number'
+  if (t === 'date') return 'Date'
   return t || '—'
 }
 
 function inputTypeTone(t) {
-  if (t === 'photos') return 'amber'
-  if (t === 'numeric') return 'violet'
-  if (t === 'multi_select') return 'cyan'
-  if (t === 'dropdown') return 'slate'
   if (t === 'yes_no') return 'emerald'
+  if (t === 'single_choice') return 'cyan'
+  if (t === 'multi_choice') return 'violet'
+  if (t === 'short_text') return 'slate'
+  if (t === 'long_text') return 'slate'
+  if (t === 'number') return 'amber'
+  if (t === 'date') return 'rose'
   return 'slate'
 }
 
@@ -35,18 +37,24 @@ export function ChecklistBuilderPage() {
   const { actor, permissions } = useRbac()
   const canEdit = !!permissions?.manageInspectors
 
-  const [condition, setCondition] = useState('pre_owned')
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [selectedSectionId, setSelectedSectionId] = useState('')
   const [dialog, setDialog] = useState(null)
+  const [confirmDialog, setConfirmDialog] = useState(null)
 
-  const { data, loading, error, refresh } = usePolling(
-    ['checklist', condition].join(':'),
-    () => mockApi.getInspectionChecklist({ condition }),
+  const { data: templatesData, loading, error, refresh } = usePolling(
+    'inspection-templates',
+    () => listTemplates(),
     { intervalMs: 20_000 }
   )
 
-  const sections = (data?.sections || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
-  const scoringRules = (data?.scoringRules || []).slice().sort((a, b) => (a.minChecked || 0) - (b.minChecked || 0))
+  const templates = templatesData?.items || []
+  const selectedTemplate = useMemo(() => {
+    if (!selectedTemplateId) return null
+    return templates.find(t => t.id === selectedTemplateId) || null
+  }, [selectedTemplateId, templates])
+
+  const sections = (selectedTemplate?.sections || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
 
   const sectionById = useMemo(() => new Map(sections.map((s) => [s.id, s])), [sections])
 
@@ -55,6 +63,83 @@ export function ChecklistBuilderPage() {
     if (!id) return null
     return sectionById.get(id) || null
   }, [dialog?.sectionId, sectionById, selectedSectionId])
+
+  const templateColumns = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'Template Name',
+        exportValue: (r) => r.name,
+        cell: (r) => (
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-semibold text-slate-900">{r.name}</div>
+            {r.is_active && <Badge tone="emerald">Active</Badge>}
+          </div>
+        ),
+      },
+      {
+        key: 'description',
+        header: 'Description',
+        exportValue: (r) => r.description,
+        cell: (r) => <div className="text-sm text-slate-700">{r.description || '—'}</div>,
+      },
+      {
+        key: 'sections',
+        header: 'Sections',
+        exportValue: (r) => (r.sections || []).length,
+        cell: (r) => <div className="text-xs text-slate-600">{(r.sections || []).length} sections</div>,
+      },
+      {
+        key: 'created_at',
+        header: 'Created',
+        exportValue: (r) => r.created_at,
+        cell: (r) => <div className="text-xs text-slate-600">{new Date(r.created_at).toLocaleDateString()}</div>,
+      },
+      {
+        key: 'actions',
+        header: <div className="w-full text-right">Actions</div>,
+        cell: (r) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              className="h-8"
+              title="View sections"
+              onClick={() => setSelectedTemplateId(r.id)}
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View
+            </Button>
+            <Button
+              variant="icon"
+              size="icon"
+              title="Edit template"
+              onClick={() => setDialog({ type: 'editTemplate', templateId: r.id })}
+              disabled={!canEdit}
+            >
+              <Pencil className="h-4 w-4 text-slate-700" />
+            </Button>
+            <Button
+              variant="icon"
+              size="icon"
+              title="Delete template"
+              onClick={() => setConfirmDialog({
+                type: 'deleteTemplate',
+                templateId: r.id,
+                templateName: r.name,
+                message: `Are you sure you want to delete "${r.name}"? This will permanently delete the template and all its sections and questions.`
+              })}
+              disabled={!canEdit || r.is_active}
+            >
+              <Trash2 className="h-4 w-4 text-rose-700" />
+            </Button>
+          </div>
+        ),
+        className: 'text-right',
+        tdClassName: 'text-right',
+      },
+    ],
+    [canEdit]
+  )
 
   const sectionColumns = useMemo(
     () => [
@@ -71,10 +156,16 @@ export function ChecklistBuilderPage() {
         cell: (r) => <div className="text-sm font-semibold text-slate-900">{r.title}</div>,
       },
       {
-        key: 'fields',
-        header: 'Fields',
-        exportValue: (r) => (r.fields || []).length,
-        cell: (r) => <div className="text-xs text-slate-600">{(r.fields || []).length} items</div>,
+        key: 'questions',
+        header: 'Questions',
+        exportValue: (r) => (r.questions || []).length,
+        cell: (r) => <div className="text-xs text-slate-600">{(r.questions || []).length} questions</div>,
+      },
+      {
+        key: 'description',
+        header: 'Description',
+        exportValue: (r) => r.description,
+        cell: (r) => <div className="text-xs text-slate-700">{r.description || '—'}</div>,
       },
       {
         key: 'actions',
@@ -84,10 +175,10 @@ export function ChecklistBuilderPage() {
             <Button
               variant="ghost"
               className="h-8"
-              title="View fields"
+              title="View questions"
               onClick={() => setSelectedSectionId(r.id)}
             >
-              Fields
+              View Questions
             </Button>
             <Button
               variant="icon"
@@ -102,21 +193,26 @@ export function ChecklistBuilderPage() {
               variant="icon"
               size="icon"
               title="Delete section"
-              onClick={() => setDialog({ type: 'deleteSection', sectionId: r.id })}
+              onClick={() => setConfirmDialog({
+                type: 'deleteSection',
+                sectionId: r.id,
+                sectionName: r.title,
+                message: `Are you sure you want to delete section "${r.title}"? This will permanently delete the section and all its questions.`
+              })}
               disabled={!canEdit}
             >
               <Trash2 className="h-4 w-4 text-rose-700" />
             </Button>
             <Button
-              title="Add field"
+              title="Add question"
               onClick={() => {
                 setSelectedSectionId(r.id)
-                setDialog({ type: 'createField', sectionId: r.id })
+                setDialog({ type: 'createQuestion', sectionId: r.id })
               }}
               disabled={!canEdit}
             >
               <Plus className="h-4 w-4" />
-              Field
+              Question
             </Button>
           </div>
         ),
@@ -127,43 +223,47 @@ export function ChecklistBuilderPage() {
     [canEdit]
   )
 
-  const fieldRows = selectedSection?.fields || []
+  const questionRows = selectedSection?.questions || []
 
-  const fieldColumns = useMemo(
+  const questionColumns = useMemo(
     () => [
       {
-        key: 'label',
-        header: 'Field',
-        exportValue: (r) => r.label,
-        cell: (r) => <div className="text-sm font-semibold text-slate-900">{r.label}</div>,
+        key: 'title',
+        header: 'Question',
+        exportValue: (r) => r.title,
+        cell: (r) => <div className="text-sm font-semibold text-slate-900">{r.title}</div>,
       },
       {
-        key: 'type',
+        key: 'answer_type',
         header: 'Type',
-        exportValue: (r) => r.inputType,
-        cell: (r) => <Badge tone={inputTypeTone(r.inputType)}>{inputTypeLabel(r.inputType)}</Badge>,
+        exportValue: (r) => r.answer_type,
+        cell: (r) => <Badge tone={inputTypeTone(r.answer_type)}>{inputTypeLabel(r.answer_type)}</Badge>,
       },
       {
-        key: 'required',
+        key: 'is_required',
         header: 'Required',
-        exportValue: (r) => (r.required ? 'Yes' : 'No'),
-        cell: (r) => <div className="text-xs text-slate-700">{r.required ? 'Yes' : 'No'}</div>,
+        exportValue: (r) => (r.is_required ? 'Yes' : 'No'),
+        cell: (r) => <div className="text-xs text-slate-700">{r.is_required ? 'Yes' : 'No'}</div>,
       },
       {
         key: 'options',
         header: 'Options',
-        exportValue: (r) => (r.options || []).join(', '),
+        exportValue: (r) => (r.options || []).map(o => o.label).join(', '),
         cell: (r) => {
           const opts = r.options || []
           if (!opts.length) return <div className="text-xs text-slate-500">—</div>
-          return <div className="max-w-[420px] whitespace-normal text-xs text-slate-700">{opts.join(', ')}</div>
+          return <div className="max-w-[420px] whitespace-normal text-xs text-slate-700">{opts.map(o => o.label).join(', ')}</div>
         },
       },
       {
-        key: 'minPhotos',
-        header: 'Min Photos',
-        exportValue: (r) => r.minPhotos ?? '',
-        cell: (r) => <div className="text-xs text-slate-700">{r.minPhotos ?? '—'}</div>,
+        key: 'images',
+        header: 'Images',
+        exportValue: (r) => `${r.expected_images_min || 0}-${r.expected_images_max || 0}`,
+        cell: (r) => (
+          <div className="text-xs text-slate-700">
+            {r.expected_images_min || 0} - {r.expected_images_max || 0}
+          </div>
+        ),
       },
       {
         key: 'actions',
@@ -173,8 +273,8 @@ export function ChecklistBuilderPage() {
             <Button
               variant="icon"
               size="icon"
-              title="Edit field"
-              onClick={() => setDialog({ type: 'editField', sectionId: selectedSection?.id, fieldId: r.id })}
+              title="Edit question"
+              onClick={() => setDialog({ type: 'editQuestion', sectionId: selectedSection?.id, questionId: r.id })}
               disabled={!canEdit}
             >
               <Pencil className="h-4 w-4 text-slate-700" />
@@ -182,8 +282,14 @@ export function ChecklistBuilderPage() {
             <Button
               variant="icon"
               size="icon"
-              title="Delete field"
-              onClick={() => setDialog({ type: 'deleteField', sectionId: selectedSection?.id, fieldId: r.id })}
+              title="Delete question"
+              onClick={() => setConfirmDialog({
+                type: 'deleteQuestion',
+                sectionId: selectedSection?.id,
+                questionId: r.id,
+                questionName: r.title,
+                message: `Are you sure you want to delete question "${r.title}"? This will permanently delete the question.`
+              })}
               disabled={!canEdit}
             >
               <Trash2 className="h-4 w-4 text-rose-700" />
@@ -197,416 +303,410 @@ export function ChecklistBuilderPage() {
     [canEdit, selectedSection?.id]
   )
 
-  const sectionDialogOpen =
-    dialog?.type === 'createSection' || dialog?.type === 'editSection' || dialog?.type === 'deleteSection'
-  const fieldDialogOpen =
-    dialog?.type === 'createField' || dialog?.type === 'editField' || dialog?.type === 'deleteField'
-  const scoringDialogOpen =
-    dialog?.type === 'createScoreRule' || dialog?.type === 'editScoreRule' || dialog?.type === 'deleteScoreRule'
+  const templateDialogOpen = dialog?.type === 'createTemplate' || dialog?.type === 'editTemplate'
+  const sectionDialogOpen = dialog?.type === 'createSection' || dialog?.type === 'editSection'
+  const questionDialogOpen = dialog?.type === 'createQuestion' || dialog?.type === 'editQuestion'
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
       <Card
-        title="Inspection Checklist Builder"
-        subtitle="Create the inspection checklist used by PDI inspectors in the mobile app"
+        title="Inspection Template Management"
+        subtitle="Create and manage inspection templates used by inspectors"
         accent="cyan"
         right={
           <div className="flex items-center gap-2">
             <Button onClick={() => refresh()} variant="ghost">
               Refresh
             </Button>
-            <Button onClick={() => setDialog({ type: 'createSection' })} disabled={!canEdit}>
+            <Button onClick={() => setDialog({ type: 'createTemplate' })} disabled={!canEdit}>
               <Plus className="h-4 w-4" />
-              Section
+              Template
             </Button>
           </div>
         }
       >
         <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
           <div className="flex items-center gap-2 text-xs text-slate-600">
-            <ListChecks className="h-4 w-4 text-cyan-700" />
-            {canEdit ? 'You can edit checklist.' : 'View only (insufficient permission).'}
+            <FileText className="h-4 w-4 text-cyan-700" />
+            {canEdit ? 'You can edit templates.' : 'View only (insufficient permission).'}
           </div>
-          <div className="text-xs text-slate-500">{loading && !data ? 'Loading…' : `${sections.length} sections`}</div>
-        </div>
-
-        <div className="flex items-center gap-2 pb-3">
-          {CONDITION_TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              className={
-                condition === t.key
-                  ? 'cursor-pointer rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-800'
-                  : 'cursor-pointer rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700'
-              }
-              onClick={() => {
-                setCondition(t.key)
-                setSelectedSectionId('')
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
+          <div className="text-xs text-slate-500">{loading && !templatesData ? 'Loading…' : `${templates.length} templates`}</div>
         </div>
 
         {error ? (
-          <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Failed to load checklist.</div>
+          <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Failed to load templates.</div>
         ) : null}
 
         <PaginatedTable
-          columns={sectionColumns}
-          rows={sections}
+          columns={templateColumns}
+          rows={templates}
           rowKey={(r) => r.id}
           initialRowsPerPage={10}
           rowsPerPageOptions={[10, 20, 50, 'all']}
           enableSearch
-          searchPlaceholder="Search sections…"
+          searchPlaceholder="Search templates…"
           enableExport
-          exportFilename={`checklist-${condition}-sections.csv`}
+          exportFilename="inspection-templates.csv"
         />
 
-        {selectedSection ? (
-          <div className="mt-4">
-            <div className="mb-2 text-sm font-semibold text-slate-900">Fields: {selectedSection.title}</div>
-            <PaginatedTable
-              columns={fieldColumns}
-              rows={fieldRows}
-              rowKey={(r) => r.id}
-              initialRowsPerPage={10}
-              rowsPerPageOptions={[10, 20, 50, 'all']}
-              enableSearch
-              searchPlaceholder="Search fields…"
-              enableExport
-              exportFilename={`checklist-${condition}-${selectedSection.id}-fields.csv`}
-            />
+        {selectedTemplate ? (
+          <div className="mt-6">
+            <div className="mb-4">
+              <div className="text-lg font-semibold text-slate-900">Template: {selectedTemplate.name}</div>
+              <div className="text-sm text-slate-600">{selectedTemplate.description}</div>
+            </div>
+            
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold text-slate-900">Sections</div>
+                <Button
+                  onClick={() => setDialog({ type: 'createSection', templateId: selectedTemplate.id })}
+                  disabled={!canEdit}
+                >
+                  <Plus className="h-4 w-4" />
+                  Section
+                </Button>
+              </div>
+              <PaginatedTable
+                columns={sectionColumns}
+                rows={sections}
+                rowKey={(r) => r.id}
+                initialRowsPerPage={10}
+                rowsPerPageOptions={[10, 20, 50, 'all']}
+                enableSearch
+                searchPlaceholder="Search sections…"
+                enableExport
+                exportFilename={`${selectedTemplate.name}-sections.csv`}
+              />
+            </div>
+
+            {selectedSection ? (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-sm font-semibold text-slate-900">Questions: {selectedSection.title}</div>
+                  <Button
+                    onClick={() => setDialog({ type: 'createQuestion', sectionId: selectedSection.id })}
+                    disabled={!canEdit}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Question
+                  </Button>
+                </div>
+                <PaginatedTable
+                  columns={questionColumns}
+                  rows={questionRows}
+                  rowKey={(r) => r.id}
+                  initialRowsPerPage={10}
+                  rowsPerPageOptions={[10, 20, 50, 'all']}
+                  enableSearch
+                  searchPlaceholder="Search questions…"
+                  enableExport
+                  exportFilename={`${selectedTemplate.name}-${selectedSection.title}-questions.csv`}
+                />
+              </div>
+            ) : null}
           </div>
         ) : null}
-
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-white/70 p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <div className="text-sm font-semibold text-slate-900">Score management</div>
-              <div className="text-xs text-slate-500">Define how checklist completion translates to a PDI score</div>
-            </div>
-            <Button
-              onClick={() => setDialog({ type: 'createScoreRule' })}
-              disabled={!canEdit}
-              title={canEdit ? 'Add score rule' : 'Insufficient permission'}
-            >
-              <Plus className="h-4 w-4" />
-              Rule
-            </Button>
-          </div>
-
-          {scoringRules.length ? (
-            <div className="mt-3 overflow-hidden rounded-xl border border-slate-200">
-              <table className="w-full text-left text-[13px]">
-                <thead className="bg-slate-200/70 text-[11px] uppercase tracking-wide text-slate-700">
-                  <tr>
-                    <th className="whitespace-nowrap px-3 py-2.5">Min checked</th>
-                    <th className="whitespace-nowrap px-3 py-2.5">Score %</th>
-                    <th className="whitespace-nowrap px-3 py-2.5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scoringRules.map((r) => (
-                    <tr key={r.id} className="border-t border-slate-200/80">
-                      <td className="whitespace-nowrap px-3 py-2.5 text-slate-800">
-                        <span className="font-semibold">{r.minChecked}</span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-slate-800">
-                        <Badge tone="cyan">{r.scorePct}%</Badge>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="icon"
-                            size="icon"
-                            title="Edit rule"
-                            onClick={() => setDialog({ type: 'editScoreRule', ruleId: r.id })}
-                            disabled={!canEdit}
-                          >
-                            <Pencil className="h-4 w-4 text-slate-700" />
-                          </Button>
-                          <Button
-                            variant="icon"
-                            size="icon"
-                            title="Delete rule"
-                            onClick={() => setDialog({ type: 'deleteScoreRule', ruleId: r.id })}
-                            disabled={!canEdit}
-                          >
-                            <Trash2 className="h-4 w-4 text-rose-700" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
-              No scoring rules configured.
-            </div>
-          )}
-        </div>
       </Card>
+
+      {/* Template Management Dialog */}
+      <ReasonDialog
+        open={templateDialogOpen}
+        title={
+          dialog?.type === 'createTemplate'
+            ? 'Create Template'
+            : 'Edit Template'
+        }
+        description="Templates define the structure of inspection forms used by inspectors."
+        submitLabel="Save"
+        onClose={() => setDialog(null)}
+        showReason={false}
+        requireReason={false}
+        fields={[
+          {
+            name: 'name',
+            label: 'Template Name',
+            type: 'text',
+            defaultValue: dialog?.type === 'editTemplate' ? selectedTemplate?.name || '' : '',
+          },
+          {
+            name: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 3,
+            defaultValue: dialog?.type === 'editTemplate' ? selectedTemplate?.description || '' : '',
+          },
+          {
+            name: 'is_active',
+            label: 'Active Template',
+            type: 'checkbox',
+            defaultValue: dialog?.type === 'editTemplate' ? selectedTemplate?.is_active || false : false,
+            checkboxLabel: 'Make this the active template (only one can be active)',
+          },
+        ]}
+        onSubmit={async (form) => {
+          if (!canEdit) throw new Error('Insufficient permission')
+
+          const templateData = {
+            name: form.name,
+            description: form.description,
+            is_active: form.is_active,
+            sections: dialog?.type === 'editTemplate' ? selectedTemplate?.sections || [] : []
+          }
+
+          if (dialog?.type === 'createTemplate') {
+            await createTemplate(templateData)
+          } else {
+            await updateTemplate(dialog.templateId, templateData)
+          }
+
+          setDialog(null)
+          await refresh()
+        }}
+      />
 
       <ReasonDialog
         open={sectionDialogOpen}
         title={
           dialog?.type === 'createSection'
-            ? 'Add checklist section'
-            : dialog?.type === 'editSection'
-              ? 'Edit checklist section'
-              : 'Delete checklist section'
+            ? 'Add Section'
+            : 'Edit Section'
         }
-        description={
-          dialog?.type === 'deleteSection'
-            ? 'This will permanently delete the section and all its fields.'
-            : 'Sections group checklist fields used by inspectors.'
-        }
-        submitLabel={dialog?.type === 'deleteSection' ? 'Delete' : 'Save'}
+        description="Sections group related questions in the inspection template."
+        submitLabel="Save"
         onClose={() => setDialog(null)}
-        showReason={true}
-        requireReason={true}
-        fields={
-          dialog?.type === 'deleteSection'
-            ? []
-            : [
-                {
-                  name: 'title',
-                  label: 'Section title',
-                  type: 'text',
-                  defaultValue: dialog?.type === 'editSection' ? selectedSection?.title || '' : '',
-                },
-                {
-                  name: 'order',
-                  label: 'Order',
-                  type: 'text',
-                  defaultValue: dialog?.type === 'editSection' ? String(selectedSection?.order ?? '') : String(sections.length + 1),
-                },
-              ]
-        }
+        showReason={false}
+        requireReason={false}
+        fields={[
+          {
+            name: 'title',
+            label: 'Section Title',
+            type: 'text',
+            defaultValue: dialog?.type === 'editSection' ? selectedSection?.title || '' : '',
+          },
+          {
+            name: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 2,
+            defaultValue: dialog?.type === 'editSection' ? selectedSection?.description || '' : '',
+          },
+          {
+            name: 'order',
+            label: 'Order',
+            type: 'number',
+            defaultValue: dialog?.type === 'editSection' ? selectedSection?.order || 1 : sections.length + 1,
+          },
+        ]}
         onSubmit={async (form) => {
           if (!canEdit) throw new Error('Insufficient permission')
-          if (dialog?.type === 'deleteSection') {
-            await mockApi.deleteChecklistSection({
-              actor,
-              condition,
-              sectionId: dialog.sectionId,
-              reason: form.reason,
-            })
-            setDialog(null)
-            if (selectedSectionId === dialog.sectionId) setSelectedSectionId('')
-            await refresh()
-            return
-          }
 
-          const base = {
-            id: dialog?.type === 'editSection' ? selectedSection?.id : undefined,
+          const sectionData = {
             title: form.title,
-            order: Number(form.order || 0),
+            description: form.description,
+            order: Number(form.order || 1),
+            questions: dialog?.type === 'editSection' ? selectedSection?.questions || [] : []
           }
 
-          await mockApi.upsertChecklistSection({ actor, condition, section: base, reason: form.reason })
+          let updatedSections
+          if (dialog?.type === 'createSection') {
+            updatedSections = [...(selectedTemplate.sections || []), sectionData]
+          } else {
+            updatedSections = selectedTemplate.sections.map(s => 
+              s.id === dialog.sectionId ? { ...s, ...sectionData } : s
+            )
+          }
+
+          await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
           setDialog(null)
           await refresh()
         }}
       />
 
       <ReasonDialog
-        open={scoringDialogOpen}
+        open={questionDialogOpen}
         title={
-          dialog?.type === 'createScoreRule'
-            ? 'Add scoring rule'
-            : dialog?.type === 'editScoreRule'
-              ? 'Edit scoring rule'
-              : 'Delete scoring rule'
+          dialog?.type === 'createQuestion'
+            ? 'Add Question'
+            : 'Edit Question'
         }
-        description={
-          dialog?.type === 'deleteScoreRule'
-            ? 'This will remove the scoring rule.'
-            : 'If checked items are at least this number, the score % can be awarded. In-between counts interpolate automatically.'
-        }
-        submitLabel={dialog?.type === 'deleteScoreRule' ? 'Delete' : 'Save'}
+        description="Questions define what the inspector must fill during inspection."
+        submitLabel="Save"
         onClose={() => setDialog(null)}
-        showReason={true}
-        requireReason={true}
-        fields={
-          dialog?.type === 'deleteScoreRule'
-            ? []
-            : [
-                {
-                  name: 'minChecked',
-                  label: 'Min checked items',
-                  type: 'text',
-                  defaultValue:
-                    dialog?.type === 'editScoreRule'
-                      ? String(scoringRules.find((r) => r.id === dialog.ruleId)?.minChecked ?? '')
-                      : '',
-                  placeholder: 'e.g. 3',
-                },
-                {
-                  name: 'scorePct',
-                  label: 'Score (%)',
-                  type: 'text',
-                  defaultValue:
-                    dialog?.type === 'editScoreRule'
-                      ? String(scoringRules.find((r) => r.id === dialog.ruleId)?.scorePct ?? '')
-                      : '',
-                  placeholder: 'e.g. 30',
-                },
-              ]
-        }
+        showReason={false}
+        requireReason={false}
+        fields={[
+          {
+            name: 'title',
+            label: 'Question Title',
+            type: 'text',
+            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.title || '' : '',
+          },
+          {
+            name: 'description',
+            label: 'Description',
+            type: 'textarea',
+            rows: 2,
+            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.description || '' : '',
+          },
+          {
+            name: 'answer_type',
+            label: 'Answer Type',
+            type: 'select',
+            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.answer_type || 'single_choice' : 'single_choice',
+            options: [
+              { value: 'yes_no', label: 'Yes/No' },
+              { value: 'short_text', label: 'Short Text' },
+              { value: 'long_text', label: 'Long Text' },
+              { value: 'number', label: 'Number' },
+              { value: 'date', label: 'Date' },
+              { value: 'single_choice', label: 'Single Choice' },
+              { value: 'multi_choice', label: 'Multi Choice' },
+            ],
+          },
+          {
+            name: 'options',
+            label: 'Options (comma separated)',
+            type: 'text',
+            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.options?.map(o => o.label).join(', ') || '' : '',
+            placeholder: 'e.g. Excellent, Good, Average, Poor',
+            condition: (form) => form.answer_type === 'single_choice' || form.answer_type === 'multi_choice',
+          },
+          {
+            name: 'is_required',
+            label: 'Required',
+            type: 'checkbox',
+            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.is_required || false : true,
+            checkboxLabel: 'This question must be answered',
+          },
+          {
+            name: 'expected_images_min',
+            label: 'Min Images',
+            type: 'number',
+            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.expected_images_min || 0 : 0,
+            placeholder: '0',
+          },
+          {
+            name: 'expected_images_max',
+            label: 'Max Images',
+            type: 'number',
+            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.expected_images_max || 5 : 5,
+            placeholder: '5',
+          },
+          {
+            name: 'order',
+            label: 'Order',
+            type: 'number',
+            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.order || 1 : (selectedSection?.questions?.length || 0) + 1,
+          },
+        ]}
         onSubmit={async (form) => {
           if (!canEdit) throw new Error('Insufficient permission')
 
-          if (dialog?.type === 'deleteScoreRule') {
-            await mockApi.deleteChecklistScoringRule({ actor, condition, ruleId: dialog.ruleId, reason: form.reason })
-            setDialog(null)
-            await refresh()
-            return
+          const questionData = {
+            title: form.title,
+            description: form.description,
+            answer_type: form.answer_type,
+            is_required: form.is_required,
+            expected_images_min: Number(form.expected_images_min || 0),
+            expected_images_max: Number(form.expected_images_max || 5),
+            order: Number(form.order || 1),
+            options: []
           }
 
-          await mockApi.upsertChecklistScoringRule({
-            actor,
-            condition,
-            rule: {
-              id: dialog?.type === 'editScoreRule' ? dialog.ruleId : undefined,
-              minChecked: form.minChecked,
-              scorePct: form.scorePct,
-            },
-            reason: form.reason,
-          })
+          // Parse options for choice questions
+          if (form.answer_type === 'single_choice' || form.answer_type === 'multi_choice') {
+            if (form.options && form.options.trim()) {
+              const optionLabels = form.options.split(',').map(opt => opt.trim()).filter(opt => opt.length > 0)
+              questionData.options = optionLabels.map((label, index) => ({
+                label: label,
+                value: label.toLowerCase().replace(/\s+/g, '_'),
+                order: index + 1
+              }))
+            } else {
+              throw new Error('Options are required for single choice and multi choice questions')
+            }
+          }
+
+          let updatedSections
+          if (dialog?.type === 'createQuestion') {
+            updatedSections = selectedTemplate.sections.map(s => 
+              s.id === dialog.sectionId 
+                ? { ...s, questions: [...(s.questions || []), questionData] }
+                : s
+            )
+          } else {
+            updatedSections = selectedTemplate.sections.map(s => 
+              s.id === dialog.sectionId 
+                ? { 
+                    ...s, 
+                    questions: s.questions.map(q => 
+                      q.id === dialog.questionId ? { ...q, ...questionData } : q
+                    )
+                  }
+                : s
+            )
+          }
+
+          await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
           setDialog(null)
           await refresh()
         }}
       />
 
-      <ReasonDialog
-        open={fieldDialogOpen}
-        title={
-          dialog?.type === 'createField'
-            ? 'Add checklist field'
-            : dialog?.type === 'editField'
-              ? 'Edit checklist field'
-              : 'Delete checklist field'
-        }
-        description={
-          dialog?.type === 'deleteField'
-            ? 'This will permanently delete the field.'
-            : 'Fields define what the inspector must fill during inspection.'
-        }
-        submitLabel={dialog?.type === 'deleteField' ? 'Delete' : 'Save'}
-        onClose={() => setDialog(null)}
-        showReason={true}
-        requireReason={true}
-        fields={
-          dialog?.type === 'deleteField'
-            ? []
-            : [
-                {
-                  name: 'label',
-                  label: 'Field label',
-                  type: 'text',
-                  defaultValue:
-                    dialog?.type === 'editField'
-                      ? (selectedSection?.fields || []).find((f) => f.id === dialog.fieldId)?.label || ''
-                      : '',
-                },
-                {
-                  name: 'inputType',
-                  label: 'Input type',
-                  type: 'select',
-                  defaultValue:
-                    dialog?.type === 'editField'
-                      ? (selectedSection?.fields || []).find((f) => f.id === dialog.fieldId)?.inputType || 'dropdown'
-                      : 'dropdown',
-                  options: [
-                    { value: 'dropdown', label: 'Dropdown' },
-                    { value: 'multi_select', label: 'Multi-select' },
-                    { value: 'yes_no', label: 'Yes/No' },
-                    { value: 'numeric', label: 'Numeric' },
-                    { value: 'photos', label: 'Photos' },
-                    { value: 'toggle', label: 'Toggle' },
-                    { value: 'rating', label: 'Rating' },
-                  ],
-                },
-                {
-                  name: 'required',
-                  label: 'Required',
-                  type: 'select',
-                  defaultValue: dialog?.type === 'editField'
-                    ? ((selectedSection?.fields || []).find((f) => f.id === dialog.fieldId)?.required ? 'true' : 'false')
-                    : 'true',
-                  options: [
-                    { value: 'true', label: 'Yes' },
-                    { value: 'false', label: 'No' },
-                  ],
-                },
-                {
-                  name: 'options',
-                  label: 'Options (comma separated)',
-                  type: 'text',
-                  defaultValue:
-                    dialog?.type === 'editField'
-                      ? ((selectedSection?.fields || []).find((f) => f.id === dialog.fieldId)?.options || []).join(', ')
-                      : '',
-                  placeholder: 'e.g. Good, Average, Poor',
-                },
-                {
-                  name: 'minPhotos',
-                  label: 'Min photos (only for Photos type)',
-                  type: 'text',
-                  defaultValue: dialog?.type === 'editField'
-                    ? String((selectedSection?.fields || []).find((f) => f.id === dialog.fieldId)?.minPhotos ?? '')
-                    : '',
-                  placeholder: 'e.g. 4',
-                },
-              ]
-        }
-        onSubmit={async (form) => {
-          if (!canEdit) throw new Error('Insufficient permission')
-          if (!dialog?.sectionId) throw new Error('Section not selected')
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Confirm Delete</h3>
+              <p className="text-sm text-slate-600 mt-2">{confirmDialog.message}</p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setConfirmDialog(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                className="bg-rose-600 hover:bg-rose-700"
+                onClick={async () => {
+                  try {
+                    if (!canEdit) throw new Error('Insufficient permission')
 
-          if (dialog?.type === 'deleteField') {
-            await mockApi.deleteChecklistField({
-              actor,
-              condition,
-              sectionId: dialog.sectionId,
-              fieldId: dialog.fieldId,
-              reason: form.reason,
-            })
-            setDialog(null)
-            await refresh()
-            return
-          }
-
-          const existing = dialog?.type === 'editField'
-            ? (selectedSection?.fields || []).find((f) => f.id === dialog.fieldId)
-            : null
-
-          await mockApi.upsertChecklistField({
-            actor,
-            condition,
-            sectionId: dialog.sectionId,
-            field: {
-              id: existing?.id,
-              label: form.label,
-              inputType: form.inputType,
-              required: form.required === 'true',
-              options: form.options,
-              minPhotos: form.minPhotos,
-            },
-            reason: form.reason,
-          })
-
-          setDialog(null)
-          await refresh()
-        }}
-      />
+                    if (confirmDialog.type === 'deleteTemplate') {
+                      await deleteTemplate(confirmDialog.templateId)
+                      setConfirmDialog(null)
+                      if (selectedTemplateId === confirmDialog.templateId) setSelectedTemplateId('')
+                      await refresh()
+                    } else if (confirmDialog.type === 'deleteSection') {
+                      const updatedSections = selectedTemplate.sections.filter(s => s.id !== confirmDialog.sectionId)
+                      await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
+                      setConfirmDialog(null)
+                      if (selectedSectionId === confirmDialog.sectionId) setSelectedSectionId('')
+                      await refresh()
+                    } else if (confirmDialog.type === 'deleteQuestion') {
+                      const updatedQuestions = selectedSection.questions.filter(q => q.id !== confirmDialog.questionId)
+                      const updatedSections = selectedTemplate.sections.map(s => 
+                        s.id === confirmDialog.sectionId ? { ...s, questions: updatedQuestions } : s
+                      )
+                      await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
+                      setConfirmDialog(null)
+                      await refresh()
+                    }
+                  } catch (error) {
+                    console.error('Delete failed:', error)
+                  }
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

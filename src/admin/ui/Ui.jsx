@@ -383,7 +383,7 @@ export function Select({ className, children, ...props }) {
 
 export function Table({ columns, rows, rowKey }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-300 bg-white">
+    <div className="overflow-x-auto overflow-y-visible rounded-2xl border border-slate-300 bg-white">
       <table className="w-full text-left text-[13px]">
         <thead className="bg-slate-200/70 text-[11px] uppercase tracking-wide text-slate-700">
           <tr>

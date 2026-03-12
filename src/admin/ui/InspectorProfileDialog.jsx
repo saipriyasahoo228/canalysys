@@ -2,6 +2,7 @@ import { X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card, cx, Input, Select } from './Ui'
 import { CustomDatePicker } from './CustomDatePicker'
+import { createInspectorProfile, getInspectorProfile, updateInspectorProfile } from '../../api/inspectoronboard'
 
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -13,31 +14,53 @@ function readFileAsDataUrl(file) {
 }
 
 export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
+  const [profileData, setProfileData] = useState(null)
+  const [loading, setLoading] = useState(false)
+  
   const initial = useMemo(() => {
     const it = inspector || {}
+    const profile = profileData || {}
     return {
-      id: it.id || '',
-      name: it.name || '',
-      phone: it.phone || '',
-      joinDate: it.joinDate || '',
-      employmentType: it.employmentType || 'full_time',
-      email: it.email || '',
-      status: it.status || (it.active ? 'active' : 'inactive'),
-      profilePhotoUrl: it.profilePhotoUrl || '',
-      reason: '',
+      id: it.user_id || '', // user_id becomes inspector_id
+      name: profile.full_name || it.name || '',
+      phone: profile.mobile_number || it.mobile_number || '',
+      joinDate: profile.date_of_joining || '',
+      employmentType: profile.employment_type || 'full_time',
+      email: profile.email_id || it.email || '',
+      status: profile.status || (it.is_active ? 'active' : 'inactive'),
+      profilePhotoUrl: profile.profile_photo || '',
     }
-  }, [inspector])
+  }, [inspector, profileData])
 
   const [form, setForm] = useState(initial)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef(null)
+  const [selectedFile, setSelectedFile] = useState(null)
+
+  useEffect(() => {
+    if (open && inspector?.user_id) {
+      setLoading(true)
+      getInspectorProfile({ inspector_id: inspector.user_id })
+        .then((profile) => {
+          setProfileData(profile)
+        })
+        .catch(() => {
+          // Profile not found, keep null
+          setProfileData(null)
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    }
+  }, [open, inspector?.user_id])
 
   useEffect(() => {
     if (open) {
       setForm(initial)
       setSubmitting(false)
       setError('')
+      setSelectedFile(null)
       if (fileRef.current) fileRef.current.value = ''
     }
   }, [open, initial])
@@ -45,14 +68,19 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
   if (!open) return null
 
   const photo = String(form.profilePhotoUrl || '').trim()
-  const showPhoto = /^data:image\//i.test(photo)
+  const showPhoto = /^data:image\//i.test(photo) || /^https?:\/\//i.test(photo)
+  
+  // Debug logging
+  console.log('Photo URL:', photo)
+  console.log('Show photo:', showPhoto)
+  console.log('Form data:', form)
 
-  const canSave = !!String(form.reason || '').trim() && !submitting
+  const canSave = !submitting
 
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/30" onClick={submitting ? undefined : onClose} />
-      <div className="absolute inset-3 flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
+      <div className="absolute left-1/2 top-1/2 flex max-h-[92vh] w-[92vw] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
         <div className="relative shrink-0 border-b border-slate-200 px-4 py-3">
           <Button
             variant="icon"
@@ -69,16 +97,37 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
           <div className="mt-1 text-xs text-slate-500">Review profile details and update editable fields</div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-hidden p-4">
+        <div className="min-h-0 flex-1 overflow-auto p-3">
           <div className="grid h-full min-h-0 grid-cols-1 gap-3 lg:grid-cols-3">
             <Card accent="cyan" className="p-0 lg:col-span-1">
               <div className="p-3">
                 <div className="flex items-center gap-3">
                   <div className="h-14 w-14 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     {showPhoto ? (
-                      <img src={photo} alt="Inspector" className="h-full w-full object-cover" />
+                      <>
+                        <img 
+                          src={photo} 
+                          alt="Inspector" 
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            console.error('Image failed to load:', photo)
+                            e.target.style.display = 'none'
+                            // Show fallback with URL for debugging
+                            const fallback = e.target.nextSibling
+                            fallback.style.display = 'flex'
+                            fallback.innerHTML = `<span style="font-size: 8px;">IMG</span>`
+                          }}
+                          onLoad={() => {
+                            console.log('Image loaded successfully:', photo)
+                          }}
+                        />
+                        {/* Fallback always present but hidden when image loads */}
+                        <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-600 bg-slate-100" style={{ display: 'none' }}>
+                          {(String(form.name || 'I').trim().slice(0, 1) || 'I').toUpperCase()}
+                        </div>
+                      </>
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-600">
+                      <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-600 bg-slate-100">
                         {(String(form.name || 'I').trim().slice(0, 1) || 'I').toUpperCase()}
                       </div>
                     )}
@@ -111,17 +160,15 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
             <Card className="p-0 lg:col-span-2">
               <div className="border-b border-slate-200 px-3 py-2.5">
                 <div className="text-sm font-semibold">Editable fields</div>
-                <div className="mt-0.5 text-xs text-slate-500">Changes are audited. Audit reason is required.</div>
               </div>
+              {error ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-800">
+                  {error}
+                </div>
+              ) : null}
 
-              <div className="min-h-0 overflow-auto space-y-3 p-3">
-                {error ? (
-                  <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-800">
-                    {error}
-                  </div>
-                ) : null}
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-3 p-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <label className="block">
                     <div className="text-xs font-medium text-slate-900">Full name</div>
                     <div className="mt-1">
@@ -150,7 +197,7 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
                       <CustomDatePicker
                         value={form.joinDate}
                         onChange={(v) => setForm((s) => ({ ...s, joinDate: v }))}
-                        disabled={true}
+                        disabled={false} // Enable date picker
                       />
                     </div>
                   </label>
@@ -160,7 +207,7 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
                     <div className="mt-1">
                       <Select
                         value={form.employmentType}
-                        disabled={true}
+                        disabled={false} // Enable employment type dropdown
                         onChange={(e) => setForm((s) => ({ ...s, employmentType: e.target.value }))}
                       >
                         <option value="full_time">Full-time</option>
@@ -192,6 +239,7 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                         <option value="suspended">Suspended</option>
+                        <option value="terminated">Terminated</option>
                       </Select>
                     </div>
                   </label>
@@ -207,6 +255,7 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
                         onChange={async (e) => {
                           const file = e.target.files?.[0]
                           if (!file) return
+                          setSelectedFile(file)
                           try {
                             const url = await readFileAsDataUrl(file)
                             setForm((s) => ({ ...s, profilePhotoUrl: url }))
@@ -219,17 +268,7 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
                   </label>
                 </div>
 
-                <label className="block">
-                  <div className="text-xs font-medium text-slate-900">Audit reason</div>
-                  <div className="mt-1">
-                    <Input
-                      value={form.reason}
-                      onChange={(e) => setForm((s) => ({ ...s, reason: e.target.value }))}
-                      disabled={submitting}
-                      placeholder="Required for audit log"
-                    />
-                  </div>
-                </label>
+                
 
                 <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-3">
                   <Button
@@ -246,17 +285,74 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
                       setError('')
                       setSubmitting(true)
                       try {
-                        await onSave(form)
-                      } catch (e) {
-                        setError(e?.message || 'Save failed')
+                        const payload = {
+                          inspector_id: form.id, // user_id becomes inspector_id
+                          date_of_joining: form.joinDate,
+                          employment_type: form.employmentType,
+                          status: form.status,
+                        }
+                        
+                        let result
+                        
+                        if (profileData) {
+                          // Update existing profile
+                          if (selectedFile) {
+                            // For updates with photo, use FormData
+                            const formData = new FormData()
+                            formData.append('inspector_id', form.id)
+                            formData.append('date_of_joining', form.joinDate)
+                            formData.append('employment_type', form.employmentType)
+                            formData.append('status', form.status)
+                            formData.append('profile_photo', selectedFile)
+                            
+                            result = await updateInspectorProfile({
+                              inspector_id: form.id,
+                              profile_photo: selectedFile,
+                              date_of_joining: form.joinDate,
+                              employment_type: form.employmentType,
+                              status: form.status,
+                            })
+                          } else {
+                            // Update without photo
+                            result = await updateInspectorProfile({
+                              inspector_id: form.id,
+                              ...payload,
+                            })
+                          }
+                        } else {
+                          // Create new profile
+                          if (selectedFile) {
+                            // For creation with photo, use FormData
+                            const formData = new FormData()
+                            formData.append('inspector_id', form.id)
+                            formData.append('date_of_joining', form.joinDate)
+                            formData.append('employment_type', form.employmentType)
+                            formData.append('status', form.status)
+                            formData.append('profile_photo', selectedFile)
+                            
+                            result = await createInspectorProfile({
+                              inspector_id: form.id,
+                              profile_photo: selectedFile,
+                              date_of_joining: form.joinDate,
+                              employment_type: form.employmentType,
+                              status: form.status,
+                            })
+                          } else {
+                            // Create without photo
+                            result = await createInspectorProfile(payload)
+                          }
+                        }
+                        
+                        await onSave(result)
+                        onClose()
+                      } catch (err) {
+                        setError(err.message || 'Failed to save profile. Please try again.')
+                      } finally {
                         setSubmitting(false)
-                        return
                       }
-                      setSubmitting(false)
-                      onClose()
                     }}
                   >
-                    Save changes
+                    {submitting ? 'Saving...' : (profileData ? 'Update Profile' : 'Create Profile')}
                   </Button>
                 </div>
               </div>

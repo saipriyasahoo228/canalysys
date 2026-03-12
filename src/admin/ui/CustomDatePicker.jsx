@@ -25,7 +25,7 @@ function dmyToIso(dmy) {
   return iso
 }
 
-export function CustomDatePicker({ value, onChange, disabled, placeholder = 'dd/mm/yyyy', className }) {
+export function CustomDatePicker({ value, onChange, disabled, placeholder = 'dd/mm/yyyy', className, min, max }) {
   const [text, setText] = useState(() => isoToDmy(value))
   const nativeRef = useRef(null)
 
@@ -43,7 +43,17 @@ export function CustomDatePicker({ value, onChange, disabled, placeholder = 'dd/
         onChange={(e) => setText(e.target.value)}
         onBlur={() => {
           const iso = dmyToIso(text)
-          if (iso) onChange?.(iso)
+          if (iso) {
+            if (min && iso < String(min)) {
+              setText(dmy)
+              return
+            }
+            if (max && iso > String(max)) {
+              setText(dmy)
+              return
+            }
+            onChange?.(iso)
+          }
           else if (!String(text || '').trim()) onChange?.('')
           else setText(dmy)
         }}
@@ -75,6 +85,8 @@ export function CustomDatePicker({ value, onChange, disabled, placeholder = 'dd/
         ref={nativeRef}
         type="date"
         value={value || ''}
+        min={min || undefined}
+        max={max || undefined}
         disabled={disabled}
         onChange={(e) => onChange?.(e.target.value)}
         className="pointer-events-none absolute right-0 top-0 h-full w-10 opacity-0"

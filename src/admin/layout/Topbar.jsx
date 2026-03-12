@@ -2,17 +2,20 @@ import { Bell, LogOut, Menu, Moon, RefreshCcw, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePolling } from '../hooks/usePolling'
-import { mockApi } from '../mock/mockApi'
-import { useRbac } from '../rbac/RbacContext'
 import { useAuth } from '../auth/AuthContext'
+import { getNotifications, markNotificationAsRead } from '../../api/notification'
 
 export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
   const navigate = useNavigate()
   const { logout } = useAuth()
-  const { user } = useRbac()
-  const { data, refresh } = usePolling('bootstrap', () => mockApi.getBootstrap(), {
-    intervalMs: 15_000,
-  })
+
+  const { data: notificationsData, refresh: refreshNotifications } = usePolling(
+    'notifications',
+    () => getNotifications(),
+    {
+      intervalMs: 30_000, // Poll notifications every 30 seconds
+    }
+  )
 
   const projectName = 'CARNALYSYS'
 
@@ -23,6 +26,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
     return { text: 'Good evening', icon: Moon, color: 'text-indigo-600' }
   }, [])
 
+  const [markingAsRead, setMarkingAsRead] = useState(null)
   const [search, setSearch] = useState('')
 
   const [notifOpen, setNotifOpen] = useState(false)
@@ -33,15 +37,37 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
   const userRefDesktop = useRef(null)
   const userRefMobile = useRef(null)
 
+  const [userInfo, setUserInfo] = useState(() => {
+    try {
+      const raw = window.localStorage.getItem('userInfo')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  })
+
+  useEffect(() => {
+    const sync = () => {
+      try {
+        const raw = window.localStorage.getItem('userInfo')
+        setUserInfo(raw ? JSON.parse(raw) : null)
+      } catch {
+        setUserInfo(null)
+      }
+    }
+    window.addEventListener('userInfoUpdated', sync)
+    return () => window.removeEventListener('userInfoUpdated', sync)
+  }, [])
+
   const notifications = useMemo(() => {
-    const name = user?.name || 'Admin'
-    const userId = user?.userId || 'USR-ADMIN'
-    return [
-      { id: 'n1', title: 'Logged in', body: `${name} · ${userId}` },
-      { id: 'n2', title: 'Queue', body: 'New jobs assigned in the last 10 minutes (demo)' },
-      { id: 'n3', title: 'Finance', body: 'Pending commission approvals need attention (demo)' },
-    ]
-  }, [user])
+    // Use real notifications from API
+    if (notificationsData && notificationsData.items && Array.isArray(notificationsData.items)) {
+      return notificationsData.items;
+    }
+    
+    // Return empty array if no notifications
+    return [];
+  }, [notificationsData])
 
   useEffect(() => {
     const onDown = (e) => {
@@ -76,6 +102,22 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
     logout()
     navigate('/login', { replace: true })
   }
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification.read_at && !markingAsRead) {
+      setMarkingAsRead(notification.id);
+      try {
+        await markNotificationAsRead(notification.id);
+        refreshNotifications(); // Refresh notifications to update read status
+      } catch (error) {
+        console.error('Failed to mark notification as read:', error);
+      } finally {
+        setMarkingAsRead(null);
+      }
+    }
+  }
+
+  const unreadCount = notifications.filter(n => !n.read_at).length
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur">
@@ -126,7 +168,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
             >
               <Bell className="h-4 w-4" />
               <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-950 px-1 text-[10px] font-semibold text-amber-50">
-                {notifications.length}
+                {unreadCount}
               </span>
             </button>
 
@@ -134,15 +176,54 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
               <div className="absolute right-0 top-full z-50 mt-2 w-[320px] max-w-[92vw] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
                 <div className="border-b border-slate-200 px-3 py-2">
                   <div className="text-sm font-semibold text-slate-900">Notifications</div>
-                  <div className="text-xs text-slate-500">Demo feed</div>
+                  <div className="text-xs text-slate-500">
+                    {notifications.length === 0 ? 'No notifications' : `${unreadCount} unread`}
+                  </div>
                 </div>
                 <div className="max-h-[300px] overflow-auto">
-                  {notifications.map((n) => (
-                    <div key={n.id} className="border-b border-slate-100 px-3 py-2">
-                      <div className="text-xs font-semibold text-slate-900">{n.title}</div>
-                      <div className="mt-0.5 text-xs text-slate-600">{n.body}</div>
+                  {notifications.length === 0 ? (
+                    <div className="px-3 py-4 text-center text-xs text-slate-500">
+                      No notifications available
                     </div>
-                  ))}
+                  ) : (
+                    notifications.map((n) => (
+                      <div 
+                        key={n.id} 
+                        className={`border-b border-slate-100 px-3 py-2 cursor-pointer transition-all duration-200 ${
+                          !n.read_at ? 'bg-amber-50/50 hover:bg-amber-100/50' : 'hover:bg-slate-50'
+                        } ${
+                          markingAsRead === n.id ? 'opacity-60' : ''
+                        }`}
+                        onClick={() => handleNotificationClick(n)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-semibold text-slate-900">{n.title}</div>
+                            <div className="mt-0.5 text-xs text-slate-600">
+                              {n.data?.customer_id ? `Customer ID: ${n.data.customer_id}` : n.body}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 ml-2">
+                            {!n.read_at && (
+                              <>
+                                {markingAsRead === n.id ? (
+                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-500 border-t-transparent"></div>
+                                ) : (
+                                  <>
+                                    <div className="inline-flex h-1.5 w-1.5 rounded-full bg-amber-500"></div>
+                                    <div className="text-xs text-amber-600 font-medium">Mark as read</div>
+                                  </>
+                                )}
+                              </>
+                            )}
+                            {n.read_at && (
+                              <div className="text-xs text-slate-400 font-medium">Read</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             ) : null}
@@ -156,16 +237,18 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
               title="User menu"
             >
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
-                {(user?.name || 'A').slice(0, 1).toUpperCase()}
+                {(userInfo?.name || 'A').slice(0, 1).toUpperCase()}
               </span>
-              <span className="max-w-[160px] truncate">{user?.name || 'Admin'}</span>
+              <span className="max-w-[160px] truncate">{userInfo?.name || 'Admin'}</span>
             </button>
 
             {userOpen ? (
               <div className="absolute right-0 top-full z-50 mt-2 w-[280px] max-w-[92vw] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
                 <div className="border-b border-slate-200 px-3 py-2">
-                  <div className="text-sm font-semibold text-slate-900">{user?.name || 'Admin'}</div>
-                  <div className="text-xs text-slate-500">{user?.role || user?.userId || 'USR-ADMIN'}</div>
+                  <div className="text-sm font-semibold text-slate-900">{userInfo?.name || 'Admin'}</div>
+                  <div className="text-xs text-slate-500">
+                    {userInfo?.role || userInfo?.user_id || 'USR-ADMIN'}
+                  </div>
                 </div>
                 <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-3 py-2">
                   <button
@@ -184,7 +267,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
           <button
             className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
             onClick={() => {
-              refresh()
+              refreshNotifications();
             }}
             aria-label="Refresh"
           >
@@ -213,7 +296,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
           >
             <Bell className="h-4 w-4" />
             <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-950 px-1 text-[10px] font-semibold text-amber-50">
-              {notifications.length}
+              {unreadCount}
             </span>
           </button>
 
@@ -221,15 +304,54 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
             <div className="absolute left-0 top-full z-50 mt-2 w-[320px] max-w-[92vw] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
               <div className="border-b border-slate-200 px-3 py-2">
                 <div className="text-sm font-semibold text-slate-900">Notifications</div>
-                <div className="text-xs text-slate-500">Demo feed</div>
+                <div className="text-xs text-slate-500">
+                  {notifications.length === 0 ? 'No notifications' : `${unreadCount} unread`}
+                </div>
               </div>
               <div className="max-h-[260px] overflow-auto">
-                {notifications.map((n) => (
-                  <div key={n.id} className="border-b border-slate-100 px-3 py-2">
-                    <div className="text-xs font-semibold text-slate-900">{n.title}</div>
-                    <div className="mt-0.5 text-xs text-slate-600">{n.body}</div>
+                {notifications.length === 0 ? (
+                  <div className="px-3 py-4 text-center text-xs text-slate-500">
+                    No notifications available
                   </div>
-                ))}
+                ) : (
+                  notifications.map((n) => (
+                    <div 
+                      key={n.id} 
+                      className={`border-b border-slate-100 px-3 py-2 cursor-pointer transition-all duration-200 ${
+                        !n.read_at ? 'bg-amber-50/50 hover:bg-amber-100/50' : 'hover:bg-slate-50'
+                      } ${
+                        markingAsRead === n.id ? 'opacity-60' : ''
+                      }`}
+                      onClick={() => handleNotificationClick(n)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-semibold text-slate-900">{n.title}</div>
+                          <div className="mt-0.5 text-xs text-slate-600">
+                            {n.data?.customer_id ? `Customer ID: ${n.data.customer_id}` : n.body}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 ml-2">
+                          {!n.read_at && (
+                            <>
+                              {markingAsRead === n.id ? (
+                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-500 border-t-transparent"></div>
+                              ) : (
+                                <>
+                                  <div className="inline-flex h-1.5 w-1.5 rounded-full bg-amber-500"></div>
+                                  <div className="text-xs text-amber-600 font-medium">Mark as read</div>
+                                </>
+                              )}
+                            </>
+                          )}
+                          {n.read_at && (
+                            <div className="text-xs text-slate-400 font-medium">Read</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           ) : null}
@@ -243,15 +365,17 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
             title="User menu"
           >
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
-              {(user?.name || 'A').slice(0, 1).toUpperCase()}
+              {(userInfo?.name || 'A').slice(0, 1).toUpperCase()}
             </span>
           </button>
 
           {userOpen ? (
             <div className="absolute right-0 top-full z-50 mt-2 w-[280px] max-w-[92vw] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
               <div className="border-b border-slate-200 px-3 py-2">
-                <div className="text-sm font-semibold text-slate-900">{user?.name || 'Admin'}</div>
-                <div className="text-xs text-slate-500">{user?.role || user?.userId || 'USR-ADMIN'}</div>
+                <div className="text-sm font-semibold text-slate-900">{userInfo?.name || 'Admin'}</div>
+                <div className="text-xs text-slate-500">
+                  {userInfo?.role || userInfo?.user_id || 'USR-ADMIN'}
+                </div>
               </div>
               <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-3 py-2">
                 <button
@@ -270,7 +394,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
         <button
           className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
           onClick={() => {
-            refresh()
+            refreshNotifications();
           }}
           aria-label="Refresh"
           title="Refresh"

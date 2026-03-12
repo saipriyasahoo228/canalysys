@@ -3,7 +3,6 @@ import {
   ClipboardList,
   Layers3,
   Users,
-  UserPlus,
   FilePlus2,
   IndianRupee,
   ScrollText,
@@ -119,15 +118,6 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
             </div>
             <div className={collapsed ? 'mx-auto w-fit' : ''}>
               <NavItem
-                to="/register-customer"
-                icon={UserPlus}
-                label="Register Customer"
-                collapsed={collapsed}
-                iconClassName="text-orange-800"
-              />
-            </div>
-            <div className={collapsed ? 'mx-auto w-fit' : ''}>
-              <NavItem
                 to="/new-inspection"
                 icon={FilePlus2}
                 label="New Inspection"
@@ -139,7 +129,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               <NavItem
                 to="/queue"
                 icon={ClipboardList}
-                label="Queue Control"
+                label="Inspector Report"
                 collapsed={collapsed}
                 iconClassName="text-orange-700"
               />
@@ -171,7 +161,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
                 iconClassName="text-amber-600"
               />
             </div>
-            <div className={collapsed ? 'mx-auto w-fit' : ''}>
+            {/* <div className={collapsed ? 'mx-auto w-fit' : ''}>
               <NavItem
                 to="/audit"
                 icon={ScrollText}
@@ -179,7 +169,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
                 collapsed={collapsed}
                 iconClassName="text-slate-600"
               />
-            </div>
+            </div> */}
           </div>
           {!collapsed ? (
             <div className="border-t border-slate-200 p-3 text-xs text-slate-500">Admin console · Demo mode</div>
@@ -217,20 +207,13 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
                 iconClassName="text-emerald-600"
               />
               <NavItem
-                to="/register-customer"
-                icon={UserPlus}
-                label="Register Customer"
-                collapsed={false}
-                iconClassName="text-orange-800"
-              />
-              <NavItem
                 to="/new-inspection"
                 icon={FilePlus2}
                 label="New Inspection"
                 collapsed={false}
                 iconClassName="text-violet-600"
               />
-              <NavItem to="/queue" icon={ClipboardList} label="Queue Control" collapsed={false} iconClassName="text-orange-700" />
+              <NavItem to="/queue" icon={ClipboardList} label="Inspector Report" collapsed={false} iconClassName="text-orange-700" />
               <NavItem to="/vehicle-master" icon={Layers3} label="Vehicle Master" collapsed={false} iconClassName="text-indigo-600" />
               <NavItem to="/checklists" icon={ListChecks} label="Checklist Builder" collapsed={false} iconClassName="text-orange-800" />
               <NavItem to="/finance" icon={IndianRupee} label="Finance" collapsed={false} iconClassName="text-amber-600" />

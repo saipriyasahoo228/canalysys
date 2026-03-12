@@ -1,47 +1,58 @@
-import { CarFront, Lock, Mail } from 'lucide-react'
+import { CarFront, Eye, EyeOff, Lock, Phone } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, cx, Input } from '../ui/Ui'
 import { useAuth } from '../auth/AuthContext'
+import { login as apiLogin } from '../../auth'
 
 export function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
 
-  const demoEmail = 'demo@carnalysys.com'
-  const demoPassword = 'Carnalysys@123'
-
-  const [email, setEmail] = useState('')
+  const [mobileNumber, setMobileNumber] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   const canSubmit = useMemo(() => {
-    return String(email || '').trim().length > 0 && String(password || '').trim().length > 0 && !submitting
-  }, [email, password, submitting])
+    return (
+      String(mobileNumber || '').trim().length > 0 && String(password || '').trim().length > 0 && !submitting
+    )
+  }, [mobileNumber, password, submitting])
+
+  const getErrorMessage = (err) => {
+    const fallback = 'Login failed. Please try again.'
+    const data = err?.response?.data
+    if (!data) return fallback
+    if (typeof data === 'string') return data
+    if (typeof data?.detail === 'string') return data.detail
+    if (typeof data?.message === 'string') return data.message
+    if (Array.isArray(data?.non_field_errors) && data.non_field_errors.length > 0) {
+      return String(data.non_field_errors[0])
+    }
+    return fallback
+  }
 
   const onSubmit = async (e) => {
     e.preventDefault()
     setError('')
 
-    const e1 = String(email || '').trim()
+    const m1 = String(mobileNumber || '').trim()
     const p1 = String(password || '').trim()
 
-    if (!e1) return setError('Please enter your email.')
+    if (!m1) return setError('Please enter your mobile number.')
+    if (!/^\d{10}$/.test(m1)) return setError('Mobile number must be exactly 10 digits.')
     if (!p1) return setError('Please enter your password.')
-
-    if (e1.toLowerCase() !== demoEmail.toLowerCase() || p1 !== demoPassword) {
-      return setError('Invalid demo credentials. Please use the demo email and password shown below.')
-    }
 
     setSubmitting(true)
 
     try {
-      await new Promise((r) => setTimeout(r, 450))
+      await apiLogin(m1, p1)
       login()
       navigate('/dashboard', { replace: true })
-    } catch {
-      setError('Login failed. Please try again.')
+    } catch (err) {
+      setError(getErrorMessage(err))
     } finally {
       setSubmitting(false)
     }
@@ -114,15 +125,20 @@ export function LoginPage() {
 
                     <form className="space-y-3" onSubmit={onSubmit}>
                       <label className="block">
-                        <div className="mb-1 text-xs font-semibold text-slate-700">Email</div>
+                        <div className="mb-1 text-xs font-semibold text-slate-700">Mobile number</div>
                         <div className="relative">
-                          <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                          <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                           <Input
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            value={mobileNumber}
+                            onChange={(e) => {
+                              const onlyDigits = String(e.target.value || '').replace(/\D/g, '').slice(0, 10)
+                              setMobileNumber(onlyDigits)
+                            }}
                             autoComplete="username"
-                            inputMode="email"
-                            placeholder="you@company.com"
+                            inputMode="numeric"
+                            maxLength={10}
+                            pattern="[0-9]{10}"
+                            placeholder="Enter your mobile number"
                             className="pl-9 border-slate-200 focus:border-cyan-500/70 focus:ring-cyan-100/70"
                           />
                         </div>
@@ -133,13 +149,25 @@ export function LoginPage() {
                         <div className="relative">
                           <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                           <Input
-                            type="password"
+                            type={showPassword ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             autoComplete="current-password"
                             placeholder="Enter your password"
-                            className="pl-9 border-slate-200 focus:border-cyan-500/70 focus:ring-cyan-100/70"
+                            className="pl-9 pr-10 border-slate-200 focus:border-cyan-500/70 focus:ring-cyan-100/70"
                           />
+                          <button
+                            type="button"
+                            className={cx(
+                              'absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700',
+                              submitting ? 'pointer-events-none opacity-60' : ''
+                            )}
+                            onClick={() => setShowPassword((v) => !v)}
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            title={showPassword ? 'Hide password' : 'Show password'}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
                         </div>
                       </label>
 
@@ -151,37 +179,13 @@ export function LoginPage() {
                             submitting ? 'pointer-events-none opacity-60' : ''
                           )}
                           onClick={() => {
-                            setEmail('')
+                            setMobileNumber('')
                             setPassword('')
                             setError('')
                           }}
                         >
                           Clear
                         </button>
-                        <button
-                          type="button"
-                          className={cx(
-                            'text-xs font-semibold text-cyan-800 hover:text-cyan-900',
-                            submitting ? 'pointer-events-none opacity-60' : ''
-                          )}
-                          onClick={() => {
-                            setEmail(demoEmail)
-                            setPassword(demoPassword)
-                            setError('')
-                          }}
-                        >
-                          Use demo credentials
-                        </button>
-                      </div>
-
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-700">
-                        <div className="font-semibold text-slate-900">Demo credentials</div>
-                        <div className="mt-0.5">
-                          <span className="font-semibold">Email:</span> {demoEmail}
-                        </div>
-                        <div className="mt-0.5">
-                          <span className="font-semibold">Password:</span> {demoPassword}
-                        </div>
                       </div>
 
                       <Button

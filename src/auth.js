@@ -7,20 +7,12 @@ import { jwtDecode } from "jwt-decode";
 const storeToken = (accessToken, refreshToken) => {
   localStorage.setItem('accessToken', accessToken);
   localStorage.setItem('refreshToken', refreshToken);
-
-  // ✅ Debugging: Print tokens after storing
-  console.log("Stored Access Token:", accessToken);
-  console.log("Stored Refresh Token:", refreshToken);
 };
 
 // Retrieve tokens from localStorage
 const getToken = () => {
   const accessToken = localStorage.getItem('accessToken');
   const refreshToken = localStorage.getItem('refreshToken');
-
-  // ✅ Debugging: Print retrieved tokens
-  console.log("Retrieved Access Token:", accessToken);
-  console.log("Retrieved Refresh Token:", refreshToken);
 
   return { accessToken, refreshToken };
 };
@@ -29,7 +21,6 @@ const getToken = () => {
 const removeToken = () => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
-  console.log("Tokens removed from storage.");
 };
 
 
@@ -102,31 +93,45 @@ const getNewAccessToken = async () => {
       return;
     }
 
-    const decodedRefreshToken = jwtDecode(refreshToken);
-    if (decodedRefreshToken.exp < Date.now() / 1000) {
-      console.warn("Refresh token expired. Logging out...");
-      logout();
-      return;
-    }
+    // Don't check refresh token expiration here - let the server handle it
+    // The server will return 401 if refresh token is truly expired
 
-    const response = await axios.post(`${API_BASE_URL}api/auth/token/refresh/`, {
+    const response = await axios.post(`${API_BASE_URL}/api/auth/token/refresh/`, {
       refresh: refreshToken
     });
 
     const newAccessToken = response.data.access;
-    const newRefreshToken = response.data.refresh; // Django returns new refresh token!
+    const newRefreshToken = response.data.refresh;
     
     // Store both new tokens
-    storeToken(newAccessToken, newRefreshToken);
-
-    // ✅ Debugging: Print new tokens
-    console.log("New Access Token:", newAccessToken);
-    console.log("New Refresh Token:", newRefreshToken);
+    if (newAccessToken && newRefreshToken) {
+      storeToken(newAccessToken, newRefreshToken);
+      console.log("✅ Both tokens refreshed successfully");
+    } else if (newAccessToken) {
+      // Only access token returned, keep existing refresh token
+      const { refreshToken: currentRefreshToken } = getToken();
+      storeToken(newAccessToken, currentRefreshToken);
+      console.log("✅ Access token refreshed successfully");
+    } else {
+      console.error("❌ No access token received in refresh response:", response.data);
+      logout();
+      return;
+    }
 
     return newAccessToken;
   } catch (error) {
     console.error('Refresh token error:', error);
-    logout();
+    // Handle different error scenarios
+    if (error.response?.status === 401) {
+      console.warn("Refresh token invalid/expired/blacklisted. Logging out...");
+      logout();
+    } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      console.warn("Network timeout during refresh, not logging out");
+      throw error; // Don't logout on network issues
+    } else {
+      console.warn("Refresh failed, but not logging out immediately");
+      throw error; // Let the API interceptor handle retry
+    }
   }
 };
 
@@ -160,7 +165,27 @@ const isUserAuthenticated = () => {
 
   try {
     const decodedToken = jwtDecode(accessToken);
-    return decodedToken.exp > Date.now() / 1000; // Token is valid if expiration is in the future
+    const isExpired = decodedToken.exp <= Date.now() / 1000;
+    
+    // If token is expired or will expire in next 2 minutes, try to refresh
+    if (isExpired) {
+      console.log("Access token expired, attempting refresh...");
+      getNewAccessToken().catch(err => {
+        console.error("Failed to refresh expired token:", err);
+      });
+      return false;
+    }
+    
+    // Check if token will expire in next 2 minutes
+    const timeUntilExpiry = decodedToken.exp * 1000 - Date.now();
+    if (timeUntilExpiry < 2 * 60 * 1000) { // 2 minutes
+      console.log("Token expiring soon, refreshing...");
+      getNewAccessToken().catch(err => {
+        console.error("Failed to refresh expiring token:", err);
+      });
+    }
+    
+    return true;
   } catch (error) {
     console.error("Invalid token:", error);
     return false;

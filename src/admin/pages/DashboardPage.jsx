@@ -13,12 +13,14 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { AlertTriangle, ClipboardCheck, ClipboardList, Clock, Gauge, Layers, UserX } from 'lucide-react'
+import { AlertTriangle, ClipboardCheck, ClipboardList, Clock, Gauge, Layers, UserX, Users, Star, TrendingUp } from 'lucide-react'
 import { Card, Badge, cx } from '../ui/Ui'
 import { usePolling } from '../hooks/usePolling'
 import { mockApi } from '../mock/mockApi'
 import { useRbac } from '../rbac/RbacContext'
 import { formatMinutes } from '../utils/format'
+import { getInspectorDashboardData } from '../../api/inspectionreport'
+import { listPDIRequests } from '../../api/inspection'
 
 function kpiTone(label, value) {
   if (label === 'SLA met') {
@@ -38,9 +40,33 @@ export function DashboardPage() {
     { intervalMs: 10_000 }
   )
 
+  const { data: inspectorData, loading: inspectorLoading, error: inspectorError } = usePolling(
+    'inspector-dashboard',
+    () => getInspectorDashboardData(),
+    { intervalMs: 15_000 }
+  )
+
+  const { data: pdiData, loading: pdiLoading, error: pdiError } = usePolling(
+    'pdi-requests',
+    () => listPDIRequests(),
+    { intervalMs: 20_000 }
+  )
+
   const k = data?.kpi
+  const inspectorKpi = inspectorData?.items?.[0]
   const cardValueClass = 'mt-1 text-lg font-semibold tracking-tight text-slate-900'
   const cardHintClass = 'mt-1 text-xs text-slate-500'
+
+  // Calculate vehicle ratio from PDI data
+  const vehicleRatio = pdiData?.items ? (() => {
+    const vehicles = pdiData.items
+    const newCount = vehicles.filter(v => v.vehicle_type === 'new').length
+    const ownedCount = vehicles.filter(v => v.vehicle_type === 'owned').length
+    return [
+      { name: 'New', value: newCount },
+      { name: 'Pre-owned', value: ownedCount }
+    ]
+  })() : []
 
   return (
     <div className="space-y-3">
@@ -128,6 +154,97 @@ export function DashboardPage() {
                 ? 'SLA + postponed'
                 : `${k?.slaBreachesCount ?? 0} SLA + ${k?.postponedCount ?? 0} postponed`}
             </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Inspector Analytics Section */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <Card accent="violet" className="p-0" kpi>
+          <div className="relative p-3">
+            <div className="mb-1 flex items-center gap-2">
+              <Users className="h-4 w-4 text-violet-700" />
+              <div className="text-xs text-slate-600">Active Inspectors</div>
+            </div>
+            <div className={cardValueClass}>{inspectorLoading ? '—' : inspectorData?.count ?? 0}</div>
+            <div className={cardHintClass}>Total inspectors</div>
+          </div>
+        </Card>
+
+        <Card accent="emerald" className="p-0" kpi>
+          <div className="relative p-3">
+            <div className="mb-1 flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-emerald-700" />
+              <div className="text-xs text-slate-600">Assigned PDI</div>
+            </div>
+            <div className={cardValueClass}>{inspectorLoading ? '—' : inspectorKpi?.assigned_pdi_requests_count ?? 0}</div>
+            <div className={cardHintClass}>Total assigned</div>
+          </div>
+        </Card>
+
+        <Card accent="cyan" className="p-0" kpi>
+          <div className="relative p-3">
+            <div className="mb-1 flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4 text-cyan-700" />
+              <div className="text-xs text-slate-600">Completed</div>
+            </div>
+            <div className={cardValueClass}>{inspectorLoading ? '—' : inspectorKpi?.completed_inspections_count ?? 0}</div>
+            <div className={cardHintClass}>Inspections done</div>
+          </div>
+        </Card>
+
+        <Card accent="amber" className="p-0" kpi>
+          <div className="relative p-3">
+            <div className="mb-1 flex items-center gap-2">
+              <Clock className="h-4 w-4 text-amber-700" />
+              <div className="text-xs text-slate-600">Pending</div>
+            </div>
+            <div className={cardValueClass}>{inspectorLoading ? '—' : inspectorKpi?.pending_inspections_count ?? 0}</div>
+            <div className={cardHintClass}>Awaiting inspection</div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Inspector Rating and Performance */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-3">
+        <Card accent="yellow" className="p-0" kpi>
+          <div className="relative p-3">
+            <div className="mb-1 flex items-center gap-2">
+              <Star className="h-4 w-4 text-yellow-700" />
+              <div className="text-xs text-slate-600">Avg Rating</div>
+            </div>
+            <div className={cardValueClass}>
+              {inspectorLoading ? '—' : inspectorKpi?.avg_rating ? `${inspectorKpi.avg_rating.toFixed(1)}/5` : 'N/A'}
+            </div>
+            <div className={cardHintClass}>{inspectorKpi?.ratings_count ?? 0} total ratings</div>
+          </div>
+        </Card>
+
+        <Card accent="blue" className="p-0" kpi>
+          <div className="relative p-3">
+            <div className="mb-1 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-blue-700" />
+              <div className="text-xs text-slate-600">Completion Rate</div>
+            </div>
+            <div className={cardValueClass}>
+              {inspectorLoading ? '—' : inspectorKpi?.assigned_pdi_requests_count > 0 
+                ? `${Math.round((inspectorKpi.completed_inspections_count / inspectorKpi.assigned_pdi_requests_count) * 100)}%`
+                : '0%'}
+            </div>
+            <div className={cardHintClass}>Tasks completed</div>
+          </div>
+        </Card>
+
+        <Card accent="purple" className="p-0" kpi>
+          <div className="relative p-3">
+            <div className="mb-1 flex items-center gap-2">
+              <Users className="h-4 w-4 text-purple-700" />
+              <div className="text-xs text-slate-600">Top Inspector</div>
+            </div>
+            <div className={cardValueClass}>
+              {inspectorLoading ? '—' : inspectorKpi?.inspector_name ? inspectorKpi.inspector_name.split(' ')[0] : 'N/A'}
+            </div>
+            <div className={cardHintClass}>{inspectorKpi?.inspector_id ?? 'ID'}</div>
           </div>
         </Card>
       </div>
@@ -259,8 +376,8 @@ export function DashboardPage() {
 
         <Card title="Vehicle mix" subtitle="New vs pre-owned" accent="violet">
           <div className="flex items-center justify-between">
-            <div className="text-xs text-slate-500">Ratio of active items</div>
-            <Badge tone="cyan">Realtime (demo)</Badge>
+            <div className="text-xs text-slate-500">Ratio of PDI requests</div>
+            <Badge tone="cyan">Live data</Badge>
           </div>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
@@ -275,14 +392,14 @@ export function DashboardPage() {
                   }}
                 />
                 <Pie
-                  data={data?.vehicleRatio || []}
+                  data={vehicleRatio}
                   dataKey="value"
                   nameKey="name"
                   innerRadius={45}
                   outerRadius={75}
                   paddingAngle={3}
                 >
-                  {(data?.vehicleRatio || []).map((_, idx) => (
+                  {vehicleRatio.map((_, idx) => (
                     <Cell
                       // eslint-disable-next-line react/no-array-index-key
                       key={`slice-${idx}`}
@@ -297,11 +414,11 @@ export function DashboardPage() {
           <div className="grid grid-cols-2 gap-2">
             <div className="flex items-center gap-2 text-xs text-slate-600">
               <Layers className="h-4 w-4 text-cyan-600" />
-              New
+              New ({vehicleRatio[0]?.value || 0})
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-600">
               <UserX className="h-4 w-4 text-violet-600" />
-              Pre-owned
+              Pre-owned ({vehicleRatio[1]?.value || 0})
             </div>
           </div>
         </Card>

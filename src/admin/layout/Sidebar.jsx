@@ -161,15 +161,6 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
                 iconClassName="text-amber-600"
               />
             </div>
-            {/* <div className={collapsed ? 'mx-auto w-fit' : ''}>
-              <NavItem
-                to="/audit"
-                icon={ScrollText}
-                label="Audit Log"
-                collapsed={collapsed}
-                iconClassName="text-slate-600"
-              />
-            </div> */}
           </div>
           {!collapsed ? (
             <div className="border-t border-slate-200 p-3 text-xs text-slate-500">Admin console · Demo mode</div>
@@ -217,7 +208,6 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               <NavItem to="/vehicle-master" icon={Layers3} label="Vehicle Master" collapsed={false} iconClassName="text-indigo-600" />
               <NavItem to="/checklists" icon={ListChecks} label="Checklist Builder" collapsed={false} iconClassName="text-orange-800" />
               <NavItem to="/finance" icon={IndianRupee} label="Finance" collapsed={false} iconClassName="text-amber-600" />
-              <NavItem to="/audit" icon={ScrollText} label="Audit Log" collapsed={false} iconClassName="text-slate-600" />
             </div>
           </div>
         </div>

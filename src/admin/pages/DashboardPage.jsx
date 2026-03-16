@@ -567,7 +567,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { AlertTriangle, ClipboardCheck, ClipboardList, Clock, Gauge, Layers, UserX, DollarSign } from 'lucide-react'
+import { AlertTriangle, ClipboardCheck, ClipboardList, Clock, Gauge, Layers, UserX, IndianRupeeIcon } from 'lucide-react'
 import { Card, Badge, cx } from '../ui/Ui'
 import { usePolling } from '../hooks/usePolling'
 import { mockApi } from '../mock/mockApi'
@@ -724,7 +724,7 @@ export function DashboardPage() {
         <Card accent="emerald" className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-emerald-700" />
+              <IndianRupeeIcon className="h-4 w-4 text-emerald-700" />
               <div className="text-xs text-slate-600">Fully Paid</div>
             </div>
             <div className={cardValueClass}>{pdiLoading ? '—' : fullyPaidCount}</div>

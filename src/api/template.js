@@ -29,3 +29,21 @@ export const deleteTemplate = async (templateId) => {
   const response = await api.delete(`/api/inspection/templates/${templateId}/`);
   return response.data;
 };
+
+// Update template metadata only (PATCH)
+export const patchTemplate = async (templateId, templateData) => {
+  const response = await api.patch(`/api/inspection/templates/${templateId}/`, templateData);
+  return response.data;
+};
+
+// Update section (PATCH)
+export const patchSection = async (sectionId, sectionData) => {
+  const response = await api.patch(`/api/inspection/templates/sections/${sectionId}/`, sectionData);
+  return response.data;
+};
+
+// Update question (PATCH)
+export const patchQuestion = async (questionId, questionData) => {
+  const response = await api.patch(`/api/inspection/templates/questions/${questionId}/`, questionData);
+  return response.data;
+};

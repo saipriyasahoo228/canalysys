@@ -4,7 +4,8 @@ import { usePolling } from '../hooks/usePolling'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, PaginatedTable } from '../ui/Ui'
 import { ReasonDialog } from '../ui/ReasonDialog'
-import { listTemplates, createTemplate, updateTemplate, deleteTemplate, getTemplate } from '../../api/template'
+import { Snackbar } from '../ui/Snackbar'
+import { listTemplates, createTemplate, updateTemplate, deleteTemplate, getTemplate, patchTemplate, patchSection, patchQuestion } from '../../api/template'
 
 const CONDITION_TABS = [
   { key: 'pre_owned', label: 'Pre-Owned' },
@@ -41,6 +42,8 @@ export function ChecklistBuilderPage() {
   const [selectedSectionId, setSelectedSectionId] = useState('')
   const [dialog, setDialog] = useState(null)
   const [confirmDialog, setConfirmDialog] = useState(null)
+  const [backendErrors, setBackendErrors] = useState(null)
+  const [snackbar, setSnackbar] = useState({ open: false, tone: 'error', title: '', message: '' })
 
   const { data: templatesData, loading, error, refresh } = usePolling(
     'inspection-templates',
@@ -63,6 +66,28 @@ export function ChecklistBuilderPage() {
     if (!id) return null
     return sectionById.get(id) || null
   }, [dialog?.sectionId, sectionById, selectedSectionId])
+
+  // Helper function to format backend errors
+  const formatBackendErrors = (errors) => {
+    if (typeof errors === 'string') return errors
+    if (typeof errors === 'object' && errors !== null) {
+      const errorMessages = []
+      for (const [field, messages] of Object.entries(errors)) {
+        if (Array.isArray(messages)) {
+          errorMessages.push(`${field}: ${messages.join(', ')}`)
+        } else {
+          errorMessages.push(`${field}: ${messages}`)
+        }
+      }
+      return errorMessages.join('\n')
+    }
+    return 'An unknown error occurred'
+  }
+
+  // Helper function to show snackbar
+  const showSnackbar = (tone, title, message) => {
+    setSnackbar({ open: true, tone, title, message })
+  }
 
   const templateColumns = useMemo(
     () => [
@@ -117,20 +142,6 @@ export function ChecklistBuilderPage() {
               disabled={!canEdit}
             >
               <Pencil className="h-4 w-4 text-slate-700" />
-            </Button>
-            <Button
-              variant="icon"
-              size="icon"
-              title="Delete template"
-              onClick={() => setConfirmDialog({
-                type: 'deleteTemplate',
-                templateId: r.id,
-                templateName: r.name,
-                message: `Are you sure you want to delete "${r.name}"? This will permanently delete the template and all its sections and questions.`
-              })}
-              disabled={!canEdit || r.is_active}
-            >
-              <Trash2 className="h-4 w-4 text-rose-700" />
             </Button>
           </div>
         ),
@@ -188,20 +199,6 @@ export function ChecklistBuilderPage() {
               disabled={!canEdit}
             >
               <Pencil className="h-4 w-4 text-slate-700" />
-            </Button>
-            <Button
-              variant="icon"
-              size="icon"
-              title="Delete section"
-              onClick={() => setConfirmDialog({
-                type: 'deleteSection',
-                sectionId: r.id,
-                sectionName: r.title,
-                message: `Are you sure you want to delete section "${r.title}"? This will permanently delete the section and all its questions.`
-              })}
-              disabled={!canEdit}
-            >
-              <Trash2 className="h-4 w-4 text-rose-700" />
             </Button>
             <Button
               title="Add question"
@@ -278,21 +275,6 @@ export function ChecklistBuilderPage() {
               disabled={!canEdit}
             >
               <Pencil className="h-4 w-4 text-slate-700" />
-            </Button>
-            <Button
-              variant="icon"
-              size="icon"
-              title="Delete question"
-              onClick={() => setConfirmDialog({
-                type: 'deleteQuestion',
-                sectionId: selectedSection?.id,
-                questionId: r.id,
-                questionName: r.title,
-                message: `Are you sure you want to delete question "${r.title}"? This will permanently delete the question.`
-              })}
-              disabled={!canEdit}
-            >
-              <Trash2 className="h-4 w-4 text-rose-700" />
             </Button>
           </div>
         ),
@@ -419,7 +401,10 @@ export function ChecklistBuilderPage() {
         }
         description="Templates define the structure of inspection forms used by inspectors."
         submitLabel="Save"
-        onClose={() => setDialog(null)}
+        onClose={() => {
+          setDialog(null)
+          setBackendErrors(null)
+        }}
         showReason={false}
         requireReason={false}
         fields={[
@@ -447,22 +432,36 @@ export function ChecklistBuilderPage() {
         onSubmit={async (form) => {
           if (!canEdit) throw new Error('Insufficient permission')
 
-          const templateData = {
-            name: form.name,
-            description: form.description,
-            is_active: form.is_active,
-            sections: dialog?.type === 'editTemplate' ? selectedTemplate?.sections || [] : []
-          }
+          try {
+            setBackendErrors(null)
 
-          if (dialog?.type === 'createTemplate') {
-            await createTemplate(templateData)
-          } else {
-            await updateTemplate(dialog.templateId, templateData)
-          }
+            const templateData = {
+              name: form.name,
+              description: form.description,
+              is_active: form.is_active
+            }
 
-          setDialog(null)
-          await refresh()
+            if (dialog?.type === 'createTemplate') {
+              await createTemplate(templateData)
+            } else {
+              // Use PATCH for metadata-only updates
+              await patchTemplate(dialog.templateId, templateData)
+            }
+
+            setDialog(null)
+            await refresh()
+          } catch (error) {
+            if (error.response?.data) {
+              setBackendErrors(error.response.data)
+              showSnackbar('error', 'Validation Error', formatBackendErrors(error.response.data))
+            } else {
+              setBackendErrors({ detail: error.message })
+              showSnackbar('error', 'Error', error.message)
+            }
+            throw error // Re-throw to prevent dialog from closing
+          }
         }}
+        errorMessage={backendErrors ? formatBackendErrors(backendErrors) : undefined}
       />
 
       <ReasonDialog
@@ -474,7 +473,10 @@ export function ChecklistBuilderPage() {
         }
         description="Sections group related questions in the inspection template."
         submitLabel="Save"
-        onClose={() => setDialog(null)}
+        onClose={() => {
+          setDialog(null)
+          setBackendErrors(null)
+        }}
         showReason={false}
         requireReason={false}
         fields={[
@@ -501,26 +503,38 @@ export function ChecklistBuilderPage() {
         onSubmit={async (form) => {
           if (!canEdit) throw new Error('Insufficient permission')
 
-          const sectionData = {
-            title: form.title,
-            description: form.description,
-            order: Number(form.order || 1),
-            questions: dialog?.type === 'editSection' ? selectedSection?.questions || [] : []
-          }
+          try {
+            setBackendErrors(null)
 
-          let updatedSections
-          if (dialog?.type === 'createSection') {
-            updatedSections = [...(selectedTemplate.sections || []), sectionData]
-          } else {
-            updatedSections = selectedTemplate.sections.map(s => 
-              s.id === dialog.sectionId ? { ...s, ...sectionData } : s
-            )
-          }
+            const sectionData = {
+              title: form.title,
+              description: form.description,
+              order: Number(form.order || 1)
+            }
 
-          await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
-          setDialog(null)
-          await refresh()
+            if (dialog?.type === 'createSection') {
+              // For creating sections, we still need to use PUT on the template
+              const updatedSections = [...(selectedTemplate.sections || []), { ...sectionData, questions: [] }]
+              await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
+            } else {
+              // Use PATCH for editing existing sections
+              await patchSection(dialog.sectionId, sectionData)
+            }
+
+            setDialog(null)
+            await refresh()
+          } catch (error) {
+            if (error.response?.data) {
+              setBackendErrors(error.response.data)
+              showSnackbar('error', 'Validation Error', formatBackendErrors(error.response.data))
+            } else {
+              setBackendErrors({ detail: error.message })
+              showSnackbar('error', 'Error', error.message)
+            }
+            throw error // Re-throw to prevent dialog from closing
+          }
         }}
+        errorMessage={backendErrors ? formatBackendErrors(backendErrors) : undefined}
       />
 
       <ReasonDialog
@@ -532,7 +546,10 @@ export function ChecklistBuilderPage() {
         }
         description="Questions define what the inspector must fill during inspection."
         submitLabel="Save"
-        onClose={() => setDialog(null)}
+        onClose={() => {
+          setDialog(null)
+          setBackendErrors(null)
+        }}
         showReason={false}
         requireReason={false}
         fields={[
@@ -603,55 +620,61 @@ export function ChecklistBuilderPage() {
         onSubmit={async (form) => {
           if (!canEdit) throw new Error('Insufficient permission')
 
-          const questionData = {
-            title: form.title,
-            description: form.description,
-            answer_type: form.answer_type,
-            is_required: form.is_required,
-            expected_images_min: Number(form.expected_images_min || 0),
-            expected_images_max: Number(form.expected_images_max || 5),
-            order: Number(form.order || 1),
-            options: []
-          }
+          try {
+            setBackendErrors(null)
 
-          // Parse options for choice questions
-          if (form.answer_type === 'single_choice' || form.answer_type === 'multi_choice') {
-            if (form.options && form.options.trim()) {
-              const optionLabels = form.options.split(',').map(opt => opt.trim()).filter(opt => opt.length > 0)
-              questionData.options = optionLabels.map((label, index) => ({
-                label: label,
-                value: label.toLowerCase().replace(/\s+/g, '_'),
-                order: index + 1
-              }))
-            } else {
-              throw new Error('Options are required for single choice and multi choice questions')
+            const questionData = {
+              title: form.title,
+              description: form.description,
+              answer_type: form.answer_type,
+              is_required: form.is_required,
+              expected_images_min: Number(form.expected_images_min || 0),
+              expected_images_max: Number(form.expected_images_max || 5),
+              order: Number(form.order || 1),
+              options: []
             }
-          }
 
-          let updatedSections
-          if (dialog?.type === 'createQuestion') {
-            updatedSections = selectedTemplate.sections.map(s => 
-              s.id === dialog.sectionId 
-                ? { ...s, questions: [...(s.questions || []), questionData] }
-                : s
-            )
-          } else {
-            updatedSections = selectedTemplate.sections.map(s => 
-              s.id === dialog.sectionId 
-                ? { 
-                    ...s, 
-                    questions: s.questions.map(q => 
-                      q.id === dialog.questionId ? { ...q, ...questionData } : q
-                    )
-                  }
-                : s
-            )
-          }
+            // Parse options for choice questions
+            if (form.answer_type === 'single_choice' || form.answer_type === 'multi_choice') {
+              if (form.options && form.options.trim()) {
+                const optionLabels = form.options.split(',').map(opt => opt.trim()).filter(opt => opt.length > 0)
+                questionData.options = optionLabels.map((label, index) => ({
+                  label: label,
+                  value: label.toLowerCase().replace(/\s+/g, '_'),
+                  order: index + 1
+                }))
+              } else {
+                throw new Error('Options are required for single choice and multi choice questions')
+              }
+            }
 
-          await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
-          setDialog(null)
-          await refresh()
+            if (dialog?.type === 'createQuestion') {
+              // For creating questions, we still need to use PUT on the template
+              const updatedSections = selectedTemplate.sections.map(s => 
+                s.id === dialog.sectionId 
+                  ? { ...s, questions: [...(s.questions || []), questionData] }
+                  : s
+              )
+              await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
+            } else {
+              // Use PATCH for editing existing questions
+              await patchQuestion(dialog.questionId, questionData)
+            }
+
+            setDialog(null)
+            await refresh()
+          } catch (error) {
+            if (error.response?.data) {
+              setBackendErrors(error.response.data)
+              showSnackbar('error', 'Validation Error', formatBackendErrors(error.response.data))
+            } else {
+              setBackendErrors({ detail: error.message })
+              showSnackbar('error', 'Error', error.message)
+            }
+            throw error // Re-throw to prevent dialog from closing
+          }
         }}
+        errorMessage={backendErrors ? formatBackendErrors(backendErrors) : undefined}
       />
 
       {/* Confirmation Dialog */}
@@ -707,6 +730,15 @@ export function ChecklistBuilderPage() {
           </div>
         </div>
       )}
+
+      {/* Snackbar for error notifications */}
+      <Snackbar
+        open={snackbar.open}
+        tone={snackbar.tone}
+        title={snackbar.title}
+        message={snackbar.message}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+      />
     </div>
   )
 }

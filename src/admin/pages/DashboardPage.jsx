@@ -559,7 +559,10 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
   Legend,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -838,12 +841,12 @@ export function DashboardPage() {
         </Card>
 
         <Card title="Queue load by location" subtitle="Assigned vs unassigned inspections" accent="cyan">
-          <div className="h-56">
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={locationData} margin={{ left: 8, right: 8, top: 10, bottom: 10 }}>
+              <LineChart data={locationData} layout="horizontal" margin={{ left: 100, right: 20, top: 10, bottom: 10 }}>
                 <CartesianGrid stroke="#e2e8f0" />
-                <XAxis dataKey="name" stroke="#94a3b8" tick={{ fontSize: 11 }} interval={0} angle={-45} textAnchor="end" height={60} />
-                <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} />
+                <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 11 }} />
+                <YAxis dataKey="name" type="category" stroke="#94a3b8" tick={{ fontSize: 11 }} width={90} />
                 <Tooltip
                   contentStyle={{
                     background: '#ffffff',
@@ -854,9 +857,9 @@ export function DashboardPage() {
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="assigned" stackId="a" fill="#22d3ee" name="Assigned" />
-                <Bar dataKey="unassigned" stackId="a" fill="#f59e0b" name="Unassigned" />
-              </BarChart>
+                <Line type="monotone" dataKey="assigned" stroke="#22d3ee" strokeWidth={2} dot={{ fill: '#22d3ee', r: 4 }} name="Assigned" />
+                <Line type="monotone" dataKey="unassigned" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} name="Unassigned" />
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </Card>

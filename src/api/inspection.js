@@ -109,3 +109,12 @@ export const confirmManualRemainingPayment = async (requestId, manualPaymentMode
     throw error.response?.data || error.message
   }
 }
+
+export const deleteInspector = async (inspectorId) => {
+  try {
+    const response = await api.post(`/api/admin/accounts/inspectors/${inspectorId}/delete/`)
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}

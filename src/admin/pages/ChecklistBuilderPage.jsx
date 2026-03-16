@@ -72,14 +72,38 @@ export function ChecklistBuilderPage() {
     if (typeof errors === 'string') return errors
     if (typeof errors === 'object' && errors !== null) {
       const errorMessages = []
+      
+      // Handle nested structure with sections and questions
+      if (errors.sections && Array.isArray(errors.sections)) {
+        errors.sections.forEach((section, sectionIndex) => {
+          if (section.questions && Array.isArray(section.questions)) {
+            section.questions.forEach((question, questionIndex) => {
+              if (typeof question === 'object' && question !== null) {
+                for (const [field, messages] of Object.entries(question)) {
+                  if (Array.isArray(messages)) {
+                    errorMessages.push(`${field}: ${messages.join(', ')}`)
+                  } else {
+                    errorMessages.push(`${field}: ${messages}`)
+                  }
+                }
+              }
+            })
+          }
+        })
+      }
+      
+      // Handle flat structure (fallback)
       for (const [field, messages] of Object.entries(errors)) {
+        if (field === 'sections') continue // Skip sections as handled above
+        
         if (Array.isArray(messages)) {
           errorMessages.push(`${field}: ${messages.join(', ')}`)
         } else {
           errorMessages.push(`${field}: ${messages}`)
         }
       }
-      return errorMessages.join('\n')
+      
+      return errorMessages.length > 0 ? errorMessages.join('\n') : 'Validation failed'
     }
     return 'An unknown error occurred'
   }

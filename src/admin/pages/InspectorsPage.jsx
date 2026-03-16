@@ -1,6 +1,6 @@
 // TODO: Temporary fix for React development error with X icon
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Plus, Search, Trash2, User, UserCheck, UserX, XCircle, Users, CalendarCheck, CalendarX } from 'lucide-react'
+import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Plus, Search, Trash2, User, UserCheck, UserX, XCircle, Users, CalendarCheck, CalendarX, ChevronDown, ChevronRight } from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, cx } from '../ui/Ui'
@@ -12,6 +12,7 @@ import { InspectorProfileDialog } from '../ui/InspectorProfileDialog'
 import { ViewProfileDialog } from '../ui/ViewProfileDialog'
 import { formatDate, formatDateTime, formatMinutes, minutesSince } from '../utils/format'
 import { registerInspector, resendOtp, verifyEmailOtp, verifySmsOtp, listInspectors, getInspectorProfile, createInspectorProfile, updateInspectorProfile } from '../../api/inspectoronboard'
+import { deleteInspector } from '../../api/inspection'
 import { getAvailabilities, updateAvailabilityStatus, createAvailability, deleteAvailability, patchAvailability, getInspectorAvailability } from '../../api/inspectoravailibility'
 import { listLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '../../api/leave'
 
@@ -172,6 +173,7 @@ export function InspectorsPage() {
   const [snack, setSnack] = useState({ open: false, tone: 'info', title: '', message: '' })
   const [fieldErrors, setFieldErrors] = useState({})
   const [availabilityFieldErrors, setAvailabilityFieldErrors] = useState({})
+  const [expandedInspectors, setExpandedInspectors] = useState(new Set())
   const [profileForm, setProfileForm] = useState({
     inspector_id: '',
     date_of_joining: '',
@@ -251,6 +253,75 @@ export function InspectorsPage() {
   const showSnack = (next) => {
     setSnack({ open: true, tone: next?.tone || 'info', title: next?.title || '', message: next?.message || '' })
   }
+
+  const toggleInspectorExpanded = (inspectorId) => {
+    setExpandedInspectors(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(inspectorId)) {
+        newSet.delete(inspectorId)
+      } else {
+        newSet.add(inspectorId)
+      }
+      return newSet
+    })
+  }
+
+  // Group availability data by inspector
+  const availabilityByInspector = useMemo(() => {
+    const grouped = {}
+    for (const record of availabilities) {
+      const key = `${record.inspector_id}-${record.inspector_name}`
+      if (!grouped[key]) {
+        grouped[key] = {
+          inspector_id: record.inspector_id,
+          inspector_name: record.inspector_name,
+          records: [],
+          presentCount: 0,
+          absentCount: 0,
+          halfDayCount: 0,
+          onLeaveCount: 0
+        }
+      }
+      grouped[key].records.push(record)
+      // Count by status
+      if (record.availability_status === 'present') grouped[key].presentCount++
+      else if (record.availability_status === 'absent') grouped[key].absentCount++
+      else if (record.availability_status === 'half_day') grouped[key].halfDayCount++
+      else if (record.availability_status === 'on_leave') grouped[key].onLeaveCount++
+    }
+    return grouped
+  }, [availabilities])
+
+  // Create flattened rows for the table
+  const flattenedAvailabilityRows = useMemo(() => {
+    const rows = []
+    for (const [key, group] of Object.entries(availabilityByInspector)) {
+      // Add summary row
+      rows.push({
+        id: `summary-${key}`,
+        isSummary: true,
+        inspector_id: group.inspector_id,
+        inspector_name: group.inspector_name,
+        presentCount: group.presentCount,
+        absentCount: group.absentCount,
+        halfDayCount: group.halfDayCount,
+        onLeaveCount: group.onLeaveCount,
+        totalRecords: group.records.length
+      })
+      
+      // Add detail rows if expanded
+      if (expandedInspectors.has(group.inspector_id)) {
+        for (const record of group.records) {
+          rows.push({
+            ...record,
+            isDetail: true,
+            parentId: `summary-${key}`
+          })
+        }
+      }
+    }
+    return rows
+  }, [availabilityByInspector, expandedInspectors])
 
   const responseToMessage = (res) => {
     if (!res) return ''
@@ -396,77 +467,148 @@ export function InspectorsPage() {
       {
         key: 'inspector',
         header: 'Inspector',
-        exportValue: (r) => `${r.inspector_name} (${r.inspector_id})`,
-        cell: (r) => (
-          <div>
-            <div className="text-sm font-semibold">{r.inspector_name}</div>
-            <div className="text-xs text-slate-500">{r.inspector_id}</div>
-          </div>
-        ),
+        exportValue: (r) => r.isSummary ? `${r.inspector_name} (${r.inspector_id})` : `${r.inspector_name} (${r.inspector_id})`,
+        cell: (r) => {
+          if (r.isSummary) {
+            return (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => toggleInspectorExpanded(r.inspector_id)}
+                  className="flex items-center gap-1 text-slate-600 hover:text-slate-900"
+                >
+                  {expandedInspectors.has(r.inspector_id) ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </button>
+                <div>
+                  <div className="text-sm font-semibold">{r.inspector_name}</div>
+                  <div className="text-xs text-slate-500">{r.inspector_id}</div>
+                </div>
+              </div>
+            )
+          } else {
+            return (
+              <div className="ml-6">
+                <div className="text-sm text-slate-700">{formatDate(r.date)}</div>
+                <div className="text-xs text-slate-500">{r.inspector_id}</div>
+              </div>
+            )
+          }
+        },
       },
       {
-        key: 'date',
-        header: 'Date',
-        exportValue: (r) => r.date,
-        cell: (r) => <div className="text-sm text-slate-700">{formatDate(r.date)}</div>,
-      },
-      {
-        key: 'availability_status',
-        header: 'Status',
-        exportValue: (r) => availabilityStatusLabel(r.availability_status),
-        cell: (r) => <Badge tone={availabilityStatusTone(r.availability_status)}>{availabilityStatusLabel(r.availability_status)}</Badge>,
+        key: 'summary',
+        header: 'Summary',
+        exportValue: (r) => r.isSummary ? `Present: ${r.presentCount}, Absent: ${r.absentCount}` : '',
+        cell: (r) => {
+          if (r.isSummary) {
+            return (
+              <div className="flex items-center gap-4 text-sm">
+                <span className="flex items-center gap-1">
+                  <Badge tone="emerald" className="text-xs">Present: {r.presentCount}</Badge>
+                </span>
+                <span className="flex items-center gap-1">
+                  <Badge tone="rose" className="text-xs">Absent: {r.absentCount}</Badge>
+                </span>
+                <span className="flex items-center gap-1">
+                  <Badge tone="amber" className="text-xs">Half Day: {r.halfDayCount}</Badge>
+                </span>
+                <span className="flex items-center gap-1">
+                  <Badge tone="slate" className="text-xs">On Leave: {r.onLeaveCount}</Badge>
+                </span>
+                <span className="text-xs text-slate-500">Total: {r.totalRecords}</span>
+              </div>
+            )
+          } else {
+            return (
+              <div className="ml-6">
+                <Badge tone={availabilityStatusTone(r.availability_status)}>
+                  {availabilityStatusLabel(r.availability_status)}
+                </Badge>
+              </div>
+            )
+          }
+        },
       },
       {
         key: 'remarks',
         header: 'Remarks',
-        exportValue: (r) => r.remarks || '',
-        cell: (r) => <div className="max-w-[200px] truncate text-sm text-slate-600">{r.remarks || '—'}</div>,
+        exportValue: (r) => r.isSummary ? '' : (r.remarks || ''),
+        cell: (r) => {
+          if (r.isSummary) {
+            return <div className="text-sm text-slate-500">—</div>
+          } else {
+            return (
+              <div className="ml-6 max-w-[200px] truncate text-sm text-slate-600">
+                {r.remarks || '—'}
+              </div>
+            )
+          }
+        },
       },
       {
         key: 'submitted_date',
         header: 'Submitted',
-        exportValue: (r) => r.submitted_date,
-        cell: (r) => <div className="text-xs text-slate-600">{formatDateTime(r.submitted_date)}</div>,
+        exportValue: (r) => r.isSummary ? '' : r.submitted_date,
+        cell: (r) => {
+          if (r.isSummary) {
+            return <div className="text-sm text-slate-500">—</div>
+          } else {
+            return (
+              <div className="ml-6 text-xs text-slate-600">
+                {formatDateTime(r.submitted_date)}
+              </div>
+            )
+          }
+        },
       },
       {
         key: 'actions',
         header: <div className="w-full pr-6 text-right">Actions</div>,
-        cell: (r) => (
-          <div className="flex items-center justify-end gap-2">
-            <Button 
-              variant="icon" 
-              size="icon" 
-              onClick={() => setAvailabilityDialog({ type: 'view', item: r })} 
-              title={'View Details'}
-            >
-              <Eye className="h-4 w-4 text-slate-700" />
-            </Button>
-            <Button
-              variant="icon"
-              size="icon"
-              disabled={!permissions.manageInspectors}
-              onClick={() => setAvailabilityDialog({ type: 'update', item: r })}
-              title={permissions.manageInspectors ? 'Update Status' : 'Insufficient permission'}
-            >
-              <CheckCircle2 className="h-4 w-4 text-slate-700" />
-            </Button>
-            <Button
-              variant="icon"
-              size="icon"
-              disabled={!permissions.manageInspectors}
-              onClick={() => setAvailabilityDialog({ type: 'delete', item: r })}
-              title={permissions.manageInspectors ? 'Delete Record' : 'Insufficient permission'}
-              className="text-rose-600 hover:text-rose-700"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ),
+        cell: (r) => {
+          if (r.isSummary) {
+            return <div className="text-sm text-slate-500">—</div>
+          } else {
+            return (
+              <div className="ml-6 flex items-center justify-end gap-2">
+                <Button 
+                  variant="icon" 
+                  size="icon" 
+                  onClick={() => setAvailabilityDialog({ type: 'view', item: r })} 
+                  title={'View Details'}
+                >
+                  <Eye className="h-4 w-4 text-slate-700" />
+                </Button>
+                <Button
+                  variant="icon"
+                  size="icon"
+                  disabled={!permissions.manageInspectors}
+                  onClick={() => setAvailabilityDialog({ type: 'update', item: r })}
+                  title={permissions.manageInspectors ? 'Update Status' : 'Insufficient permission'}
+                >
+                  <CheckCircle2 className="h-4 w-4 text-slate-700" />
+                </Button>
+                <Button
+                  variant="icon"
+                  size="icon"
+                  disabled={!permissions.manageInspectors}
+                  onClick={() => setAvailabilityDialog({ type: 'delete', item: r })}
+                  title={permissions.manageInspectors ? 'Delete Record' : 'Insufficient permission'}
+                  className="text-rose-600 hover:text-rose-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )
+          }
+        },
         className: 'text-right',
         tdClassName: 'text-right',
       },
     ],
-    []
+    [expandedInspectors, permissions.manageInspectors]
   )
 
   const availabilityViewItems = useMemo(() => {
@@ -641,6 +783,47 @@ export function InspectorsPage() {
               {availabilityLoading && !availabilityData ? '—' : new Set(availabilities.filter(a => a.availability_status === 'absent' && a.date === todayIso()).map(a => a.inspector_id)).size}
             </div>
             <div className="mt-1 text-xs text-slate-500">Not available today</div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        <Card
+          title="Inspector roster"
+          className="col-span-1"
+          right={
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <User className="h-4 w-4" />
+                Inspectors
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={!permissions.manageInspectors}
+                onClick={() => {
+                  if (!permissions.manageInspectors) return
+                  setDialog({ type: 'create' })
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Add inspector
+              </Button>
+            </div>
+          }
+        >
+          <div className={loading && !data ? 'opacity-60' : ''}>
+            <PaginatedTable
+              key={`inspectors-${tableNonce}`}
+              columns={columns}
+              rows={displayInspectors}
+              rowKey={(r) => r.user_id}
+              initialRowsPerPage={10}
+              enableSearch
+              searchPlaceholder="Search inspectors…"
+              enableExport
+              exportFilename="inspectors.csv"
+            />
           </div>
         </Card>
       </div>
@@ -865,7 +1048,7 @@ export function InspectorsPage() {
         <div className={availabilityLoading && !availabilityData ? 'opacity-60' : ''}>
           <PaginatedTable
             columns={availabilityColumns}
-            rows={availabilities}
+            rows={flattenedAvailabilityRows}
             rowKey={(r) => r.id}
             initialRowsPerPage={availabilityFilters.page_size}
             rowsPerPageOptions={[10, 20, 50, 100]}
@@ -893,47 +1076,6 @@ export function InspectorsPage() {
           Failed to load inspectors.
         </div>
       ) : null}
-
-      <div className="grid grid-cols-1 gap-3">
-        <Card
-          title="Inspector roster"
-          className="col-span-1"
-          right={
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <User className="h-4 w-4" />
-                Inspectors
-              </div>
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={!permissions.manageInspectors}
-                onClick={() => {
-                  if (!permissions.manageInspectors) return
-                  setDialog({ type: 'create' })
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                Add inspector
-              </Button>
-            </div>
-          }
-        >
-          <div className={loading && !data ? 'opacity-60' : ''}>
-            <PaginatedTable
-              key={`inspectors-${tableNonce}`}
-              columns={columns}
-              rows={displayInspectors}
-              rowKey={(r) => r.user_id}
-              initialRowsPerPage={10}
-              enableSearch
-              searchPlaceholder="Search inspectors…"
-              enableExport
-              exportFilename="inspectors.csv"
-            />
-          </div>
-        </Card>
-      </div>
 
       <ViewDetailsDialog
         open={leaveViewOpen}
@@ -1271,6 +1413,32 @@ export function InspectorsPage() {
           >
             <Eye className="h-4 w-4" />
             View Availability
+          </button>
+          
+          <button
+            type="button"
+            disabled={!permissions.manageInspectors}
+            className={cx(
+              'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-red-50',
+              permissions.manageInspectors ? 'text-red-600' : 'text-slate-400'
+            )}
+            onClick={async () => {
+              if (!permissions.manageInspectors) return
+              
+              if (window.confirm(`Are you sure you want to delete inspector ${actionsMenu.row.name} (${actionsMenu.row.user_id})? This action cannot be undone.`)) {
+                try {
+                  await deleteInspector(actionsMenu.row.user_id)
+                  showSnack({ tone: 'success', title: 'Success', message: 'Inspector deleted successfully' })
+                  refresh() // Refresh the inspectors list
+                } catch (error) {
+                  showSnack({ tone: 'danger', title: 'Error', message: responseToMessage(error) || 'Failed to delete inspector' })
+                }
+              }
+              setActionsMenu(null)
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Inspector
           </button>
         </div>
       ) : null}

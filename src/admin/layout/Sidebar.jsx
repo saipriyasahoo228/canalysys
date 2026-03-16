@@ -65,29 +65,21 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
         <div className="flex h-full flex-col">
           <div
             className={cx(
-              'flex items-center gap-2 border-b border-slate-200/70 bg-white/55 px-4 py-4 backdrop-blur-sm',
-              collapsed ? 'justify-center px-2' : ''
+              'flex items-center justify-center border-b border-slate-200/70 bg-white/55 px-4 py-4 backdrop-blur-sm',
+              collapsed ? 'px-2' : ''
             )}
           >
             <img
-              src="/carnalysysnew.jpg"
+              src="/carnalysysnew1.jpg"
               alt="CARNALYSYS"
-              className={cx('rounded-xl object-contain', collapsed ? 'h-12 w-12' : 'h-14 w-14')}
+              className={cx('rounded-xl object-contain', collapsed ? 'h-12 w-12' : 'h-20 w-20')}
             />
-            <div
-              className={cx(
-                'min-w-0 flex-1 transition-all duration-300',
-                collapsed ? 'w-0 opacity-0 -translate-x-1 pointer-events-none' : 'w-auto opacity-100 translate-x-0'
-              )}
-            >
-              <div className="truncate text-sm font-semibold text-slate-900">CARNALYSYS</div>
-            </div>
 
             <button
               type="button"
               className={cx(
-                'cursor-pointer rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 active:scale-95',
-                collapsed ? '' : 'ml-auto'
+                'cursor-pointer rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 active:scale-95 absolute right-2',
+                collapsed ? 'hidden' : ''
               )}
               onClick={() => setCollapsed((v) => !v)}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -155,14 +147,14 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               <NavItem
                 to="/finance"
                 icon={IndianRupee}
-                label="Finance"
+                label="Commission Management"
                 collapsed={collapsed}
                 iconClassName="text-amber-600"
               />
             </div>
           </div>
           {!collapsed ? (
-            <div className="border-t border-slate-200 p-3 text-xs text-slate-500">Admin console</div>
+            <div className="border-t border-slate-200 p-3 text-xs text-slate-500">Admin console - Powered By Intulet</div>
           ) : null}
         </div>
       </div>
@@ -173,10 +165,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
           <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] border-r border-slate-200 bg-white">
             <div className="flex items-center justify-between px-4 py-4">
               <div className="flex items-center gap-2">
-                <img src="/carnalysysnew.jpg" alt="CARNALYSYS" className="h-14 w-14 rounded-xl object-contain" />
-                <div>
-                  <div className="text-sm font-semibold text-slate-900">CARNALYSYS</div>
-                </div>
+                <img src="/carnalysysnew1.jpg" alt="CARNALYSYS" className="h-14 w-14 rounded-xl object-contain" />
               </div>
               <button
                 className="cursor-pointer rounded-xl p-2 text-slate-700"
@@ -205,7 +194,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               <NavItem to="/queue" icon={ClipboardList} label="Inspector Report" collapsed={false} iconClassName="text-orange-700" />
               <NavItem to="/vehicle-master" icon={Layers3} label="Vehicle Master" collapsed={false} iconClassName="text-indigo-600" />
               <NavItem to="/checklists" icon={ListChecks} label="Checklist Builder" collapsed={false} iconClassName="text-orange-800" />
-              <NavItem to="/finance" icon={IndianRupee} label="Finance" collapsed={false} iconClassName="text-amber-600" />
+              <NavItem to="/finance" icon={IndianRupee} label="Commission Management" collapsed={false} iconClassName="text-amber-600" />
             </div>
           </div>
         </div>

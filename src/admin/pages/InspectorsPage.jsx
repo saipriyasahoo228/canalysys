@@ -1,6 +1,6 @@
 // TODO: Temporary fix for React development error with X icon
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Plus, Search, Trash2, User, UserCheck, UserX, XCircle } from 'lucide-react'
+import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Plus, Search, Trash2, User, UserCheck, UserX, XCircle, Users, CalendarCheck, CalendarX } from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, cx } from '../ui/Ui'
@@ -11,7 +11,7 @@ import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { InspectorProfileDialog } from '../ui/InspectorProfileDialog'
 import { ViewProfileDialog } from '../ui/ViewProfileDialog'
 import { formatDate, formatDateTime, formatMinutes, minutesSince } from '../utils/format'
-import { registerInspector, resendOtp, verifyEmailOtp, verifySmsOtp, listInspectors, getInspectorProfile } from '../../api/inspectoronboard'
+import { registerInspector, resendOtp, verifyEmailOtp, verifySmsOtp, listInspectors, getInspectorProfile, createInspectorProfile, updateInspectorProfile } from '../../api/inspectoronboard'
 import { getAvailabilities, updateAvailabilityStatus, createAvailability, deleteAvailability, patchAvailability, getInspectorAvailability } from '../../api/inspectoravailibility'
 import { listLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '../../api/leave'
 
@@ -172,6 +172,12 @@ export function InspectorsPage() {
   const [snack, setSnack] = useState({ open: false, tone: 'info', title: '', message: '' })
   const [fieldErrors, setFieldErrors] = useState({})
   const [availabilityFieldErrors, setAvailabilityFieldErrors] = useState({})
+  const [profileForm, setProfileForm] = useState({
+    inspector_id: '',
+    date_of_joining: '',
+    employment_type: 'full_time',
+    status: 'active',
+  })
 
   const profileOpen = dialog?.type === 'profile'
   const createOpen = dialog?.type === 'create'
@@ -320,7 +326,7 @@ export function InspectorsPage() {
         key: 'status',
         header: 'Status',
         exportValue: (r) => r.status,
-        cell: (r) => <Badge tone={leaveStatusTone(r.status)}>{r.status}</Badge>,
+        cell: (r) => <Badge tone={leaveStatusTone(r.status)}>{r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : ''}</Badge>,
       },
       {
         key: 'requestedAt',
@@ -593,53 +599,54 @@ export function InspectorsPage() {
   return (
     <div className="space-y-3" ref={actionsBoxRef}>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Card accent="blue" className="p-0" kpi>
+          <div className="relative p-3">
+            <div className="mb-1 flex items-center gap-2">
+              <Users className="h-4 w-4 text-blue-700" />
+              <div className="text-xs text-slate-600">Total Inspectors</div>
+            </div>
+            <div className="mt-1 text-lg font-semibold tracking-tight">{loading && !data ? '—' : inspectors.length}</div>
+            <div className="mt-1 text-xs text-slate-500">All registered inspectors</div>
+          </div>
+        </Card>
+        <Card accent="cyan" className="p-0" kpi>
+          <div className="relative p-3">
+            <div className="mb-1 flex items-center gap-2">
+              <CalendarCheck className="h-4 w-4 text-cyan-700" />
+              <div className="text-xs text-slate-600">Leave Requests</div>
+            </div>
+            <div className="mt-1 text-lg font-semibold tracking-tight">{leaveLoading && !leaveData ? '—' : leaveRequests.length}</div>
+            <div className="mt-1 text-xs text-slate-500">Pending and processed</div>
+          </div>
+        </Card>
         <Card accent="emerald" className="p-0" kpi>
           <div className="relative p-3">
             <div className="mb-1 flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-emerald-700" />
-              <div className="text-xs text-slate-600">Active</div>
-            </div>
-            <div className="mt-1 text-lg font-semibold tracking-tight">{loading && !data ? '—' : active.length}</div>
-            <div className="mt-1 text-xs text-slate-500">Currently enabled</div>
-          </div>
-        </Card>
-        <Card accent={idle.length >= 2 ? 'amber' : 'slate'} className="p-0" kpi>
-          <div className="relative p-3">
-            <div className="mb-1 flex items-center gap-2">
-              <UserX className={cx('h-4 w-4', idle.length >= 2 ? 'text-amber-700' : 'text-slate-700')} />
-              <div className="text-xs text-slate-600">Idle</div>
-            </div>
-            <div className="mt-1 text-lg font-semibold tracking-tight">{loading && !data ? '—' : idle.length}</div>
-            <div className="mt-1 text-xs text-slate-500">Potentially re-allocatable</div>
-          </div>
-        </Card>
-        <Card accent={avgUtil >= 85 ? 'amber' : 'cyan'} className="p-0" kpi>
-          <div className="relative p-3">
-            <div className="mb-1 flex items-center gap-2">
-              <Gauge className={cx('h-4 w-4', avgUtil >= 85 ? 'text-amber-700' : 'text-cyan-700')} />
-              <div className="text-xs text-slate-600">Avg utilization</div>
-            </div>
-            <div className="mt-1 text-lg font-semibold tracking-tight">{loading && !data ? '—' : `${avgUtil}%`}</div>
-            <div className="mt-1 text-xs text-slate-500">Workload</div>
-          </div>
-        </Card>
-        <Card accent="violet" className="p-0" kpi>
-          <div className="relative p-3">
-            <div className="mb-1 flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-violet-700" />
-              <div className="text-xs text-slate-600">Coverage</div>
+              <div className="text-xs text-slate-600">Total Present</div>
             </div>
             <div className="mt-1 text-lg font-semibold tracking-tight">
-              {loading && !data ? '—' : `${new Set(active.flatMap((i) => i.locationIds)).size}`}
+              {availabilityLoading && !availabilityData ? '—' : new Set(availabilities.filter(a => a.availability_status === 'present' && a.date === todayIso()).map(a => a.inspector_id)).size}
             </div>
-            <div className="mt-1 text-xs text-slate-500">Locations staffed</div>
+            <div className="mt-1 text-xs text-slate-500">Available today</div>
+          </div>
+        </Card>
+        <Card accent="rose" className="p-0" kpi>
+          <div className="relative p-3">
+            <div className="mb-1 flex items-center gap-2">
+              <UserX className="h-4 w-4 text-rose-700" />
+              <div className="text-xs text-slate-600">Total Absent</div>
+            </div>
+            <div className="mt-1 text-lg font-semibold tracking-tight">
+              {availabilityLoading && !availabilityData ? '—' : new Set(availabilities.filter(a => a.availability_status === 'absent' && a.date === todayIso()).map(a => a.inspector_id)).size}
+            </div>
+            <div className="mt-1 text-xs text-slate-500">Not available today</div>
           </div>
         </Card>
       </div>
 
       <Card
         title="Leave requests"
-        subtitle="Requested from the mobile app · Approve or reject (rejection requires reason)"
         accent="cyan"
         right={
           <Button onClick={async () => refreshLeave()} className="ml-1">
@@ -887,11 +894,10 @@ export function InspectorsPage() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3">
         <Card
           title="Inspector roster"
-          subtitle="Profiles + utilization + idle monitoring"
-          className="lg:col-span-2"
+          className="col-span-1"
           right={
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -925,28 +931,6 @@ export function InspectorsPage() {
               enableExport
               exportFilename="inspectors.csv"
             />
-          </div>
-        </Card>
-
-        <Card title="Idle watch" subtitle="Investigate idle time">
-          <div className="space-y-2">
-            {idle.length === 0 ? <div className="text-sm text-slate-500">No idle inspectors.</div> : null}
-            {idle.slice(0, 8).map((i) => (
-              <div key={i.id} className="rounded-md border border-slate-200 bg-white p-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 truncate text-sm font-semibold">{i.name}</div>
-                  <Badge tone="amber">Idle {formatMinutes(minutesSince(i.lastStateChangeAt))}</Badge>
-                </div>
-                <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                  <MapPin className="h-4 w-4" />
-                  {i.locationIds.map((id) => locationById.get(id)?.name || id).join(', ')}
-                </div>
-                <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                  <Gauge className="h-4 w-4" />
-                  Utilization {i.utilizationPct}%
-                </div>
-              </div>
-            ))}
           </div>
         </Card>
       </div>

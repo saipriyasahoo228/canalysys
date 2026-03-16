@@ -84,12 +84,13 @@ export const createRazorpayOrderForRemaining = async (requestId, clientRequestId
   }
 }
 
-export const verifyRazorpayRemainingPayment = async (requestId, razorpayOrderId, razorpayPaymentId, razorpaySignature) => {
+export const verifyRazorpayRemainingPayment = async (requestId, razorpayOrderId, razorpayPaymentId, razorpaySignature, clientRequestId) => {
   try {
     const response = await api.post(`/api/pdi-requests/${requestId}/payments/razorpay/verify/?purpose=remaining`, {
       razorpay_order_id: razorpayOrderId,
       razorpay_payment_id: razorpayPaymentId,
-      razorpay_signature: razorpaySignature
+      razorpay_signature: razorpaySignature,
+      client_request_id: clientRequestId
     })
     return response.data
   } catch (error) {

@@ -1,12 +1,12 @@
 // Razorpay Configuration
-// Update these values for production
+// Currently using test key for both development and production
 
 export const RAZORPAY_CONFIG = {
   // Test Key (for development)
   TEST_KEY: 'rzp_test_S6qCIp2zlZlXCH',
   
-  // Production Key (replace with your live key)
-  PRODUCTION_KEY: 'rzp_live_your_live_key_here',
+  // Production Key (currently using test key)
+  PRODUCTION_KEY: 'rzp_test_S6qCIp2zlZlXCH',
   
   // Key Secret (for backend verification if needed)
   KEY_SECRET: 'Cp2cMaMQbfpWpUt1nHWHTt4v',

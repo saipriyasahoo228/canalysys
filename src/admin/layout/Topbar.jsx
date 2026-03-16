@@ -132,14 +132,6 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
-            <div className="min-w-0">
-              <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">
-                <span className="bg-gradient-to-r from-slate-900 via-amber-900 to-orange-800 bg-clip-text text-transparent">
-                  {projectName}
-                </span>
-              </div>
-            </div>
-
             <div className="hidden min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm backdrop-blur sm:flex">
               <timeMeta.icon className={"h-4 w-4 " + timeMeta.color} />
               <span className="truncate">{timeMeta.text}</span>
@@ -148,16 +140,6 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
         </div>
 
         <div className="hidden items-center gap-2 sm:flex">
-          <div className="min-w-0 flex-1">
-            <div className="max-w-[460px]">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search…"
-                className="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-500 focus:border-amber-950/35 focus:ring-2 focus:ring-amber-200/70"
-              />
-            </div>
-          </div>
 
           <div className="relative shrink-0" ref={notifRefDesktop}>
             <button
@@ -278,14 +260,6 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
       </div>
 
       <div className="flex items-center gap-2 px-3 pb-3 sm:hidden">
-        <div className="flex-1">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search…"
-            className="w-full rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-500 focus:border-amber-950/35 focus:ring-2 focus:ring-amber-200/70"
-          />
-        </div>
 
         <div className="relative shrink-0" ref={notifRefMobile}>
           <button

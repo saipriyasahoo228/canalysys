@@ -72,7 +72,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
             <img
               src="/carnalysysnew.jpg"
               alt="CARNALYSYS"
-              className={cx('rounded-xl object-contain', collapsed ? 'h-9 w-9' : 'h-9 w-9')}
+              className={cx('rounded-xl object-contain', collapsed ? 'h-12 w-12' : 'h-14 w-14')}
             />
             <div
               className={cx(
@@ -81,7 +81,6 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               )}
             >
               <div className="truncate text-sm font-semibold text-slate-900">CARNALYSYS</div>
-              <div className="truncate text-xs text-slate-500">Queue + Workforce + Finance</div>
             </div>
 
             <button
@@ -163,7 +162,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
             </div>
           </div>
           {!collapsed ? (
-            <div className="border-t border-slate-200 p-3 text-xs text-slate-500">Admin console · Demo mode</div>
+            <div className="border-t border-slate-200 p-3 text-xs text-slate-500">Admin console</div>
           ) : null}
         </div>
       </div>
@@ -174,10 +173,9 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
           <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] border-r border-slate-200 bg-white">
             <div className="flex items-center justify-between px-4 py-4">
               <div className="flex items-center gap-2">
-                <img src="/carnalysysnew.jpg" alt="CARNALYSYS" className="h-9 w-9 rounded-xl object-contain" />
+                <img src="/carnalysysnew.jpg" alt="CARNALYSYS" className="h-14 w-14 rounded-xl object-contain" />
                 <div>
                   <div className="text-sm font-semibold text-slate-900">CARNALYSYS</div>
-                  <div className="text-xs text-slate-500">Queue + Workforce + Finance</div>
                 </div>
               </div>
               <button

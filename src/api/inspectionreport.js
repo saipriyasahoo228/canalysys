@@ -8,3 +8,12 @@ export const getInspectorDashboardData = async () => {
     throw error.response?.data || error.message
   }
 }
+
+export const getPDIReportByRequestId = async (requestId) => {
+  try {
+    const response = await api.get(`/api/inspection/reports/pdi-requests/${requestId}/`)
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}

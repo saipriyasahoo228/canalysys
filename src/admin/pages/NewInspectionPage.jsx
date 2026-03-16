@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Eye, FilePlus2, MoreVertical, X } from 'lucide-react'
+import { Eye, FilePlus2, MoreVertical, X, Download } from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
 import { listCategoryPricing } from '../../api/categorypricing'
 import { listBrands, listModels, listVariants, listCategoryValues } from '../../api/vehiclemaster'
@@ -7,11 +7,13 @@ import { createPDIRequest, listPDIRequests, getPDIRequestById, assignInspector, 
 import { listCustomers, createCustomer, deleteCustomer, getCustomerBookings } from '../../api/customer'
 import { getAvailabilities, getInspectorAvailabilityByDate } from '../../api/inspectoravailibility'
 import { listInspectors } from '../../api/inspectoronboard'
+import { getPDIReportByRequestId } from '../../api/inspectionreport'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, Select, cx } from '../ui/Ui'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { formatDate } from '../utils/format'
+import { RAZORPAY_KEY } from '../../config/razorpay'
 
 const VEHICLE_TYPE_OPTIONS = [
   { value: 'new', label: 'New' },
@@ -89,6 +91,198 @@ export function NewInspectionPage() {
   const [selectedInspector, setSelectedInspector] = useState('')
   const [assignmentReason, setAssignmentReason] = useState('')
   const [assignmentLoading, setAssignmentLoading] = useState(false)
+  
+  // State for PDI Report
+  const [showPDIReport, setShowPDIReport] = useState(false)
+  const [pdiReportData, setPdiReportData] = useState(null)
+  const [pdiReportLoading, setPdiReportLoading] = useState(false)
+
+  // Function to fetch and show PDI report
+  const fetchAndShowPDIReport = async (requestId) => {
+    try {
+      setPdiReportLoading(true)
+      const reportData = await getPDIReportByRequestId(requestId)
+      console.log('✅ PDI report fetched:', reportData)
+      setPdiReportData(reportData)
+      setShowPDIReport(true)
+      setActionsMenu(null)
+    } catch (error) {
+      console.error('❌ Failed to fetch PDI report:', error)
+      // Show backend error message directly
+      alert(error.response?.data?.detail || error.message || 'Failed to load PDI report. Please try again.')
+    } finally {
+      setPdiReportLoading(false)
+    }
+  }
+
+  // Function to download PDI report as PDF
+  const downloadPDIReport = () => {
+    if (!pdiReportData) return
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank')
+    
+    // Generate HTML content for PDF
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>PDI Report - ${pdiReportData.request_id}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+          .title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+          .subtitle { font-size: 14px; color: #666; }
+          .section { margin-bottom: 30px; }
+          .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+          .info-item { display: flex; justify-content: space-between; padding: 5px 0; }
+          .info-label { font-weight: 600; }
+          .vehicle-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+          .answer-item { margin-bottom: 15px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 5px; }
+          .question { font-weight: 600; margin-bottom: 5px; }
+          .answer { padding: 5px; background: #f9fafb; border-radius: 3px; }
+          .yes { color: #059669; font-weight: 600; }
+          .no { color: #dc2626; font-weight: 600; }
+          .images { margin-top: 10px; }
+          .image-item { width: 60px; height: 60px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 3px; margin-right: 5px; }
+          .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; }
+          @media print { body { margin: 10px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">PDI Inspection Report</div>
+          <div class="subtitle">Report #${pdiReportData.document_no} for ${pdiReportData.request_id}</div>
+        </div>
+        
+        <div class="section">
+          <div class="section-title">Report Information</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Document No:</span>
+              <span>${pdiReportData.document_no}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Status:</span>
+              <span>${pdiReportData.status}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Request ID:</span>
+              <span>${pdiReportData.request_id}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Started At:</span>
+              <span>${new Date(pdiReportData.started_at).toLocaleString()}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Submitted At:</span>
+              <span>${new Date(pdiReportData.submitted_at).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="section">
+          <div class="section-title">Customer Information</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Name:</span>
+              <span>${pdiReportData.customer_name}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Mobile:</span>
+              <span>${pdiReportData.customer_mobile}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Email:</span>
+              <span>${pdiReportData.customer_email}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Slot Date:</span>
+              <span>${pdiReportData.slot_date}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="section">
+          <div class="section-title">Vehicle Information</div>
+          <div class="vehicle-grid">
+            <div class="info-item">
+              <span class="info-label">Type:</span>
+              <span>${pdiReportData.vehicle_type}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Brand:</span>
+              <span>${pdiReportData.brand}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Model:</span>
+              <span>${pdiReportData.model}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Variant:</span>
+              <span>${pdiReportData.variant}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Category:</span>
+              <span>${pdiReportData.category}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Inspector:</span>
+              <span>${pdiReportData.inspector_name}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Location:</span>
+              <span>${pdiReportData.location_name}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="section">
+          <div class="section-title">Inspection Results</div>
+          ${pdiReportData.answers?.map(answer => `
+            <div class="answer-item">
+              <div class="question">${answer.question_title}</div>
+              <div class="section-title" style="font-size: 12px; color: #666; margin: 5px 0;">${answer.section_title}</div>
+              <div class="answer">
+                ${answer.value_bool !== null ? 
+                  (answer.value_bool ? '<span class="yes">YES</span>' : '<span class="no">NO</span>') : 
+                  answer.value_short || answer.value_long || answer.value_number || 'N/A'
+                }
+              </div>
+              ${answer.images && answer.images.length > 0 ? `
+                <div class="images">
+                  <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Evidence Images:</div>
+                  ${answer.images.map(img => `<img class="image-item" src="${img.image_url}" alt="Evidence" />`).join('')}
+                </div>
+              ` : ''}
+            </div>
+          `).join('') || '<p>No inspection data available</p>'}
+        </div>
+        
+        <div class="footer">
+          <p>Generated on ${new Date().toLocaleString()}</p>
+          <p>PDI Inspection Report - ${pdiReportData.request_id}</p>
+        </div>
+      </body>
+      </html>
+    `
+    
+    // Write content to the new window
+    printWindow.document.write(htmlContent)
+    printWindow.document.close()
+    
+    // Wait for content to load, then trigger print dialog
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print()
+        // Close the window after printing (optional)
+        printWindow.onafterprint = () => {
+          printWindow.close()
+        }
+      }, 500)
+    }
+  }
 
   // Function to fetch and show PDI request details
   const fetchAndShowDetails = async (requestId, type) => {
@@ -688,8 +882,25 @@ export function NewInspectionPage() {
       
       // Step 2: Create Razorpay order (use clientRequestId string, not requestId number)
       const orderResponse = await createRazorpayOrder(clientRequestId, clientRequestId)
-      console.log('✅ Razorpay order created with clientRequestId:', clientRequestId)
-      console.log('📦 Razorpay Order Response:', orderResponse)
+      console.log('✅ Razorpay order response:', orderResponse)
+      
+      // Handle case where order already exists - create a new one instead
+      if (orderResponse.message === 'Order already created') {
+        console.log('ℹ️ Order already exists, creating new Razorpay order...')
+        // For existing orders, we should create a new one or use a different approach
+        // Let the backend handle creating a fresh order
+        try {
+          const newOrderResponse = await createRazorpayOrder(clientRequestId, clientRequestId + '_new')
+          console.log('✅ New Razorpay order created:', newOrderResponse)
+          // Use the new order response
+          Object.assign(orderResponse, newOrderResponse)
+        } catch (newOrderError) {
+          console.error('❌ Failed to create new order:', newOrderError)
+          throw new Error('Unable to create payment order. Please try again.')
+        }
+      }
+      
+      console.log('📦 Final Razorpay Order Data:', orderResponse)
       
       // Load Razorpay script
       const script = document.createElement('script')
@@ -750,7 +961,8 @@ export function NewInspectionPage() {
               }
             } catch (error) {
               console.error('Payment handler error:', error)
-              alert('Payment processing failed. Please try again.')
+              // Show backend error message directly
+              alert(error.response?.data?.detail || error.message || 'Payment processing failed. Please try again.')
               setShowRazorpay(false)
             }
           }
@@ -768,9 +980,10 @@ export function NewInspectionPage() {
         alert('Payment gateway is currently unavailable. Please try again later.')
         setPaymentLoading(false)
       }
-    } catch (error) {
+      } catch (error) {
       console.error('Payment error:', error)
-      alert('Payment failed. Please try again.')
+      // Show backend error message directly
+      alert(error.response?.data?.detail || error.message || 'Payment failed. Please try again.')
       setPaymentLoading(false)
     }
   }
@@ -787,17 +1000,47 @@ export function NewInspectionPage() {
     try {
       const clientRequestId = remainingPaymentData.request_id
       const remainingAmount = remainingPaymentData.remaining_amount_paise
+      const paymentStage = remainingPaymentData.payment_stage
       
       console.log('🔍 Processing remaining payment:', {
         clientRequestId,
         remainingAmount,
+        paymentStage,
         customerName: remainingPaymentData.name,
         customerPhone: remainingPaymentData.mobile_number
       })
       
+      // Check if payment stage allows remaining payment
+      if (paymentStage !== 'remaining_due' && paymentStage !== 'advance_paid') {
+        alert('Remaining payment is not available for this request. Current payment stage: ' + (paymentStage || 'unknown'))
+        setRemainingPaymentLoading(false)
+        return
+      }
+      
       // Step 1: Create Razorpay order for remaining payment
-      const orderResponse = await createRazorpayOrderForRemaining(remainingPaymentRequestId, clientRequestId)
-      console.log('✅ Razorpay order created for remaining payment:', orderResponse)
+      const orderResponse = await createRazorpayOrderForRemaining(clientRequestId, clientRequestId)
+      console.log('✅ Razorpay order response for remaining payment:', orderResponse)
+      
+      // Handle case where order already exists - create a new one instead
+      if (orderResponse.message === 'Order already created') {
+        console.log('ℹ️ Order already exists for remaining payment, creating new Razorpay order...')
+        // For existing orders, we should create a new one or use a different approach
+        // Let the backend handle creating a fresh order
+        try {
+          const newOrderResponse = await createRazorpayOrderForRemaining(clientRequestId, clientRequestId + '_remaining_new')
+          console.log('✅ New Razorpay order created for remaining payment:', newOrderResponse)
+          // Use the new order response
+          Object.assign(orderResponse, newOrderResponse)
+        } catch (newOrderError) {
+          console.error('❌ Failed to create new remaining order:', newOrderError)
+          // Show backend error message directly
+          alert(newOrderError.response?.data?.detail || newOrderError.message || 'Unable to create payment order for remaining payment. Please try again.')
+          setRemainingPaymentLoading(false)
+          return
+        }
+      }
+      
+      console.log('📦 Final Razorpay Order Data for remaining payment:', orderResponse)
       
       // Load Razorpay script
       const script = document.createElement('script')
@@ -834,16 +1077,23 @@ export function NewInspectionPage() {
               
               // Step 2: Verify remaining payment with backend
               const verificationResponse = await verifyRazorpayRemainingPayment(
-                remainingPaymentRequestId,
+                clientRequestId,
                 response.razorpay_order_id,
                 response.razorpay_payment_id,
-                response.razorpay_signature
+                response.razorpay_signature,
+                clientRequestId
               )
               
               console.log('✅ Remaining payment verified:', verificationResponse)
               
-              if (verificationResponse.message === 'Remaining payment verified and request fully paid') {
-                alert('Remaining payment successful! Your payment is now complete.')
+              if (verificationResponse.message === 'Remaining payment verified' || verificationResponse.message === 'Remaining payment verified and request fully paid' || verificationResponse.message === 'Order already created') {
+                // Show appropriate message based on the response
+                if (verificationResponse.message === 'Order already created') {
+                  alert('Order already created! Your payment is now complete.')
+                } else {
+                  alert('Remaining payment successful! Your payment is now complete.')
+                }
+                
                 setShowRemainingPaymentModal(false)
                 setRemainingPaymentLoading(false)
                 
@@ -861,8 +1111,6 @@ export function NewInspectionPage() {
           }
         }
         
-        console.log('💰 Remaining Razorpay Options Amount:', orderResponse.amount_paise, 'INR:', orderResponse.amount_paise / 100)
-        
         const rzp = new window.Razorpay(options)
         rzp.open()
       }
@@ -874,7 +1122,8 @@ export function NewInspectionPage() {
       }
     } catch (error) {
       console.error('Remaining payment error:', error)
-      alert('Remaining payment failed. Please try again.')
+      // Show backend error message directly
+      alert(error.response?.data?.detail || error.message || 'Remaining payment failed. Please try again.')
       setRemainingPaymentLoading(false)
     }
   }
@@ -904,7 +1153,7 @@ export function NewInspectionPage() {
       
       // Confirm manual remaining payment
       const manualResponse = await confirmManualRemainingPayment(
-        remainingPaymentRequestId,
+        clientRequestId,
         remainingManualPaymentMode,
         remainingManualReferenceNo
       )
@@ -926,7 +1175,8 @@ export function NewInspectionPage() {
       
     } catch (error) {
       console.error('Manual remaining payment error:', error)
-      alert('Manual remaining payment failed. Please try again.')
+      // Show backend error message directly
+      alert(error.response?.data?.detail || error.message || 'Manual remaining payment failed. Please try again.')
       setRemainingPaymentLoading(false)
     }
   }
@@ -1792,24 +2042,26 @@ export function NewInspectionPage() {
                 >
                   Assign Inspector
                 </button>
-                {/* Show Remaining Pay option only if advance is paid and remaining amount is due */}
-                {(() => {
-                  const request = pdiRequests.find(r => r.request_id === actionsMenu.requestId)
-                  const isEligible = request && 
-                    request.payment_stage === 'advance_paid' && 
-                    request.remaining_amount_paise > 0
-                  return isEligible ? (
-                    <button
-                      type="button"
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-green-50 text-green-700"
-                      onClick={() => {
-                        openRemainingPayment(actionsMenu.requestId)
-                      }}
-                    >
-                      Remaining Pay
-                    </button>
-                  ) : null
-                })()}
+                {/* Remaining Pay option - always visible */}
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-green-50 text-green-700"
+                  onClick={() => {
+                    openRemainingPayment(actionsMenu.requestId)
+                  }}
+                >
+                  Remaining Pay
+                </button>
+                {/* Generate PDI Report button */}
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 text-blue-700 rounded-b-xl"
+                  onClick={() => {
+                    fetchAndShowPDIReport(actionsMenu.requestId)
+                  }}
+                >
+                  Generate PDI Report
+                </button>
               </>
             )}
             
@@ -2668,6 +2920,195 @@ export function NewInspectionPage() {
                   {remainingPaymentLoading ? 'Processing...' : remainingPaymentMethod === 'online' ? `Pay ₹${(remainingPaymentData.remaining_amount_paise / 100).toFixed(2)} Online` : 'Confirm Cash Payment'}
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDI Report Dialog */}
+      {showPDIReport && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowPDIReport(false)} />
+          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-4xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-lg max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 border-b border-slate-200 bg-white px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold">PDI Inspection Report</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {pdiReportLoading ? 'Loading report...' : `Report #${pdiReportData?.document_no} for ${pdiReportData?.request_id}`}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!pdiReportLoading && pdiReportData && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={downloadPDIReport}
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download
+                    </Button>
+                  )}
+                  <Button
+                    variant="icon"
+                    size="icon"
+                    onClick={() => setShowPDIReport(false)}
+                    aria-label="Close"
+                    title="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4">
+              {pdiReportLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-sm text-slate-600">Loading PDI report...</div>
+                </div>
+              ) : pdiReportData ? (
+                <div className="space-y-6">
+                  {/* Report Header */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card title="Report Information" accent="blue">
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">Document No:</span>
+                          <span className="text-sm">{pdiReportData.document_no}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">Status:</span>
+                          <Badge tone={pdiReportData.status === 'submitted' ? 'emerald' : 'amber'}>
+                            {pdiReportData.status}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">Request ID:</span>
+                          <span className="text-sm">{pdiReportData.request_id}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">Started At:</span>
+                          <span className="text-sm">{new Date(pdiReportData.started_at).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">Submitted At:</span>
+                          <span className="text-sm">{new Date(pdiReportData.submitted_at).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card title="Customer Information" accent="violet">
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">Name:</span>
+                          <span className="text-sm">{pdiReportData.customer_name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">Mobile:</span>
+                          <span className="text-sm">{pdiReportData.customer_mobile}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">Email:</span>
+                          <span className="text-sm">{pdiReportData.customer_email}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium">Slot Date:</span>
+                          <span className="text-sm">{pdiReportData.slot_date}</span>
+                        </div>
+                      </div>
+                    </Card>
+                  </div>
+
+                  {/* Vehicle Information */}
+                  <Card title="Vehicle Information" accent="green">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <span className="text-sm font-medium">Type:</span>
+                        <div className="text-sm capitalize">{pdiReportData.vehicle_type}</div>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium">Brand:</span>
+                        <div className="text-sm">{pdiReportData.brand}</div>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium">Model:</span>
+                        <div className="text-sm">{pdiReportData.model}</div>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium">Variant:</span>
+                        <div className="text-sm">{pdiReportData.variant}</div>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium">Category:</span>
+                        <div className="text-sm">{pdiReportData.category}</div>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium">Inspector:</span>
+                        <div className="text-sm">{pdiReportData.inspector_name}</div>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium">Location:</span>
+                        <div className="text-sm">{pdiReportData.location_name}</div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Inspection Answers */}
+                  {pdiReportData.answers && pdiReportData.answers.length > 0 && (
+                    <Card title="Inspection Results" accent="orange">
+                      <div className="space-y-4">
+                        {pdiReportData.answers.map((answer, index) => (
+                          <div key={answer.id} className="border border-slate-200 rounded-lg p-3">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-slate-900">{answer.question_title}</div>
+                                <div className="text-xs text-slate-500 mb-1">
+                                  {answer.section_title} • {answer.question_description}
+                                </div>
+                              </div>
+                              <Badge 
+                                tone={
+                                  answer.value_bool === true ? 'emerald' : 
+                                  answer.value_bool === false ? 'rose' : 'slate'
+                                }
+                                className="ml-3"
+                              >
+                                {answer.value_bool !== null ? (answer.value_bool ? 'Yes' : 'No') : 
+                                 answer.value_short || answer.value_long || answer.value_number || 'N/A'}
+                              </Badge>
+                            </div>
+                            
+                            {/* Images */}
+                            {answer.images && answer.images.length > 0 && (
+                              <div className="mt-2">
+                                <div className="text-xs text-slate-500 mb-1">Evidence Images:</div>
+                                <div className="flex flex-wrap gap-2">
+                                  {answer.images.map((image, imgIndex) => (
+                                    <div key={image.id} className="relative group">
+                                      <img
+                                        src={image.image_url}
+                                        alt={`Evidence ${imgIndex + 1}`}
+                                        className="h-16 w-16 object-cover rounded border border-slate-200 cursor-pointer"
+                                        onClick={() => window.open(image.image_url, '_blank')}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-sm text-slate-600">No report data available</div>
+                </div>
+              )}
             </div>
           </div>
         </div>

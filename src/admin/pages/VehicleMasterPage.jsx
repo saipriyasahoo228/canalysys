@@ -65,6 +65,11 @@ function conditionLabel(v) {
   return '—'
 }
 
+function capitalizeFirst(str) {
+  if (!str || typeof str !== 'string') return str
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
 function TabButton({ active, children, ...props }) {
   return (
     <button
@@ -538,7 +543,7 @@ export function VehicleMasterPage() {
       return [
         { key: 'id', label: 'ID', value: it?.id || '—' },
         { key: 'category', label: 'Category', value: it?.category_name || it?.category || '—' },
-        { key: 'vehicle_type', label: 'Vehicle Type', value: it?.vehicle_type || '—' },
+        { key: 'vehicle_type', label: 'Vehicle Type', value: capitalizeFirst(it?.vehicle_type) || '—' },
         { key: 'price', label: 'Price', value: it?.price || '—' },
         { key: 'effective_from', label: 'Effective From', value: formatDate(it?.effective_from) || '—' },
         { key: 'effective_to', label: 'Effective To', value: formatDate(it?.effective_to) || '—' },
@@ -668,8 +673,8 @@ export function VehicleMasterPage() {
       {
         key: 'vehicle_type',
         header: 'Vehicle type',
-        exportValue: (r) => r.vehicle_type,
-        cell: (r) => <div className="text-sm text-slate-700 text-center">{r.vehicle_type || '—'}</div>,
+        exportValue: (r) => capitalizeFirst(r.vehicle_type),
+        cell: (r) => <div className="text-sm text-slate-700 text-center">{capitalizeFirst(r.vehicle_type) || '—'}</div>,
         className: 'text-center',
         tdClassName: 'text-center',
       },

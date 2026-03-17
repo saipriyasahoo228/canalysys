@@ -47,3 +47,15 @@ export const patchQuestion = async (questionId, questionData) => {
   const response = await api.patch(`/api/inspection/templates/questions/${questionId}/`, questionData);
   return response.data;
 };
+
+// Create section under template
+export const createSection = async (templateId, sectionData) => {
+  const response = await api.post(`/api/inspection/templates/${templateId}/sections/`, sectionData);
+  return response.data;
+};
+
+// Create question under section
+export const createQuestion = async (sectionId, questionData) => {
+  const response = await api.post(`/api/inspection/templates/sections/${sectionId}/questions/`, questionData);
+  return response.data;
+};

@@ -5,7 +5,7 @@ import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, PaginatedTable } from '../ui/Ui'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { Snackbar } from '../ui/Snackbar'
-import { listTemplates, createTemplate, updateTemplate, deleteTemplate, getTemplate, patchTemplate, patchSection, patchQuestion } from '../../api/template'
+import { listTemplates, createTemplate, updateTemplate, deleteTemplate, getTemplate, patchTemplate, patchSection, patchQuestion, createSection, createQuestion } from '../../api/template'
 
 const CONDITION_TABS = [
   { key: 'pre_owned', label: 'Pre-Owned' },
@@ -537,9 +537,8 @@ export function ChecklistBuilderPage() {
             }
 
             if (dialog?.type === 'createSection') {
-              // For creating sections, we still need to use PUT on the template
-              const updatedSections = [...(selectedTemplate.sections || []), { ...sectionData, questions: [] }]
-              await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
+              // Use the new POST API to create section under template
+              await createSection(dialog.templateId, sectionData)
             } else {
               // Use PATCH for editing existing sections
               await patchSection(dialog.sectionId, sectionData)
@@ -673,13 +672,8 @@ export function ChecklistBuilderPage() {
             }
 
             if (dialog?.type === 'createQuestion') {
-              // For creating questions, we still need to use PUT on the template
-              const updatedSections = selectedTemplate.sections.map(s => 
-                s.id === dialog.sectionId 
-                  ? { ...s, questions: [...(s.questions || []), questionData] }
-                  : s
-              )
-              await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
+              // Use the new POST API to create question under section
+              await createQuestion(dialog.sectionId, questionData)
             } else {
               // Use PATCH for editing existing questions
               await patchQuestion(dialog.questionId, questionData)

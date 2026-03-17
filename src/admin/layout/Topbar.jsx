@@ -1,4 +1,4 @@
-import { Bell, LogOut, Menu, Moon, RefreshCcw, Sun } from 'lucide-react'
+import { Bell, LogOut, Menu, Moon, Sun } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePolling } from '../hooks/usePolling'
@@ -246,16 +246,6 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
             ) : null}
           </div>
 
-          <button
-            className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
-            onClick={() => {
-              refreshNotifications();
-            }}
-            aria-label="Refresh"
-          >
-            <RefreshCcw className="h-4 w-4" />
-            Refresh
-          </button>
         </div>
       </div>
 
@@ -365,16 +355,6 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
           ) : null}
         </div>
 
-        <button
-          className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
-          onClick={() => {
-            refreshNotifications();
-          }}
-          aria-label="Refresh"
-          title="Refresh"
-        >
-          <RefreshCcw className="h-4 w-4" />
-        </button>
       </div>
     </header>
   )

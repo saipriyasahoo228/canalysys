@@ -768,9 +768,9 @@ export function VehicleMasterPage() {
                 {t.label}
               </TabButton>
             ))}
-            <Button onClick={async () => refresh()} className="ml-1">
+            {/* <Button onClick={async () => refresh()} className="ml-1">
               Refresh
-            </Button>
+            </Button> */}
           </div>
         }
       >
@@ -1296,7 +1296,7 @@ export function VehicleMasterPage() {
             if (dialog.kind === 'model') {
               return [
                 {
-                  name: 'brand',
+                  name: 'brandId',
                   label: 'Brand *',
                   type: 'select',
                   defaultValue: dialog?.item?.brand || brands?.[0]?.id || '',

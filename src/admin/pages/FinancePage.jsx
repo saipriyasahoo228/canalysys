@@ -408,8 +408,9 @@ export function FinancePage() {
                   </>
                 ) : (
                   <>
-                    <ReceiptText className="h-4 w-4 mr-2" />
-                    Generate Report
+                    <ReceiptText className="h-4 w-4 mr-2 " />
+                      <span className="text-white">Generate Report</span>
+
                   </>
                 )}
               </Button>

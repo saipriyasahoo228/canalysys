@@ -831,11 +831,11 @@ export function InspectorsPage() {
       <Card
         title="Leave requests"
         accent="cyan"
-        right={
-          <Button onClick={async () => refreshLeave()} className="ml-1">
-            Refresh
-          </Button>
-        }
+        // right={
+        //   <Button onClick={async () => refreshLeave()} className="ml-1">
+        //     Refresh
+        //   </Button>
+        // }
       >
         {leaveError ? (
           <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">Failed to load leave requests.</div>
@@ -950,9 +950,9 @@ export function InspectorsPage() {
               <Plus className="h-4 w-4" />
               Create Availability
             </Button>
-            <Button onClick={async () => refreshAvailability()} className="ml-1">
+            {/* <Button onClick={async () => refreshAvailability()} className="ml-1">
               Refresh
-            </Button>
+            </Button> */}
           </div>
         }
       >

@@ -1761,7 +1761,7 @@ export function NewInspectionPage() {
             >
               Raise PDI
             </Button>
-            <Button onClick={async () => refreshCustomers()}>Refresh</Button>
+            {/* <Button onClick={async () => refreshCustomers()}>Refresh</Button> */}
           </div>
         }
       />
@@ -1771,11 +1771,11 @@ export function NewInspectionPage() {
         title="PDI Requests"
         subtitle="All PDI requests with details and status"
         accent="cyan"
-        right={
-          <Button onClick={() => refreshPDIRequests()}>
-            Refresh
-          </Button>
-        }
+        // right={
+        //   <Button onClick={() => refreshPDIRequests()}>
+        //     Refresh
+        //   </Button>
+        // }
       >
         {pdiRequestsError ? (
           <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">

@@ -606,7 +606,7 @@ export function ChecklistBuilderPage() {
           },
           {
             name: 'options',
-            label: 'Options (comma separated)',
+            label: 'Options (comma " , " separated)',
             type: 'text',
             defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.options?.map(o => o.label).join(', ') || '' : '',
             placeholder: 'e.g. Excellent, Good, Average, Poor',

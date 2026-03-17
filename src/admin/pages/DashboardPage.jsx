@@ -843,7 +843,7 @@ export function DashboardPage() {
         <Card title="Queue load by location" subtitle="Assigned vs unassigned inspections" accent="cyan">
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={locationData} layout="horizontal" margin={{ left: 100, right: 20, top: 10, bottom: 10 }}>
+              <LineChart data={locationData} layout="horizontal" margin={{ left: 20, right: 20, top: 10, bottom: 10 }}>
                 <CartesianGrid stroke="#e2e8f0" />
                 <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 11 }} />
                 <YAxis dataKey="name" type="category" stroke="#94a3b8" tick={{ fontSize: 11 }} width={90} />
@@ -856,7 +856,7 @@ export function DashboardPage() {
                     fontSize: 12,
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Legend wrapperStyle={{ fontSize: 12, textAlign: 'right' }} />
                 <Line type="monotone" dataKey="assigned" stroke="#22d3ee" strokeWidth={2} dot={{ fill: '#22d3ee', r: 4 }} name="Assigned" />
                 <Line type="monotone" dataKey="unassigned" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} name="Unassigned" />
               </LineChart>

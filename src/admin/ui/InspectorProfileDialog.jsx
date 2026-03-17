@@ -20,11 +20,12 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
   const initial = useMemo(() => {
     const it = inspector || {}
     const profile = profileData || {}
+    const today = new Date().toISOString().split('T')[0]
     return {
       id: it.user_id || '', // user_id becomes inspector_id
       name: profile.full_name || it.name || '',
       phone: profile.mobile_number || it.mobile_number || '',
-      joinDate: profile.date_of_joining || '',
+      joinDate: profile.date_of_joining || today,
       employmentType: profile.employment_type || 'full_time',
       email: profile.email_id || it.email || '',
       status: profile.status || (it.is_active ? 'active' : 'inactive'),

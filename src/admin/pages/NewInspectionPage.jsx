@@ -1631,10 +1631,10 @@ export function NewInspectionPage() {
       {
         key: 'payment_stage',
         header: 'Payment Stage',
-        exportValue: (r) => r.payment_stage || '—',
+        exportValue: (r) => r.payment_stage ? r.payment_stage.charAt(0).toUpperCase() + r.payment_stage.slice(1) : '—',
         cell: (r) => (
           <Badge tone={r.payment_stage === 'advance_paid' ? 'blue' : r.payment_stage === 'fully_paid' ? 'emerald' : 'slate'}>
-            {r.payment_stage === 'advance_paid' ? 'Advance Paid' : r.payment_stage === 'fully_paid' ? 'Fully Paid' : r.payment_stage || '—'}
+            {r.payment_stage === 'advance_paid' ? 'Advance Paid' : r.payment_stage === 'fully_paid' ? 'Fully Paid' : r.payment_stage ? r.payment_stage.charAt(0).toUpperCase() + r.payment_stage.slice(1) : '—'}
           </Badge>
         ),
       },
@@ -2042,26 +2042,52 @@ export function NewInspectionPage() {
                 >
                   Assign Inspector
                 </button>
-                {/* Remaining Pay option - always visible */}
-                <button
-                  type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-green-50 text-green-700"
-                  onClick={() => {
-                    openRemainingPayment(actionsMenu.requestId)
-                  }}
-                >
-                  Remaining Pay
-                </button>
-                {/* Generate PDI Report button */}
-                <button
-                  type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 text-blue-700 rounded-b-xl"
-                  onClick={() => {
-                    fetchAndShowPDIReport(actionsMenu.requestId)
-                  }}
-                >
-                  Generate PDI Report
-                </button>
+                {/* Remaining Pay option - enabled only when payment stage is remaining_due */}
+                {(() => {
+                  const pdiRequest = pdiRequests.find(p => p.request_id === actionsMenu.requestId)
+                  const isRemainingDue = pdiRequest?.payment_stage === 'remaining_due'
+                  return (
+                    <button
+                      type="button"
+                      className={`w-full px-3 py-2 text-left text-sm rounded-t-xl ${
+                        isRemainingDue 
+                          ? 'hover:bg-green-50 text-green-700 cursor-pointer' 
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      }`}
+                      onClick={() => {
+                        if (isRemainingDue) {
+                          openRemainingPayment(actionsMenu.requestId)
+                        }
+                      }}
+                      disabled={!isRemainingDue}
+                    >
+                      Remaining Pay
+                    </button>
+                  )
+                })()}
+                {/* Generate PDI Report button - enabled only when payment stage is fully_paid */}
+                {(() => {
+                  const pdiRequest = pdiRequests.find(p => p.request_id === actionsMenu.requestId)
+                  const isFullyPaid = pdiRequest?.payment_stage === 'fully_paid'
+                  return (
+                    <button
+                      type="button"
+                      className={`w-full px-3 py-2 text-left text-sm rounded-b-xl ${
+                        isFullyPaid 
+                          ? 'hover:bg-blue-50 text-blue-700 cursor-pointer' 
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      }`}
+                      onClick={() => {
+                        if (isFullyPaid) {
+                          fetchAndShowPDIReport(actionsMenu.requestId)
+                        }
+                      }}
+                      disabled={!isFullyPaid}
+                    >
+                      Generate PDI Report
+                    </button>
+                  )
+                })()}
               </>
             )}
             

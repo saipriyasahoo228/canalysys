@@ -2032,16 +2032,32 @@ export function NewInspectionPage() {
                 >
                   View Booking Details
                 </button>
-                <button
-                  type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
-                  onClick={() => {
-                    console.log('🔍 Debug - Assign Inspector button clicked!', { actionsMenu, requestId: actionsMenu?.requestId })
-                    openAssignInspector(actionsMenu.requestId)
-                  }}
-                >
-                  Assign Inspector
-                </button>
+                {/* Assign Inspector - disabled when payment stage is fully_paid or remaining_due */}
+                {(() => {
+                  const pdiRequest = pdiRequests.find(p => p.request_id === actionsMenu.requestId)
+                  const isFullyPaid = pdiRequest?.payment_stage === 'fully_paid'
+                  const isRemainingDue = pdiRequest?.payment_stage === 'remaining_due'
+                  const isDisabled = isFullyPaid || isRemainingDue
+                  return (
+                    <button
+                      type="button"
+                      className={`w-full px-3 py-2 text-left text-sm ${
+                        isDisabled 
+                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                          : 'hover:bg-slate-50'
+                      }`}
+                      onClick={() => {
+                        if (!isDisabled) {
+                          console.log('🔍 Debug - Assign Inspector button clicked!', { actionsMenu, requestId: actionsMenu?.requestId })
+                          openAssignInspector(actionsMenu.requestId)
+                        }
+                      }}
+                      disabled={isDisabled}
+                    >
+                      Assign Inspector
+                    </button>
+                  )
+                })()}
                 {/* Remaining Pay option - enabled only when payment stage is remaining_due */}
                 {(() => {
                   const pdiRequest = pdiRequests.find(p => p.request_id === actionsMenu.requestId)

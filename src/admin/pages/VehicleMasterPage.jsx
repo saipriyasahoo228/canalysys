@@ -916,6 +916,11 @@ export function VehicleMasterPage() {
                                 {r.brand_name || r.model_detail?.brand_detail?.name || '—'} / {r.model_detail?.name || '—'}
                               </div>
                             ) : null}
+                            {block.kind === 'categoryValue' ? (
+                              <div className="truncate text-[11px] text-slate-500">
+                                {r.category_type_detail?.name || '—'}
+                              </div>
+                            ) : null}
                           </div>
                         ),
                       },
@@ -974,6 +979,9 @@ export function VehicleMasterPage() {
                       if (block.kind === 'model') return `${r.name} ${r.brand_detail?.name || brandById.get(r.brand)?.name || ''}`
                       if (block.kind === 'variant') {
                         return `${r.name} ${r.brand_name || r.model_detail?.brand_detail?.name || ''} ${r.model_detail?.name || ''}`
+                      }
+                      if (block.kind === 'categoryValue') {
+                        return `${r.name} ${r.category_type_detail?.name || ''}`
                       }
                       return `${r.name} ${r.id}`
                     }}

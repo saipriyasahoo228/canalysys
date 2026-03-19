@@ -129,25 +129,26 @@ export function NewInspectionPage() {
       <head>
         <title>PDI Report - ${pdiReportData.request_id}</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
-          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-          .title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-          .subtitle { font-size: 14px; color: #666; }
-          .section { margin-bottom: 30px; }
-          .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
-          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-          .info-item { display: flex; justify-content: space-between; padding: 5px 0; }
-          .info-label { font-weight: 600; }
-          .vehicle-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-          .answer-item { margin-bottom: 15px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 5px; }
-          .question { font-weight: 600; margin-bottom: 5px; }
-          .answer { padding: 5px; background: #f9fafb; border-radius: 3px; }
+          @page { margin: 10mm; size: A4; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 10px; color: #333; line-height: 1.3; font-size: 11px; max-width: 700px; margin: 0 auto; }
+          .header { text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-bottom: 15px; }
+          .title { font-size: 18px; font-weight: bold; margin-bottom: 3px; color: #1e40af; }
+          .subtitle { font-size: 11px; color: #6b7280; }
+          .section { margin-bottom: 15px; page-break-inside: avoid; max-width: 650px; margin: 0 auto; }
+          .section-title { font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #2563eb; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px; }
+          .info-grid { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+          .info-item { display: flex; align-items: center; padding: 1px 0; border-bottom: 1px solid #f3f4f6; }
+          .info-label { font-weight: 600; color: #374151; margin-right: 5px; min-width: 80px; font-size: 10px; }
+          .vehicle-grid { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+          .answer-item { margin-bottom: 8px; padding: 4px; border: 1px solid #e5e7eb; border-radius: 3px; page-break-inside: avoid; }
+          .question { font-weight: 600; margin-bottom: 2px; font-size: 10px; }
+          .answer { padding: 2px; background: #f9fafb; border-radius: 2px; font-size: 10px; }
           .yes { color: #059669; font-weight: 600; }
           .no { color: #dc2626; font-weight: 600; }
-          .images { margin-top: 10px; }
-          .image-item { width: 60px; height: 60px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 3px; margin-right: 5px; }
-          .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; }
-          @media print { body { margin: 10px; } }
+          .images { margin-top: 5px; }
+          .image-item { width: 40px; height: 40px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 2px; margin-right: 2px; }
+          .footer { margin-top: 15px; text-align: center; font-size: 9px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+          @media print { body { margin: 0; padding: 5px; max-width: 100%; } .section { page-break-inside: avoid; max-width: 100%; } }
         </style>
       </head>
       <body>
@@ -170,14 +171,6 @@ export function NewInspectionPage() {
             <div class="info-item">
               <span class="info-label">Request ID:</span>
               <span>${pdiReportData.request_id}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Started At:</span>
-              <span>${new Date(pdiReportData.started_at).toLocaleString()}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Submitted At:</span>
-              <span>${new Date(pdiReportData.submitted_at).toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -206,7 +199,7 @@ export function NewInspectionPage() {
         
         <div class="section">
           <div class="section-title">Vehicle Information</div>
-          <div class="vehicle-grid">
+          <div class="info-grid">
             <div class="info-item">
               <span class="info-label">Type:</span>
               <span>${pdiReportData.vehicle_type}</span>
@@ -1584,6 +1577,12 @@ export function NewInspectionPage() {
         header: 'Customer Name',
         exportValue: (r) => r.name || '—',
         cell: (r) => <div className="text-sm text-slate-700">{r.name || '—'}</div>,
+      },
+      {
+        key: 'created_by_name',
+        header: 'Created By',
+        exportValue: (r) => r.created_by_name || '—',
+        cell: (r) => <div className="text-sm text-slate-700">{r.created_by_name || '—'}</div>,
       },
       {
         key: 'mobile_number',
@@ -2971,7 +2970,7 @@ export function NewInspectionPage() {
       {showPDIReport && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/30" onClick={() => setShowPDIReport(false)} />
-          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-4xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-lg max-h-[90vh] overflow-y-auto">
+          <div className="absolute left-1/2 top-1/2 w-[85vw] max-w-3xl -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-lg max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 border-b border-slate-200 bg-white px-4 py-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -3013,51 +3012,51 @@ export function NewInspectionPage() {
               ) : pdiReportData ? (
                 <div className="space-y-6">
                   {/* Report Header */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-3">
                     <Card title="Report Information" accent="blue">
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">Document No:</span>
-                          <span className="text-sm">{pdiReportData.document_no}</span>
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium">Document No:</span>
+                          <span className="text-xs">{pdiReportData.document_no}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">Status:</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium">Status:</span>
                           <Badge tone={pdiReportData.status === 'submitted' ? 'emerald' : 'amber'}>
                             {pdiReportData.status}
                           </Badge>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">Request ID:</span>
-                          <span className="text-sm">{pdiReportData.request_id}</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium">Request ID:</span>
+                          <span className="text-xs">{pdiReportData.request_id}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">Started At:</span>
-                          <span className="text-sm">{new Date(pdiReportData.started_at).toLocaleString()}</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium">Started At:</span>
+                          <span className="text-xs">{new Date(pdiReportData.started_at).toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">Submitted At:</span>
-                          <span className="text-sm">{new Date(pdiReportData.submitted_at).toLocaleString()}</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium">Submitted At:</span>
+                          <span className="text-xs">{new Date(pdiReportData.submitted_at).toLocaleString()}</span>
                         </div>
                       </div>
                     </Card>
 
                     <Card title="Customer Information" accent="violet">
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">Name:</span>
-                          <span className="text-sm">{pdiReportData.customer_name}</span>
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium">Name:</span>
+                          <span className="text-xs">{pdiReportData.customer_name}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">Mobile:</span>
-                          <span className="text-sm">{pdiReportData.customer_mobile}</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium">Mobile:</span>
+                          <span className="text-xs">{pdiReportData.customer_mobile}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">Email:</span>
-                          <span className="text-sm">{pdiReportData.customer_email}</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium">Email:</span>
+                          <span className="text-xs">{pdiReportData.customer_email}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm font-medium">Slot Date:</span>
-                          <span className="text-sm">{pdiReportData.slot_date}</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium">Slot Date:</span>
+                          <span className="text-xs">{pdiReportData.slot_date}</span>
                         </div>
                       </div>
                     </Card>
@@ -3065,34 +3064,34 @@ export function NewInspectionPage() {
 
                   {/* Vehicle Information */}
                   <Card title="Vehicle Information" accent="green">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       <div>
-                        <span className="text-sm font-medium">Type:</span>
-                        <div className="text-sm capitalize">{pdiReportData.vehicle_type}</div>
+                        <span className="text-xs font-medium">Type:</span>
+                        <div className="text-xs capitalize">{pdiReportData.vehicle_type}</div>
                       </div>
                       <div>
-                        <span className="text-sm font-medium">Brand:</span>
-                        <div className="text-sm">{pdiReportData.brand}</div>
+                        <span className="text-xs font-medium">Brand:</span>
+                        <div className="text-xs">{pdiReportData.brand}</div>
                       </div>
                       <div>
-                        <span className="text-sm font-medium">Model:</span>
-                        <div className="text-sm">{pdiReportData.model}</div>
+                        <span className="text-xs font-medium">Model:</span>
+                        <div className="text-xs">{pdiReportData.model}</div>
                       </div>
                       <div>
-                        <span className="text-sm font-medium">Variant:</span>
-                        <div className="text-sm">{pdiReportData.variant}</div>
+                        <span className="text-xs font-medium">Variant:</span>
+                        <div className="text-xs">{pdiReportData.variant}</div>
                       </div>
                       <div>
-                        <span className="text-sm font-medium">Category:</span>
-                        <div className="text-sm">{pdiReportData.category}</div>
+                        <span className="text-xs font-medium">Category:</span>
+                        <div className="text-xs">{pdiReportData.category}</div>
                       </div>
                       <div>
-                        <span className="text-sm font-medium">Inspector:</span>
-                        <div className="text-sm">{pdiReportData.inspector_name}</div>
+                        <span className="text-xs font-medium">Inspector:</span>
+                        <div className="text-xs">{pdiReportData.inspector_name}</div>
                       </div>
                       <div>
-                        <span className="text-sm font-medium">Location:</span>
-                        <div className="text-sm">{pdiReportData.location_name}</div>
+                        <span className="text-xs font-medium">Location:</span>
+                        <div className="text-xs">{pdiReportData.location_name}</div>
                       </div>
                     </div>
                   </Card>
@@ -3100,12 +3099,12 @@ export function NewInspectionPage() {
                   {/* Inspection Answers */}
                   {pdiReportData.answers && pdiReportData.answers.length > 0 && (
                     <Card title="Inspection Results" accent="orange">
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {pdiReportData.answers.map((answer, index) => (
-                          <div key={answer.id} className="border border-slate-200 rounded-lg p-3">
+                          <div key={answer.id} className="border border-slate-200 rounded-lg p-2">
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex-1">
-                                <div className="text-sm font-medium text-slate-900">{answer.question_title}</div>
+                                <div className="text-xs font-medium text-slate-900">{answer.question_title}</div>
                                 <div className="text-xs text-slate-500 mb-1">
                                   {answer.section_title} • {answer.question_description}
                                 </div>
@@ -3132,7 +3131,7 @@ export function NewInspectionPage() {
                                       <img
                                         src={image.image_url}
                                         alt={`Evidence ${imgIndex + 1}`}
-                                        className="h-16 w-16 object-cover rounded border border-slate-200 cursor-pointer"
+                                        className="h-12 w-12 object-cover rounded border border-slate-200 cursor-pointer"
                                         onClick={() => window.open(image.image_url, '_blank')}
                                       />
                                     </div>

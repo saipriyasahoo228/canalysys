@@ -356,35 +356,6 @@ export function Button({ children, className, variant = 'default', size = 'sm', 
 }
 
 export const Input = forwardRef(function Input({ className, type, ...props }, ref) {
-  const [showPassword, setShowPassword] = useState(false)
-  
-  if (type === 'password') {
-    return (
-      <div className="relative">
-        <input
-          ref={ref}
-          type={showPassword ? 'text' : 'password'}
-          className={cx(
-            'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-500 shadow-sm focus:border-cyan-500/80 focus:ring-2 focus:ring-cyan-200/70',
-            className
-          )}
-          {...props}
-        />
-        <button
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
-        >
-          {showPassword ? (
-            <Eye className="h-4 w-4" />
-          ) : (
-            <Eye className="h-4 w-4" />
-          )}
-        </button>
-      </div>
-    )
-  }
-  
   return (
     <input
       ref={ref}

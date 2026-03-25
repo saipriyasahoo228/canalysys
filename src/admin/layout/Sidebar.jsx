@@ -72,14 +72,14 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
             <img
               src="/carnalysysnew1.jpg"
               alt="CARNALYSYS"
-              className={cx('rounded-xl object-contain', collapsed ? 'h-12 w-12' : 'h-20 w-20')}
+              className={cx('rounded-xl object-contain', collapsed ? 'hidden' : 'h-20 w-20')}
             />
 
             <button
               type="button"
               className={cx(
-                'cursor-pointer rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 active:scale-95 absolute right-2',
-                collapsed ? 'hidden' : ''
+                'cursor-pointer rounded-xl p-2 text-slate-700 transition hover:bg-slate-100 active:scale-95',
+                collapsed ? 'absolute left-1/2 -translate-x-1/2' : 'absolute right-2'
               )}
               onClick={() => setCollapsed((v) => !v)}
               aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}

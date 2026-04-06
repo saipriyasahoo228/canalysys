@@ -49,6 +49,66 @@ function formatDateDisplay(dateIso) {
   return `${dayName}, ${monthName} ${dd}`
 }
 
+function formatAddress(form) {
+  const parts = [
+    form.houseNumber,
+    form.areaStreet,
+    form.city,
+    form.district,
+    form.state,
+    form.pinCode
+  ].filter(Boolean)
+  
+  return parts.join(', ')
+}
+
+function formatAddressDisplay(addressString) {
+  if (!addressString) return '—'
+  
+  // Split by comma and clean up
+  const parts = addressString.split(',').map(part => part.trim()).filter(Boolean)
+  
+  if (parts.length === 0) return '—'
+  
+  // Format with line breaks for better readability
+  let formatted = parts[0] // House Number
+  
+  if (parts.length >= 2) {
+    formatted += ', ' + parts[1] // Area/Street
+  }
+  
+  if (parts.length >= 3) {
+    formatted += '\n' + parts[2] // City
+  }
+  if (parts.length >= 4) {
+    formatted += ', ' + parts[3] // District
+  }
+  
+  if (parts.length >= 5) {
+    formatted += '\n' + parts[4] // State
+  }
+  if (parts.length >= 6) {
+    formatted += ', ' + parts[5] // Pin Code
+  }
+  
+  return formatted
+}
+
+function formatTimeToAMPM(timeString) {
+  if (!timeString) return '—'
+  
+  // Parse time string like "14:00:00"
+  const [hours, minutes] = timeString.split(':')
+  const hour = parseInt(hours)
+  const minute = parseInt(minutes)
+  
+  // Convert to 12-hour format
+  const period = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 || 12 // Convert 0 to 12
+  
+  return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`
+}
+
 export function NewInspectionPage() {
   console.log('🔍 Debug - NewInspectionPage component rendering')
   
@@ -777,7 +837,7 @@ export function NewInspectionPage() {
         model_id: parseInt(wizardForm.modelId),
         variant_id: parseInt(wizardForm.variantId),
         category_id: parseInt(wizardForm.category),
-        address: wizardForm.locationId || '', // Send as string, not address_id
+        address: formatAddress(wizardForm), // Use formatted address instead of locationId
         slot_date: wizardForm.slotDate,
         slot_time: wizardForm.slotTime,
         slot_start_time: wizardForm.slotStart,
@@ -905,7 +965,7 @@ export function NewInspectionPage() {
         model_id: parseInt(wizardForm.modelId),
         variant_id: parseInt(wizardForm.variantId),
         category_id: parseInt(wizardForm.category),
-        address: wizardForm.locationId || '', // Send as string, not address_id
+        address: formatAddress(wizardForm), // Use formatted address instead of locationId
         slot_date: wizardForm.slotDate,
         slot_time: wizardForm.slotTime,
         slot_start_time: wizardForm.slotStart,
@@ -1359,6 +1419,12 @@ export function NewInspectionPage() {
       variantId: '',
       category: '',
       locationId: '',
+      houseNumber: '',
+      areaStreet: '',
+      city: '',
+      district: '',
+      state: '',
+      pinCode: '',
       slotDate: new Date().toISOString().split('T')[0], // Set today's date as default
       slotTime: '',
       slotStart: '',
@@ -1554,15 +1620,17 @@ export function NewInspectionPage() {
       { key: 'customerMobile', label: 'Mobile', value: c?.mobile || '—' },
       { key: 'pdiId', label: 'Booking / PDI ID', value: b?.id || '—' },
       {key: 'createdAt', label: 'Booked at', value: b?.createdAt ? formatDateDisplay(String(b.createdAt).slice(0, 10)) : '—', fullWidth: true },
-      { key: 'slot', label: 'Selected slot', value: b?.requestedSlotAt ? formatDateDisplay(String(b.requestedSlotAt).slice(0, 10)) : '—', fullWidth: true },
-      { key: 'location', label: 'Location', value: locationNameById.get(b?.locationId) || b?.locationId || '—' },
-      { key: 'vehicleType', label: 'Vehicle type', value: b?.vehicleType === 'pre_owned' ? 'Pre-Owned' : 'New' },
-      { key: 'vehicle', label: 'Vehicle', value: b?.vehicleSummary || '—', fullWidth: true },
-      { key: 'category', label: 'Category', value: b?.requestedCategory || b?.requestedVehicle?.category || '—' },
-      { key: 'total', label: 'Total price (INR)', value: b?.priceInr ?? '—' },
-      { key: 'advance', label: 'Advance paid (INR)', value: b?.advancePaidInr ?? 500 },
-      { key: 'due', label: 'Remaining due (INR)', value: b?.dueInr ?? (Number.isFinite(Number(b?.priceInr)) ? Math.max(0, Number(b.priceInr) - 500) : '—') },
+      { key: 'slot', label: 'Selected slot', value: b?.slot_date ? `${formatDateDisplay(b.slot_date)}\n${formatTimeToAMPM(b.slot_start_time)} - ${formatTimeToAMPM(b.slot_end_time)}` : '—', fullWidth: true },
+      { key: 'location', label: 'Address', value: formatAddressDisplay(b?.address) || '—', fullWidth: true },
+      { key: 'vehicleType', label: 'Vehicle type', value: b?.vehicle_type === 'pre_owned' ? 'Pre-Owned' : 'New' },
+      { key: 'vehicle', label: 'Vehicle', value: `${b?.brand_name || '—'} ${b?.model_name || '—'} ${b?.variant_name || '—'}`.trim() || '—', fullWidth: true },
+      { key: 'category', label: 'Category', value: b?.category_name || '—' },
+      { key: 'total', label: 'Total price (INR)', value: b?.amount_paise ? `₹${(b.amount_paise / 100).toFixed(2)}` : '—' },
+      { key: 'advance', label: 'Advance paid (INR)', value: b?.advance_amount_paise ? `₹${(b.advance_amount_paise / 100).toFixed(2)}` : '—' },
+      { key: 'due', label: 'Remaining due (INR)', value: b?.remaining_amount_paise ? `₹${(b.remaining_amount_paise / 100).toFixed(2)}` : '—' },
       { key: 'status', label: 'Status', value: b?.status || 'pending' },
+      { key: 'assignedInspectorName', label: 'Assigned Inspector', value: b?.assigned_inspector_name || '—' },
+      { key: 'assignedInspectorMobile', label: 'Assigned Inspector Mobile', value: b?.assigned_inspector_mobile_number || '—' },
     ]
   }, [booking, bookingOpen, dialog?.customer, locationNameById])
 
@@ -1603,8 +1671,8 @@ export function NewInspectionPage() {
       return [
         { key: 'requestId', label: 'Request ID', value: detailData.request_id || '—' },
         { key: 'slotDate', label: 'Slot Date', value: detailData.slot_date ? formatDateDMY(detailData.slot_date) : '—' },
-        { key: 'slotTime', label: 'Slot Time', value: `${detailData.slot_start_time || '09:00:00'} - ${detailData.slot_end_time || '18:00:00'}` },
-        { key: 'address', label: 'Address', value: detailData.address || '—', fullWidth: true },
+        { key: 'slotTime', label: 'Slot Time', value: `${formatTimeToAMPM(detailData.slot_start_time || '09:00:00')} - ${formatTimeToAMPM(detailData.slot_end_time || '18:00:00')}` },
+        { key: 'address', label: 'Address', value: formatAddressDisplay(detailData.address) || '—', fullWidth: true },
         { key: 'amount', label: 'Total Amount', value: `₹${(detailData.amount_paise / 100).toFixed(2)}` },
         { key: 'advancePaid', label: 'Advance Paid', value: `₹${(detailData.advance_amount_paise / 100).toFixed(2)}` },
         { key: 'remainingAmount', label: 'Remaining Amount', value: `₹${(detailData.remaining_amount_paise / 100).toFixed(2)}` },
@@ -1612,6 +1680,7 @@ export function NewInspectionPage() {
         { key: 'status', label: 'Status', value: detailData.status || '—' },
         { key: 'assignedInspectorId', label: 'Assigned Inspector ID', value: detailData.assigned_inspector_id || '—' },
         { key: 'assignedInspectorName', label: 'Assigned Inspector Name', value: detailData.assigned_inspector_name || '—' },
+        { key: 'assignedInspectorMobile', label: 'Assigned Inspector Mobile', value: detailData.assigned_inspector_mobile_number || '—' },
         { key: 'createdAt', label: 'Created At', value: detailData.created_at ? new Date(detailData.created_at).toLocaleString() : '—', fullWidth: true },
       ]
     }
@@ -1835,12 +1904,18 @@ export function NewInspectionPage() {
                     customerName: '',
                     customerEmail: '',
                     customerPhone: '',
-                    vehicleType: 'new',
+                    vehicleType: '',
                     makeId: '',
                     modelId: '',
                     variantId: '',
                     category: '',
                     locationId: '',
+                    houseNumber: '',
+                    areaStreet: '',
+                    city: '',
+                    district: '',
+                    state: '',
+                    pinCode: '',
                     slotDate: '',
                     slotTime: '',
                     slotStart: '',
@@ -2458,16 +2533,91 @@ export function NewInspectionPage() {
                         </div>
 
                         <div>
-                          <div className="text-xs font-medium text-slate-900">Location</div>
+                          <div className="text-xs font-medium text-slate-900">House Number</div>
                           <div className="mt-1">
                             <Input
-                              value={wizardForm.locationId || ''}
+                              value={wizardForm.houseNumber || ''}
                               onChange={(e) =>
                                 setDialog((s) =>
-                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, locationId: e.target.value } } : s
+                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, houseNumber: e.target.value } } : s
                                 )
                               }
-                              placeholder="Enter location"
+                              placeholder="Enter house number"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs font-medium text-slate-900">Area/Street</div>
+                          <div className="mt-1">
+                            <Input
+                              value={wizardForm.areaStreet || ''}
+                              onChange={(e) =>
+                                setDialog((s) =>
+                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, areaStreet: e.target.value } } : s
+                                )
+                              }
+                              placeholder="Enter area/street"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs font-medium text-slate-900">City</div>
+                          <div className="mt-1">
+                            <Input
+                              value={wizardForm.city || ''}
+                              onChange={(e) =>
+                                setDialog((s) =>
+                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, city: e.target.value } } : s
+                                )
+                              }
+                              placeholder="Enter city"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs font-medium text-slate-900">District</div>
+                          <div className="mt-1">
+                            <Input
+                              value={wizardForm.district || ''}
+                              onChange={(e) =>
+                                setDialog((s) =>
+                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, district: e.target.value } } : s
+                                )
+                              }
+                              placeholder="Enter district"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs font-medium text-slate-900">State</div>
+                          <div className="mt-1">
+                            <Input
+                              value={wizardForm.state || ''}
+                              onChange={(e) =>
+                                setDialog((s) =>
+                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, state: e.target.value } } : s
+                                )
+                              }
+                              placeholder="Enter state"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs font-medium text-slate-900">Pin Code</div>
+                          <div className="mt-1">
+                            <Input
+                              value={wizardForm.pinCode || ''}
+                              onChange={(e) =>
+                                setDialog((s) =>
+                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, pinCode: e.target.value } } : s
+                                )
+                              }
+                              placeholder="Enter pin code"
                             />
                           </div>
                         </div>
@@ -2669,7 +2819,7 @@ export function NewInspectionPage() {
                             </div>
                           )}
                         </div>
-                        <div className="mt-1 text-xs text-slate-600">{wizardForm.locationId || '—'}</div>
+                        <div className="mt-1 text-xs text-slate-600">{formatAddress(wizardForm) || '—'}</div>
                       </div>
                     </div>
 
@@ -2749,7 +2899,7 @@ export function NewInspectionPage() {
                             : '—'}
                         </div>
                         <div className="mt-1 text-xs text-slate-600">
-                          {String(wizardForm.locationId || '').trim() || '—'}
+                          {formatAddress(wizardForm) || '—'}
                         </div>
                       </div>
 
@@ -2892,7 +3042,7 @@ export function NewInspectionPage() {
                         (wizardStep === 2 && !wizardForm.slotDate)
                       }
                     >
-                      {wizardStep === 1 ? 'Select Date' : wizardStep === 2 ? 'Proceed to Checkout' : 'Next'}
+                      {wizardStep === 1 ? (loadingAvailability ? 'Loading...' : 'Select Date') : wizardStep === 2 ? 'Proceed to Checkout' : 'Next'}
                     </Button>
                   ) : (
                     <Button

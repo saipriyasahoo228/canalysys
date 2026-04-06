@@ -30,7 +30,7 @@ export function ViewDetailsDialog({ open, title, subtitle, onClose, items, accen
                 {(items || []).map((it) => (
                   <div key={it.key || it.label} className={it.fullWidth ? 'sm:col-span-2' : ''}>
                     <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-600">{it.label}</dt>
-                    <dd className="mt-1 text-sm font-semibold text-slate-900 break-words">{it.value ?? '—'}</dd>
+                    <dd className="mt-1 text-sm font-semibold text-slate-900 break-words whitespace-pre-line">{it.value ?? '—'}</dd>
                   </div>
                 ))}
               </dl>

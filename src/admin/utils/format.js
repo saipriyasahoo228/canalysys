@@ -35,6 +35,22 @@ export function formatDateTime(iso) {
   return `${dd}/${mm}/${yyyy}, ${hh}:${min}`
 }
 
+export function formatTime(timeString) {
+  if (!timeString) return '—'
+  // Handle HH:MM:SS format
+  const [hours, minutes] = timeString.split(':')
+  const hour = parseInt(hours, 10)
+  const minute = parseInt(minutes, 10)
+  
+  if (isNaN(hour) || isNaN(minute)) return '—'
+  
+  const ampm = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 || 12 // Convert 0 to 12 for 12 AM
+  const displayMinute = String(minute).padStart(2, '0')
+  
+  return `${displayHour}:${displayMinute} ${ampm}`
+}
+
 export function minutesSince(iso) {
   const t = new Date(iso).getTime()
   if (!t) return 0

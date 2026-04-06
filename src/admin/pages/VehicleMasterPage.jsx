@@ -13,6 +13,7 @@ import { Snackbar } from '../ui/Snackbar'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { formatDate } from '../utils/format'
+import { API_BASE_URL } from '../../constant'
 import {
   listBrands,
   createBrand,
@@ -452,6 +453,7 @@ export function VehicleMasterPage() {
         ...(dialog.kind === 'make'
           ? [
               { key: 'description', label: 'Description', value: it?.description || '—', fullWidth: true },
+              { key: 'brand_image', label: 'Brand Logo', value: it?.brand_image ? <img src={`${API_BASE_URL}${it.brand_image}`} alt="Brand Logo" style={{ maxWidth: '100px', maxHeight: '100px', objectFit: 'cover' }} /> : '—' },
               { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
               { key: 'created_at', label: 'Created', value: it?.created_at ? new Date(it.created_at).toLocaleString() : '—' },
               { key: 'updated_at', label: 'Updated', value: it?.updated_at ? new Date(it.updated_at).toLocaleString() : '—' },
@@ -1181,6 +1183,16 @@ export function VehicleMasterPage() {
           if (dialog?.type === 'viewBase') {
             return [
               { name: 'id', label: 'ID', type: 'text', defaultValue: dialog?.item?.id || '', disabled: true },
+              ...(dialog?.kind === 'make' && dialog?.item?.logo ? [
+                {
+                  name: 'logo',
+                  label: 'Logo',
+                  type: 'image',
+                  defaultValue: dialog?.item?.logo || '',
+                  disabled: true,
+                  fullWidth: true
+                },
+              ] : []),
               ...(dialog?.kind === 'model'
                 ? [
                     {
@@ -1188,18 +1200,6 @@ export function VehicleMasterPage() {
                       label: 'Brand',
                       type: 'select',
                       defaultValue: dialog?.item?.makeId || '',
-                      options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
-                      disabled: true,
-                    },
-                  ]
-                : []),
-              ...(dialog?.kind === 'variant'
-                ? [
-                    {
-                      name: 'makeId',
-                      label: 'Brand',
-                      type: 'select',
-                      defaultValue: modelById.get(dialog?.item?.modelId)?.makeId || '',
                       options: (vm.makes || []).map((m) => ({ value: m.id, label: m.name })),
                       disabled: true,
                     },
@@ -1214,6 +1214,9 @@ export function VehicleMasterPage() {
                   ]
                 : []),
               { name: 'name', label: 'Name', type: 'text', defaultValue: dialog?.item?.name || '', disabled: true },
+              ...(dialog?.kind === 'make' ? [
+                { name: 'description', label: 'Description', type: 'text', defaultValue: dialog?.item?.description || '', disabled: true },
+              ] : []),
             ].filter(Boolean)
           }
 
@@ -1222,6 +1225,16 @@ export function VehicleMasterPage() {
               return [
                 { name: 'name', label: 'Brand name *', type: 'text', defaultValue: '' },
                 { name: 'description', label: 'Description', type: 'text', defaultValue: '' },
+                { 
+                  name: 'logo', 
+                  label: 'Brand Logo', 
+                  type: 'file', 
+                  defaultValue: '', 
+                  accept: 'image/*',
+                  fileMode: 'dataUrl',
+                  progressName: 'logoProgress',
+                  fileNameName: 'logoFileName'
+                },
               ]
             }
             if (dialog.kind === 'model') {
@@ -1304,6 +1317,16 @@ export function VehicleMasterPage() {
               return [
                 { name: 'name', label: 'Brand name *', type: 'text', defaultValue: dialog?.item?.name || '' },
                 { name: 'description', label: 'Description', type: 'text', defaultValue: dialog?.item?.description || '' },
+                { 
+                  name: 'logo', 
+                  label: 'Brand Logo', 
+                  type: 'file', 
+                  defaultValue: dialog?.item?.brand_image || '', 
+                  accept: 'image/*',
+                  fileMode: 'dataUrl',
+                  progressName: 'logoProgress',
+                  fileNameName: 'logoFileName'
+                },
               ]
             }
             if (dialog.kind === 'model') {
@@ -1791,6 +1814,8 @@ export function VehicleMasterPage() {
                 const res = await createBrand({
                   name: String(form.name || '').trim(),
                   description: String(form.description || '').trim() || null,
+                  brand_image: form.logo || null,
+                  is_active: true,
                 })
                 showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
               } else if (dialog.kind === 'model') {
@@ -1841,6 +1866,8 @@ export function VehicleMasterPage() {
                 const res = await updateBrand(dialog.item.id, {
                   name: String(form.name || '').trim(),
                   description: String(form.description || '').trim() || null,
+                  brand_image: form.logo || null,
+                  is_active: true,
                 })
                 showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
               } else if (dialog.kind === 'model') {

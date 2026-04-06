@@ -490,6 +490,24 @@ export function ReasonDialog({
                           {f.checkboxLabel || f.label}
                         </label>
                       </div>
+                    ) : f.type === 'image' ? (
+                      <div className="space-y-2">
+                        {f.defaultValue ? (
+                          <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                            <img 
+                              src={f.defaultValue} 
+                              alt={f.label || 'Image'}
+                              className="w-full h-32 object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-32 border border-slate-200 bg-slate-50 rounded-lg">
+                            <div className="text-center">
+                              <div className="text-slate-400 text-sm">No image available</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <Input
                         type={f.type || 'text'}

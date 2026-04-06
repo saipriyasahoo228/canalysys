@@ -10,6 +10,8 @@ import { VehicleMasterPage } from './pages/VehicleMasterPage'
 import { ChecklistBuilderPage } from './pages/ChecklistBuilderPage'
 import { RegisterCustomerPage } from './pages/RegisterCustomerPage'
 import { NewInspectionPage } from './pages/NewInspectionPage'
+import { TimeFramesPage } from './pages/TimeFramesPage'
+import { BannerPage } from './pages/BannerPage'
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { LoginPage } from './pages/LoginPage'
@@ -38,6 +40,8 @@ export default function AdminApp() {
               <Route path="/finance" element={<FinancePage />} />
               <Route path="/vehicle-master" element={<VehicleMasterPage />} />
               <Route path="/checklists" element={<ChecklistBuilderPage />} />
+              <Route path="/time-frames" element={<TimeFramesPage />} />
+              <Route path="/banners" element={<BannerPage />} />
               <Route path="/audit" element={<AuditLogsPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>

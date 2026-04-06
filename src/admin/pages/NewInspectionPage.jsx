@@ -8,6 +8,7 @@ import { listCustomers, createCustomer, deleteCustomer, getCustomerBookings } fr
 import { getAvailabilities, getInspectorAvailabilityByDate } from '../../api/inspectoravailibility'
 import { listInspectors } from '../../api/inspectoronboard'
 import { getPDIReportByRequestId } from '../../api/inspectionreport'
+import { getPDIAvailableSlots } from '../../api/timeSlotConfigurations'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, Select, cx } from '../ui/Ui'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
@@ -53,6 +54,11 @@ export function NewInspectionPage() {
   
   const { actor } = useRbac()
 
+  // State for time slots
+  const [timeSlots, setTimeSlots] = useState([])
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false)
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState('')
+  
   // State for availability data
   const [availabilityData, setAvailabilityData] = useState([])
   const [loadingAvailability, setLoadingAvailability] = useState(false)
@@ -418,7 +424,38 @@ export function NewInspectionPage() {
     { intervalMs: 15_000 }
   )
 
-  // Function to generate date slots inside component
+  // Function to fetch time slots for a selected date
+  const fetchTimeSlots = async (date) => {
+    console.log('🎯 fetchTimeSlots called with date:', date)
+    if (!date) {
+      console.log('⚠️ No date provided, clearing slots')
+      setTimeSlots([])
+      setSelectedTimeSlot('')
+      return
+    }
+    
+    try {
+      setLoadingTimeSlots(true)
+      console.log('🕐 Fetching PDI time slots for date:', date)
+      
+      const response = await getPDIAvailableSlots(date) // Use new PDI slots API
+      console.log('✅ PDI time slots fetched:', response)
+      
+      const slots = response.slots || []
+      setTimeSlots(slots)
+      setSelectedTimeSlot('') // Reset selected time slot when date changes
+      console.log('📊 Time slots state updated:', slots.length, 'slots')
+      console.log('📋 First slot:', slots[0])
+    } catch (error) {
+      console.error('❌ Failed to fetch PDI time slots:', error)
+      console.error('❌ Error details:', error.response?.data || error.message)
+      setTimeSlots([])
+      setSelectedTimeSlot('')
+    } finally {
+      setLoadingTimeSlots(false)
+      console.log('🏁 fetchTimeSlots completed')
+    }
+  }
   const generateDateSlots = (availabilityData = [], inspectorAvailabilityByDate = {}) => {
     console.log('🗓️ generateDateSlots called with:', { availabilityData, inspectorAvailabilityByDate, selectedFilterDate })
     const slots = []
@@ -719,7 +756,13 @@ export function NewInspectionPage() {
       }
       
       if (!wizardForm.slotDate) {
-        alert('This field is required.')
+        alert('Please select a date for the inspection.')
+        setPaymentLoading(false)
+        return
+      }
+      
+      if (!wizardForm.slotTime) {
+        alert('Please select a time slot for the inspection.')
         setPaymentLoading(false)
         return
       }
@@ -736,6 +779,9 @@ export function NewInspectionPage() {
         category_id: parseInt(wizardForm.category),
         address: wizardForm.locationId || '', // Send as string, not address_id
         slot_date: wizardForm.slotDate,
+        slot_time: wizardForm.slotTime,
+        slot_start_time: wizardForm.slotStart,
+        slot_end_time: wizardForm.slotEnd,
         amount_paise: priceInr * 100, // Send full amount
         advance_amount_paise: 50000, // But specify advance is 500
         remaining_amount_paise: (priceInr - 500) * 100 // Calculate remaining
@@ -837,7 +883,13 @@ export function NewInspectionPage() {
       }
       
       if (!wizardForm.slotDate) {
-        alert('This field is required.')
+        alert('Please select a date for the inspection.')
+        setPaymentLoading(false)
+        return
+      }
+      
+      if (!wizardForm.slotTime) {
+        alert('Please select a time slot for the inspection.')
         setPaymentLoading(false)
         return
       }
@@ -855,6 +907,9 @@ export function NewInspectionPage() {
         category_id: parseInt(wizardForm.category),
         address: wizardForm.locationId || '', // Send as string, not address_id
         slot_date: wizardForm.slotDate,
+        slot_time: wizardForm.slotTime,
+        slot_start_time: wizardForm.slotStart,
+        slot_end_time: wizardForm.slotEnd,
         amount_paise: priceInr * 100, // Send full amount
         advance_amount_paise: 50000, // But specify advance is 500
         remaining_amount_paise: (priceInr - 500) * 100 // Calculate remaining
@@ -1293,7 +1348,8 @@ export function NewInspectionPage() {
 
   const wizardForm = useMemo(() => {
     if (!raiseOpen) return {}
-    return dialog?.form || {
+    
+    const defaultForm = {
       customerName: '',
       customerEmail: '',
       customerPhone: '',
@@ -1303,9 +1359,41 @@ export function NewInspectionPage() {
       variantId: '',
       category: '',
       locationId: '',
-      slotDate: '',
+      slotDate: new Date().toISOString().split('T')[0], // Set today's date as default
+      slotTime: '',
+      slotStart: '',
+      slotEnd: '',
     }
+    
+    const form = dialog?.form || defaultForm
+    
+    // Ensure slotDate is always set to today's date if not provided
+    if (!form.slotDate) {
+      form.slotDate = defaultForm.slotDate
+    }
+    
+    console.log('🔍 WizardForm generated:', { slotDate: form.slotDate, hasDialogForm: !!dialog?.form })
+    return form
   }, [raiseOpen, dialog?.form])
+
+  // Fetch time slots when dialog opens with default date
+  useEffect(() => {
+    console.log('🔄 useEffect triggered - raiseOpen:', raiseOpen, 'slotDate:', wizardForm.slotDate)
+    if (raiseOpen && wizardForm.slotDate) {
+      // Fetch time slots whenever dialog opens and there's a date selected
+      console.log('🚀 Calling fetchTimeSlots for:', wizardForm.slotDate)
+      fetchTimeSlots(wizardForm.slotDate)
+    }
+  }, [raiseOpen])
+
+  // Also fetch time slots when component first loads with default date
+  useEffect(() => {
+    if (wizardForm.slotDate && !dialog?.form?.slotDate) {
+      // Only fetch on initial load if using default date
+      console.log('🎯 Initial load - Calling fetchTimeSlots for:', wizardForm.slotDate)
+      fetchTimeSlots(wizardForm.slotDate)
+    }
+  }, []) // Empty dependency array - only run once on mount
 
   // Fetch models when brand is selected
   useEffect(() => {
@@ -1754,6 +1842,9 @@ export function NewInspectionPage() {
                     category: '',
                     locationId: '',
                     slotDate: '',
+                    slotTime: '',
+                    slotStart: '',
+                    slotEnd: '',
                   },
                 })
               }
@@ -2394,18 +2485,38 @@ export function NewInspectionPage() {
                         <div className="text-xs font-medium text-slate-900">Quick select</div>
                       </div>
 
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const today = new Date().toISOString().split('T')[0]
+                            setDialog((s) =>
+                              s && s.type === 'raise' ? { ...s, form: { ...s.form, slotDate: today } } : s
+                            )
+                            fetchTimeSlots(today)
+                          }}
+                          className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                        >
+                          Today - {formatDateDisplay(new Date().toISOString().split('T')[0])}
+                        </button>
+                      </div>
+
                       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
                         {/* Calendar Section */}
                         <div>
                           <div className="text-xs font-medium text-slate-900">Select from calendar</div>
                           <div className="mt-2">
+                            {console.log('📅 CustomDatePicker value:', wizardForm.slotDate)}
                             <CustomDatePicker
                               value={wizardForm.slotDate}
-                              onChange={(iso) =>
+                              onChange={(iso) => {
+                                console.log('📅 Date changed to:', iso)
                                 setDialog((s) =>
                                   s && s.type === 'raise' ? { ...s, form: { ...s.form, slotDate: iso } } : s
                                 )
-                              }
+                                // Fetch time slots for the selected date
+                                fetchTimeSlots(iso)
+                              }}
                             />
                           </div>
                         </div>
@@ -2425,87 +2536,106 @@ export function NewInspectionPage() {
 
                       <div className="mt-4">
                         <div className="flex items-center justify-between">
-                          <div className="text-xs font-medium text-slate-900">Select date slot</div>
-                          <button
-                            type="button"
-                            onClick={() => setShowDateFilter(!showDateFilter)}
-                            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                          >
-                            {showDateFilter ? 'Hide Filter' : 'Date Filter'}
-                          </button>
+                          <div className="text-xs font-medium text-slate-900">Select time slot</div>
+                          {loadingTimeSlots && (
+                            <div className="text-xs text-blue-600">Loading time slots...</div>
+                          )}
                         </div>
                         
-                        {showDateFilter && (
-                          <div className="mt-3 p-3 rounded-lg border border-slate-200 bg-slate-50">
-                            <div className="flex items-center gap-3">
-                              <div className="text-xs font-medium text-slate-700">Filter by date:</div>
-                              <input
-                                type="date"
-                                value={selectedFilterDate}
-                                onChange={(e) => handleDateFilter(e.target.value)}
-                                className="text-xs px-2 py-1 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                              {selectedFilterDate && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDateFilter('')}
-                                  className="text-xs text-red-600 hover:text-red-800 font-medium"
-                                >
-                                  Clear
-                                </button>
-                              )}
-                            </div>
-                            {loadingInspectorAvailability && (
-                              <div className="mt-2 text-xs text-slate-600">Loading filtered availability...</div>
+                        {wizardForm.slotDate && (
+                          <div className="mt-3">
+                            {console.log('🔍 Display check - slotDate:', wizardForm.slotDate, 'timeSlots.length:', timeSlots.length, 'loading:', loadingTimeSlots)}
+                            {timeSlots.length > 0 ? (
+                              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                                {timeSlots.map((slot) => {
+                                  const active = selectedTimeSlot === slot.timestamp
+                                  const isAvailable = slot.is_available
+                                  const freeInspectors = slot.free_inspectors || 0
+                                  
+                                  return (
+                                    <button
+                                      key={slot.timestamp}
+                                      type="button"
+                                      disabled={!isAvailable}
+                                      className={cx(
+                                        'relative rounded-xl border-2 p-3 text-center transition-all duration-200 shadow-sm hover:shadow-md',
+                                        active
+                                          ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 shadow-blue-200 shadow-lg transform scale-105'
+                                          : isAvailable
+                                          ? 'border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50 hover:shadow-blue-100 cursor-pointer transform hover:scale-102'
+                                          : 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed opacity-60'
+                                      )}
+                                      onClick={() => {
+                                        if (isAvailable) {
+                                          setSelectedTimeSlot(slot.timestamp)
+                                          setDialog((s) => 
+                                            s && s.type === 'raise' ? { ...s, form: { ...s.form, slotTime: slot.timestamp, slotStart: slot.start_24h, slotEnd: slot.end_24h } } : s
+                                          )
+                                        }
+                                      }}
+                                    >
+                                      {/* Status indicator dot */}
+                                      <div className="absolute top-2 right-2">
+                                        <div className={cx(
+                                          'w-2 h-2 rounded-full',
+                                          active ? 'bg-blue-500' : isAvailable ? 'bg-green-500' : 'bg-red-400'
+                                        )} />
+                                      </div>
+                                      
+                                      {/* Time display */}
+                                      <div className="mb-2">
+                                        <div className="text-sm font-bold text-slate-900">
+                                          {slot.start}
+                                        </div>
+                                        <div className="text-xs text-slate-500">
+                                          {slot.end}
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Inspector availability */}
+                                      <div className="border-t border-slate-100 pt-2">
+                                        {isAvailable ? (
+                                          <div className="flex items-center justify-center space-x-1">
+                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                                            <span className="text-xs font-semibold text-green-600">
+                                              {freeInspectors} {freeInspectors === 1 ? 'inspector' : 'inspectors'}
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center justify-center space-x-1">
+                                            <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
+                                            <span className="text-xs font-medium text-red-500">
+                                              Unavailable
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Selected indicator */}
+                                      {active && (
+                                        <div className="absolute -top-1 -right-1 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center">
+                                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                          </svg>
+                                        </div>
+                                      )}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 text-sm text-slate-500">
+                                {loadingTimeSlots ? 'Loading time slots...' : 'No time slots available for this date'}
+                              </div>
                             )}
                           </div>
                         )}
                         
-                        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                          {dateSlots.map((slot) => {
-                            const active = wizardForm.slotDate === slot.value
-                            const isAvailable = slot.isAvailable
-                            return (
-                              <button
-                                key={slot.value}
-                                type="button"
-                                disabled={!isAvailable}
-                                className={cx(
-                                  'rounded-xl border px-3 py-3 text-xs font-semibold shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-950/30',
-                                  active
-                                    ? 'border-green-600 bg-green-600 text-white cursor-pointer'
-                                    : isAvailable
-                                    ? 'border-green-200 bg-green-50 text-green-900 hover:bg-green-100 cursor-pointer'
-                                    : 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
-                                )}
-                                onClick={() =>
-                                  isAvailable && setDialog((s) => (s && s.type === 'raise' ? { ...s, form: { ...s.form, slotDate: slot.value } } : s))
-                                }
-                              >
-                                <div className="font-semibold">{slot.display.split(',')[0]}</div>
-                                <div className="mt-1 text-xs opacity-75">{slot.display.split(',')[1]?.trim()}</div>
-                                {isAvailable && (
-                                  <div className="mt-1 text-xs font-medium">
-                                    {slot.freeInspectorCount} free inspector{slot.freeInspectorCount > 1 ? 's' : ''} available
-                                    {slot.busyInspectorCount > 0 && (
-                                      <span className="ml-1 text-orange-600">
-                                        ({slot.busyInspectorCount} busy)
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                                {!isAvailable && (
-                                  <div className="mt-1 text-xs">
-                                    {slot.busyInspectorCount > 0 
-                                      ? `${slot.busyInspectorCount} busy inspector${slot.busyInspectorCount > 1 ? 's' : ''}`
-                                      : 'No inspectors'
-                                    }
-                                  </div>
-                                )}
-                              </button>
-                            )
-                          })}
-                        </div>
+                        {!wizardForm.slotDate && (
+                          <div className="text-center py-4 text-sm text-slate-500">
+                            Please select a date first to see available time slots
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Card>
@@ -2528,11 +2658,16 @@ export function NewInspectionPage() {
                         </div>
                       </div>
                       <div className="rounded-xl border border-slate-200 bg-white p-3">
-                        <div className="text-xs font-medium text-slate-600">Slot</div>
+                        <div className="text-xs font-medium text-slate-600">Inspection Slot</div>
                         <div className="mt-1 font-semibold text-slate-900">
                           {wizardForm.slotDate
                             ? formatDateDisplay(wizardForm.slotDate)
                             : '—'}
+                          {wizardForm.slotStart && wizardForm.slotEnd && (
+                            <div className="text-sm text-slate-600">
+                              {wizardForm.slotStart} - {wizardForm.slotEnd}
+                            </div>
+                          )}
                         </div>
                         <div className="mt-1 text-xs text-slate-600">{wizardForm.locationId || '—'}</div>
                       </div>
@@ -2733,7 +2868,14 @@ export function NewInspectionPage() {
                           return
                         }
                         if (wizardStep === 2) {
-                          if (!wizardForm.slotDate) return
+                          if (!wizardForm.slotDate) {
+                            alert('Please select a date for the inspection.')
+                            return
+                          }
+                          if (!wizardForm.slotTime) {
+                            alert('Please select a time slot for the inspection.')
+                            return
+                          }
                           setDialog((s) => (s && s.type === 'raise' ? { ...s, step: 3 } : s)) // Go to page 3
                           return
                         }

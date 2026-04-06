@@ -33,7 +33,28 @@ export const listVariants = async ({ page = 1, model_id } = {}) => {
 
 export const createBrand = async (payload) => {
   try {
-    const response = await api.post('/api/brands/', payload)
+    const formData = new FormData()
+    
+    // Add all non-file fields
+    for (const key of Object.keys(payload)) {
+      if (key === 'brand_image') {
+        // Handle file upload separately
+        if (payload[key] && typeof payload[key] === 'string' && payload[key].startsWith('data:')) {
+          // Convert data URL to blob
+          const response = await fetch(payload[key])
+          const blob = await response.blob()
+          formData.append('brand_image', blob, 'brand_image.jpg')
+        }
+      } else if (payload[key] !== null && payload[key] !== undefined) {
+        formData.append(key, payload[key])
+      }
+    }
+    
+    const response = await api.post('/api/brands/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
     return response.data
   } catch (error) {
     throw error.response?.data || error.message
@@ -87,7 +108,28 @@ export const retrieveVariant = async (id) => {
 
 export const updateBrand = async (id, payload) => {
   try {
-    const response = await api.put(`/api/brands/${id}/`, payload)
+    const formData = new FormData()
+    
+    // Add all non-file fields
+    for (const key of Object.keys(payload)) {
+      if (key === 'brand_image') {
+        // Handle file upload separately
+        if (payload[key] && typeof payload[key] === 'string' && payload[key].startsWith('data:')) {
+          // Convert data URL to blob
+          const response = await fetch(payload[key])
+          const blob = await response.blob()
+          formData.append('brand_image', blob, 'brand_image.jpg')
+        }
+      } else if (payload[key] !== null && payload[key] !== undefined) {
+        formData.append(key, payload[key])
+      }
+    }
+    
+    const response = await api.put(`/api/brands/${id}/`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
     return response.data
   } catch (error) {
     throw error.response?.data || error.message

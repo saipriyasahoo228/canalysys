@@ -10,7 +10,7 @@ import { Snackbar } from '../ui/Snackbar'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { InspectorProfileDialog } from '../ui/InspectorProfileDialog'
 import { ViewProfileDialog } from '../ui/ViewProfileDialog'
-import { formatDate, formatDateTime, formatMinutes, minutesSince } from '../utils/format'
+import { formatDate, formatDateTime, formatMinutes, formatTime, minutesSince } from '../utils/format'
 import { registerInspector, resendOtp, verifyEmailOtp, verifySmsOtp, listInspectors, getInspectorProfile, createInspectorProfile, updateInspectorProfile } from '../../api/inspectoronboard'
 import { deleteInspector } from '../../api/inspection'
 import { getAvailabilities, updateAvailabilityStatus, createAvailability, deleteAvailability, patchAvailability, getInspectorAvailability } from '../../api/inspectoravailibility'
@@ -533,6 +533,31 @@ export function InspectorsPage() {
         },
       },
       {
+        key: 'time',
+        header: 'Time',
+        exportValue: (r) => r.isSummary ? '' : `${formatTime(r.start_time)} - ${formatTime(r.end_time)}`,
+        cell: (r) => {
+          if (r.isSummary) {
+            return <div className="text-sm text-slate-500">—</div>
+          } else {
+            return (
+              <div className="ml-6 text-sm text-slate-700">
+                {r.start_time && r.end_time ? (
+                  <div>
+                    <div className="text-xs text-slate-500">Time:</div>
+                    <div className="font-medium">
+                      {formatTime(r.start_time)} - {formatTime(r.end_time)}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-500">—</div>
+                )}
+              </div>
+            )
+          }
+        },
+      },
+      {
         key: 'remarks',
         header: 'Remarks',
         exportValue: (r) => r.isSummary ? '' : (r.remarks || ''),
@@ -619,6 +644,7 @@ export function InspectorsPage() {
       { key: 'inspector_id', label: 'Inspector ID', value: it?.inspector_id || '—' },
       { key: 'inspector_name', label: 'Inspector Name', value: it?.inspector_name || '—' },
       { key: 'date', label: 'Date', value: formatDate(it?.date) || '—' },
+      { key: 'time_range', label: 'Time Range', value: (it?.start_time && it?.end_time) ? `${formatTime(it.start_time)} - ${formatTime(it.end_time)}` : '—' },
       { key: 'availability_status', label: 'Availability Status', value: availabilityStatusLabel(it?.availability_status) || '—' },
       { key: 'remarks', label: 'Remarks', value: it?.remarks || '—', fullWidth: true },
       { key: 'submitted_date', label: 'Submitted Date', value: formatDateTime(it?.submitted_date) || '—' },
@@ -1122,6 +1148,20 @@ export function InspectorsPage() {
               { value: 'on_leave', label: 'On Leave' },
             ],
           },
+          {
+            name: 'start_time',
+            label: 'Start Time',
+            type: 'time',
+            defaultValue: availabilityDialog?.item?.start_time || '',
+            condition: (form) => ['present', 'half_day'].includes(form.availability_status),
+          },
+          {
+            name: 'end_time',
+            label: 'End Time',
+            type: 'time',
+            defaultValue: availabilityDialog?.item?.end_time || '',
+            condition: (form) => ['present', 'half_day'].includes(form.availability_status),
+          },
         ]}
         onSubmit={async (form) => {
           try {
@@ -1134,6 +1174,12 @@ export function InspectorsPage() {
             
             if (form.reason) {
               payload.remarks = form.reason
+            }
+            
+            // Add start_time and end_time for present or half_day status
+            if (['present', 'half_day'].includes(form.availability_status)) {
+              if (form.start_time) payload.start_time = form.start_time
+              if (form.end_time) payload.end_time = form.end_time
             }
             
             const result = await patchAvailability(availabilityDialog.item.id, payload)
@@ -1213,6 +1259,20 @@ export function InspectorsPage() {
             type: 'textarea',
             defaultValue: '',
           },
+          {
+            name: 'start_time',
+            label: 'Start Time',
+            type: 'time',
+            defaultValue: '',
+            condition: (form) => ['present', 'half_day'].includes(form.availability_status),
+          },
+          {
+            name: 'end_time',
+            label: 'End Time',
+            type: 'time',
+            defaultValue: '',
+            condition: (form) => ['present', 'half_day'].includes(form.availability_status),
+          },
         ]}
         onSubmit={async (form) => {
           try {
@@ -1240,11 +1300,21 @@ export function InspectorsPage() {
 
             const payload = {
               inspector_id: inspectorId,
-              availability: dates.map((date) => ({
-                date,
-                status: form.availability_status,
-                remarks,
-              })),
+              availability: dates.map((date) => {
+                const availabilityEntry = {
+                  date,
+                  status: form.availability_status,
+                  remarks,
+                }
+                
+                // Add start_time and end_time only for present or half_day status
+                if (['present', 'half_day'].includes(form.availability_status)) {
+                  if (form.start_time) availabilityEntry.start_time = form.start_time
+                  if (form.end_time) availabilityEntry.end_time = form.end_time
+                }
+                
+                return availabilityEntry
+              }),
             }
 
             const result = await createAvailability(payload)
@@ -1489,11 +1559,23 @@ export function InspectorsPage() {
                 <div className="space-y-2">
                   {inspectorAvailability.availability.map((record) => (
                     <div key={record.id} className="rounded-md border border-slate-200 bg-white p-3">
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
                         <div>
                           <div className="text-xs font-medium text-slate-600">Date</div>
                           <div className="mt-1 text-sm font-semibold text-slate-900">
                             {formatDate(record.date)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs font-medium text-slate-600">Time</div>
+                          <div className="mt-1 text-sm text-slate-700">
+                            {record.start_time && record.end_time ? (
+                              <div className="font-medium">
+                                {formatTime(record.start_time)} - {formatTime(record.end_time)}
+                              </div>
+                            ) : (
+                              <div className="text-slate-500">—</div>
+                            )}
                           </div>
                         </div>
                         <div>

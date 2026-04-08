@@ -1806,10 +1806,18 @@ export function NewInspectionPage() {
               onClick={(e) => {
                 e.stopPropagation()
                 const rect = e.currentTarget.getBoundingClientRect()
+                const viewportHeight = window.innerHeight
+                const spaceBelow = viewportHeight - rect.bottom
+                const dropdownHeight = 200 // Approximate height of dropdown
+                
+                // Show upward if in last 3 rows or not enough space below
+                const showUpward = spaceBelow < dropdownHeight + 50
+                
                 setActionsMenu({
                   requestId: r.request_id,
-                  top: rect.bottom + window.scrollY + 4,
+                  top: showUpward ? rect.top + window.scrollY - dropdownHeight - 4 : rect.bottom + window.scrollY + 4,
                   left: rect.left + window.scrollX - 150, // Position to the left
+                  showUpward: showUpward
                 })
               }}
             >
@@ -1954,6 +1962,9 @@ export function NewInspectionPage() {
             emptyMessage="No PDI requests found"
             pageSize={10}
             rowKey={(row) => row.id}
+            enableSearch={true}
+            searchPlaceholder="Search by Request ID, Customer Name, Mobile, Vehicle..."
+            getSearchText={(row) => `${row.request_id} ${row.name} ${row.mobile_number} ${row.brand_name} ${row.model_name} ${row.variant_name} ${row.status} ${row.payment_stage}`}
           />
         )}
       </Card>
@@ -2164,7 +2175,7 @@ export function NewInspectionPage() {
           <div className="absolute inset-0" onClick={() => setActionsMenu(null)} />
           <div
             ref={actionsMenuRef}
-            className="absolute w-[220px] rounded-xl border border-slate-200 bg-white shadow-lg"
+            className={`absolute w-[220px] rounded-xl border border-slate-200 bg-white shadow-lg ${actionsMenu.showUpward ? 'flex flex-col-reverse' : ''}`}
             style={{ top: actionsMenu.top, left: actionsMenu.left }}
           >
             {/* PDI Request Actions */}
@@ -2172,7 +2183,7 @@ export function NewInspectionPage() {
               <>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 rounded-t-xl"
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${actionsMenu.showUpward ? 'rounded-b-xl' : 'rounded-t-xl'}`}
                   onClick={() => {
                     fetchAndShowDetails(actionsMenu.requestId, 'customer')
                   }}
@@ -2277,7 +2288,7 @@ export function NewInspectionPage() {
               <>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 rounded-t-xl"
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${actionsMenu.showUpward ? 'rounded-b-xl' : 'rounded-t-xl'}`}
                   onClick={() => {
                     const c = actionsMenu.customer
                     setActionsMenu(null)
@@ -2300,7 +2311,7 @@ export function NewInspectionPage() {
 
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-rose-50 text-rose-700 rounded-b-xl"
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-rose-50 text-rose-700 ${actionsMenu.showUpward ? 'rounded-t-xl' : 'rounded-b-xl'}`}
                   onClick={async () => {
                     const c = actionsMenu.customer
                     setActionsMenu(null)

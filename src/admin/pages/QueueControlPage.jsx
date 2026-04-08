@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Clock, Eye, Gauge, Search, User, UserCheck, AlertTriangle, RefreshCw, LayoutGrid, Table, X } from 'lucide-react'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, cx } from '../ui/Ui'
-import { formatDate, formatDateTime } from '../utils/format'
+import { formatDate, formatDateTime, formatTime } from '../utils/format'
 import { getInspectorDashboardData } from '../../api/inspectionreport'
 
 function statusTone(status) {
@@ -341,10 +341,15 @@ export function QueueControlPage() {
         ),
       },
       {
-        key: 'customer_name',
+        key: 'customer_info',
         header: 'Customer',
-        exportValue: (r) => r.customer_name,
-        cell: (r) => <div className="text-sm">{r.customer_name || '—'}</div>,
+        exportValue: (r) => `${r.name || '—'} (${r.mobile_number || '—'})`,
+        cell: (r) => (
+          <div>
+            <div className="text-sm font-medium">{r.name || '—'}</div>
+            <div className="text-xs text-slate-500">{r.mobile_number || '—'}</div>
+          </div>
+        ),
       },
       {
         key: 'status',
@@ -377,16 +382,22 @@ export function QueueControlPage() {
         ),
       },
       {
-        key: 'created_at',
-        header: 'Created',
-        exportValue: (r) => r.created_at,
-        cell: (r) => <div className="text-xs text-slate-600">{formatDateTime(r.created_at)}</div>,
+        key: 'slot_date',
+        header: 'Slot Date',
+        exportValue: (r) => r.slot_date,
+        cell: (r) => <div className="text-xs text-slate-600">{formatDate(r.slot_date)}</div>,
       },
       {
-        key: 'updated_at',
-        header: 'Updated',
-        exportValue: (r) => r.updated_at,
-        cell: (r) => <div className="text-xs text-slate-600">{formatDateTime(r.updated_at)}</div>,
+        key: 'slot_start_time',
+        header: 'Slot Start',
+        exportValue: (r) => r.slot_start_time,
+        cell: (r) => <div className="text-xs text-slate-600">{formatTime(r.slot_start_time)}</div>,
+      },
+      {
+        key: 'slot_end_time',
+        header: 'Slot End',
+        exportValue: (r) => r.slot_end_time,
+        cell: (r) => <div className="text-xs text-slate-600">{formatTime(r.slot_end_time)}</div>,
       },
     ],
     []
@@ -729,8 +740,9 @@ export function QueueControlPage() {
                         <th className="px-4 py-3 text-left font-medium text-slate-700">Priority</th>
                         <th className="px-4 py-3 text-left font-medium text-slate-700">Rating</th>
                         <th className="px-4 py-3 text-left font-medium text-slate-700">Customer Feedback</th>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700">Created</th>
-                        <th className="px-4 py-3 text-left font-medium text-slate-700">Updated</th>
+                        <th className="px-4 py-3 text-left font-medium text-slate-700">Slot Date</th>
+                        <th className="px-4 py-3 text-left font-medium text-slate-700">Slot Start</th>
+                        <th className="px-4 py-3 text-left font-medium text-slate-700">Slot End</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
@@ -747,7 +759,12 @@ export function QueueControlPage() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3">{inspection.customer_name || '—'}</td>
+                          <td className="px-4 py-3">
+                            <div>
+                              <div className="font-medium">{inspection.name || '—'}</div>
+                              <div className="text-xs text-slate-500">{inspection.mobile_number || '—'}</div>
+                            </div>
+                          </td>
                           <td className="px-4 py-3">
                             <Badge tone={statusTone(inspection.status)}>
                               {statusLabel(inspection.status)}
@@ -769,10 +786,13 @@ export function QueueControlPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-xs text-slate-600">
-                            {formatDateTime(inspection.created_at)}
+                            {formatDate(inspection.slot_date)}
                           </td>
                           <td className="px-4 py-3 text-xs text-slate-600">
-                            {formatDateTime(inspection.updated_at)}
+                            {formatTime(inspection.slot_start_time)}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-slate-600">
+                            {formatTime(inspection.slot_end_time)}
                           </td>
                         </tr>
                       ))}

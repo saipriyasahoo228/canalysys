@@ -118,10 +118,10 @@ export function FinancePage() {
       {
         key: 'amount',
         header: 'Commission',
-        exportValue: (r) => r.commission_type === 'percent' ? `${r.percent}%` : formatInr(r.fixed_amount_paise),
+        exportValue: (r) => formatInr(r.fixed_amount),
         cell: (r) => (
           <span className="font-semibold">
-            {r.commission_type === 'percent' ? `${r.percent}%` : formatInr(r.fixed_amount_paise)}
+            {formatInr(r.fixed_amount)}
           </span>
         ),
       },
@@ -187,18 +187,18 @@ export function FinancePage() {
         tdClassName: 'text-right',
       },
       {
-        key: 'total_amount_paise',
+        key: 'total_amount',
         header: 'Total Amount',
-        exportValue: (r) => formatInr(r.total_amount_paise),
-        cell: (r) => <div className="text-sm font-semibold">{formatInr(r.total_amount_paise)}</div>,
+        exportValue: (r) => formatInr(r.total_amount),
+        cell: (r) => <div className="text-sm font-semibold">{formatInr(r.total_amount)}</div>,
         className: 'text-right',
         tdClassName: 'text-right',
       },
       {
-        key: 'total_commission_paise',
+        key: 'total_commission',
         header: 'Total Commission',
-        exportValue: (r) => formatInr(r.total_commission_paise),
-        cell: (r) => <div className="text-sm font-semibold text-emerald-600">{formatInr(r.total_commission_paise)}</div>,
+        exportValue: (r) => formatInr(r.total_commission),
+        cell: (r) => <div className="text-sm font-semibold text-emerald-600">{formatInr(r.total_commission)}</div>,
         className: 'text-right',
         tdClassName: 'text-right',
       },
@@ -214,7 +214,7 @@ export function FinancePage() {
       { key: 'id', label: 'Rule ID', value: it?.id || '—' },
       { key: 'scope', label: 'Scope', value: it?.scope === 'global' ? 'Global' : `Inspector: ${it?.inspector_name}` },
       { key: 'commission_type', label: 'Commission Type', value: it?.commission_type || '—' },
-      { key: 'amount', label: 'Commission Amount', value: it?.commission_type === 'percent' ? `${it?.percent}%` : formatInr(it?.fixed_amount_paise) },
+      { key: 'amount', label: 'Commission Amount', value: it?.commission_type === 'percent' ? `${it?.percent}%` : formatInr(it?.fixed_amount || it?.fixed_amount_paise) },
       { key: 'effective_from', label: 'Effective From', value: formatDateTime(it?.effective_from) },
       { key: 'effective_to', label: 'Effective To', value: it?.effective_to ? formatDateTime(it?.effective_to) : 'Ongoing' },
       { key: 'status', label: 'Status', value: it?.is_active ? 'Active' : 'Inactive' },
@@ -266,7 +266,7 @@ export function FinancePage() {
                 <div className="flex-1">
                   <p className="text-xs sm:text-sm font-medium text-emerald-600">Report Total</p>
                   <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold text-emerald-900">
-                    {reportLoading ? '—' : formatInr(reportData?.items ? reportData.items.reduce((acc, r) => acc + (r.total_commission_paise || 0), 0) : 0)}
+                    {reportLoading ? '—' : formatInr(reportData?.items ? reportData.items.reduce((acc, r) => acc + (r.total_commission || 0), 0) : 0)}
                   </p>
                   <p className="mt-1 text-xs text-emerald-700">Commission amount</p>
                 </div>

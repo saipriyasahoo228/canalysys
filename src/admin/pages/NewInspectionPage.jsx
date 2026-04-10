@@ -1268,7 +1268,7 @@ export function NewInspectionPage() {
       
       console.log('✅ Manual remaining payment confirmed:', manualResponse)
       
-      if (manualResponse.message === 'Manual remaining payment confirmed and request fully paid') {
+      if (manualResponse.message === 'Manual remaining payment confirmed and request fully paid' || manualResponse.message === 'Manual payment confirmed') {
         alert('Manual remaining payment confirmed! Your payment is now complete.')
         setShowRemainingPaymentModal(false)
         setRemainingPaymentLoading(false)

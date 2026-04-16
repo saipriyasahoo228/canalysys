@@ -889,7 +889,7 @@ export function InspectorsPage() {
             <div className="mt-1 text-lg font-semibold tracking-tight">
               {availabilityLoading && !availabilityData ? '—' : new Set(availabilities.filter(a => a.availability_status === 'present' && a.date === todayIso()).map(a => a.inspector_id)).size}
             </div>
-            <div className="mt-1 text-xs text-slate-500">Available today</div>
+            <div className="mt-1 text-xs text-slate-500">Available </div>
           </div>
         </Card>
         <Card accent="rose" className="p-0" kpi>
@@ -901,7 +901,7 @@ export function InspectorsPage() {
             <div className="mt-1 text-lg font-semibold tracking-tight">
               {availabilityLoading && !availabilityData ? '—' : new Set(availabilities.filter(a => a.availability_status === 'absent' && a.date === todayIso()).map(a => a.inspector_id)).size}
             </div>
-            <div className="mt-1 text-xs text-slate-500">Not available today</div>
+            <div className="mt-1 text-xs text-slate-500">Not available </div>
           </div>
         </Card>
       </div>
@@ -1348,7 +1348,7 @@ export function InspectorsPage() {
           },
           {
             name: 'remarks',
-            label: 'Remarks *',
+            label: 'Remarks',
             type: 'textarea',
             defaultValue: '',
           },
@@ -1384,10 +1384,6 @@ export function InspectorsPage() {
             }
 
             const remarks = String(form.remarks || '').trim()
-            if (!remarks) {
-              setAvailabilityFieldErrors({ remarks: 'This Field is Required' })
-              return
-            }
 
             setAvailabilityFieldErrors({})
 

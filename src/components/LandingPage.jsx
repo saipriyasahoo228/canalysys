@@ -776,8 +776,8 @@ const LandingPage = () => {
             <div style={{fontSize:'12px', letterSpacing:'2px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase'}}>Pre-Delivery Inspection Specialists</div>
             <p className="footer-tagline">Odisha's trusted network of certified vehicle inspectors — <br/> ensuring every car you buy has been thoroughly checked before it's yours.</p>
             <div className="footer-contact">
-              <div className="footer-contact-item"><span className="icon">📞</span>+91 98765 43210</div>
-              <div className="footer-contact-item"><span className="icon">✉️</span>hello@carnalysys.in</div>
+              <div className="footer-contact-item"><span className="icon">📞</span>+91 6370166632</div>
+              <div className="footer-contact-item"><span className="icon">✉️</span>carnalysysindia@gmail.com</div>
               <div className="footer-contact-item"><span className="icon">📍</span>Plot No. 4907, Kalinga Nagar, Ghatikia,<br/>Near Balia Square Bus Stand,<br/>Bhubaneswar, Odisha - 751001</div>
             </div>
           </div>

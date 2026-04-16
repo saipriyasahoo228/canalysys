@@ -251,3 +251,90 @@ export const updateInspectorProfile = async ({ inspector_id, profile_photo, date
     throw error.response?.data || error.message
   }
 }
+
+// Address management functions
+export const getInspectorAddresses = async ({ inspector_id } = {}) => {
+  try {
+    const response = await api.get(`/api/staff/inspectors/${String(inspector_id || '').trim()}/address/`)
+    console.log('Get inspector addresses response:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Get inspector addresses error:', error.response?.data || error.message)
+    throw error.response?.data || error.message
+  }
+}
+
+export const createInspectorAddress = async ({ inspector_id, address_type, street_address, landmark, city, state, country, pincode, status, is_primary } = {}) => {
+  try {
+    // Start with only the required fields
+    const payload = {
+      street_address: String(street_address || '').trim(),
+      city: String(city || '').trim(),
+      state: String(state || '').trim(),
+      pincode: String(pincode || '').trim(),
+    }
+    
+    // Add optional fields only if they have values
+    if (address_type && String(address_type).trim()) {
+      payload.address_type = String(address_type).trim()
+    }
+    if (landmark && String(landmark).trim()) {
+      payload.landmark = String(landmark).trim()
+    }
+    if (country && String(country).trim()) {
+      payload.country = String(country).trim()
+    }
+    if (status && String(status).trim()) {
+      payload.status = String(status).trim()
+    }
+    if (is_primary !== undefined) {
+      payload.is_primary = Boolean(is_primary)
+    }
+    
+    console.log('Create inspector address payload:', payload)
+    const url = `/api/staff/inspectors/${String(inspector_id || '').trim()}/address/`
+    console.log('API URL being called:', url)
+    console.log('Inspector ID parameter:', inspector_id)
+    const response = await api.post(url, payload)
+    console.log('Create inspector address response:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Create inspector address error:', error.response?.data || error.message)
+    throw error.response?.data || error.message
+  }
+}
+
+export const updateInspectorAddress = async ({ inspector_id, address_id, address_type, street_address, landmark, city, state, country, pincode, status, is_primary } = {}) => {
+  try {
+    const payload = {}
+    if (address_type !== undefined) payload.address_type = String(address_type).trim()
+    if (street_address !== undefined) payload.street_address = String(street_address).trim()
+    if (landmark !== undefined && String(landmark).trim()) payload.landmark = String(landmark).trim()
+    if (city !== undefined) payload.city = String(city).trim()
+    if (state !== undefined) payload.state = String(state).trim()
+    if (country !== undefined) payload.country = String(country).trim()
+    if (pincode !== undefined) payload.pincode = String(pincode).trim()
+    if (status !== undefined) payload.status = String(status).trim()
+    if (is_primary !== undefined) payload.is_primary = Boolean(is_primary)
+    
+    console.log('Update inspector address payload:', payload)
+    const response = await api.patch(`/api/staff/inspectors/${String(inspector_id || '').trim()}/address/`, payload)
+    console.log('Update inspector address response:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Update inspector address error:', error.response?.data || error.message)
+    throw error.response?.data || error.message
+  }
+}
+
+export const deleteInspectorAddress = async ({ inspector_id, address_id } = {}) => {
+  try {
+    console.log('Delete inspector address:', { inspector_id, address_id })
+    const response = await api.delete(`/api/staff/inspectors/${String(inspector_id || '').trim()}/address/`)
+    console.log('Delete inspector address response:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Delete inspector address error:', error.response?.data || error.message)
+    throw error.response?.data || error.message
+  }
+}

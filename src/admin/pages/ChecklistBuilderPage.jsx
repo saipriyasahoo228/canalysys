@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
-import { ListChecks, Plus, Trash2, Pencil, FileText, Eye } from 'lucide-react'
-import { usePolling } from '../hooks/usePolling'
+import { useMemo, useState, useEffect } from 'react'
+import { ListChecks, Plus, Trash2, Pencil, FileText, Eye, User, Calendar, CheckCircle, Image } from 'lucide-react'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, PaginatedTable } from '../ui/Ui'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { Snackbar } from '../ui/Snackbar'
 import { listTemplates, createTemplate, updateTemplate, deleteTemplate, getTemplate, patchTemplate, patchSection, patchQuestion, createSection, createQuestion } from '../../api/template'
+import { listVariants } from '../../api/vehiclemaster'
 
 const CONDITION_TABS = [
   { key: 'pre_owned', label: 'Pre-Owned' },
@@ -44,12 +44,35 @@ export function ChecklistBuilderPage() {
   const [confirmDialog, setConfirmDialog] = useState(null)
   const [backendErrors, setBackendErrors] = useState(null)
   const [snackbar, setSnackbar] = useState({ open: false, tone: 'error', title: '', message: '' })
+  const [fuelTypes, setFuelTypes] = useState([])
+  const [loadingFuelTypes, setLoadingFuelTypes] = useState(false)
+  const [viewTemplateDialog, setViewTemplateDialog] = useState(null)
+  const [viewTemplateData, setViewTemplateData] = useState(null)
+  const [loadingViewTemplate, setLoadingViewTemplate] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState(null)
 
-  const { data: templatesData, loading, error, refresh } = usePolling(
-    'inspection-templates',
-    () => listTemplates(),
-    { intervalMs: 20_000 }
-  )
+  const [templatesData, setTemplatesData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const fetchTemplates = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await listTemplates()
+      setTemplatesData(data)
+    } catch (err) {
+      setError(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const refresh = fetchTemplates
+
+  useEffect(() => {
+    fetchTemplates()
+  }, [])
 
   const templates = templatesData?.items || []
   const selectedTemplate = useMemo(() => {
@@ -113,6 +136,45 @@ export function ChecklistBuilderPage() {
     setSnackbar({ open: true, tone, title, message })
   }
 
+  // Function to fetch template data for viewing
+  const fetchViewTemplate = async (templateId) => {
+    try {
+      setLoadingViewTemplate(true)
+      const templateData = await getTemplate(templateId)
+      setViewTemplateData(templateData)
+      setViewTemplateDialog({ templateId })
+    } catch (error) {
+      showSnackbar('error', 'Error', 'Failed to load template details')
+    } finally {
+      setLoadingViewTemplate(false)
+    }
+  }
+
+  // Fetch fuel types from variants API
+  useEffect(() => {
+    const fetchFuelTypes = async () => {
+      try {
+        setLoadingFuelTypes(true)
+        const response = await listVariants({ page: 1 })
+        const variants = response.items || []
+        
+        // Extract unique fuel types from variants
+        const uniqueFuelTypes = [...new Set(variants
+          .map(variant => variant.engine_specs?.fuel_type)
+          .filter(fuelType => fuelType && fuelType.trim() !== '')
+        )].sort()
+        
+        setFuelTypes(uniqueFuelTypes)
+      } catch (error) {
+        console.error('Failed to fetch fuel types:', error)
+      } finally {
+        setLoadingFuelTypes(false)
+      }
+    }
+
+    fetchFuelTypes()
+  }, [])
+
   const templateColumns = useMemo(
     () => [
       {
@@ -159,10 +221,28 @@ export function ChecklistBuilderPage() {
               View
             </Button>
             <Button
+              variant="ghost"
+              className="h-8"
+              title="View template details"
+              onClick={() => fetchViewTemplate(r.id)}
+              disabled={loadingViewTemplate}
+            >
+              <FileText className="h-4 w-4 mr-1" />
+              Template
+            </Button>
+            <Button
               variant="icon"
               size="icon"
               title="Edit template"
-              onClick={() => setDialog({ type: 'editTemplate', templateId: r.id })}
+              onClick={async () => {
+                try {
+                  const templateData = await getTemplate(r.id)
+                  setEditingTemplate(templateData)
+                  setDialog({ type: 'editTemplate', templateId: r.id })
+                } catch (error) {
+                  showSnackbar('error', 'Error', 'Failed to load template for editing')
+                }
+              }}
               disabled={!canEdit}
             >
               <Pencil className="h-4 w-4 text-slate-700" />
@@ -428,6 +508,7 @@ export function ChecklistBuilderPage() {
         onClose={() => {
           setDialog(null)
           setBackendErrors(null)
+          setEditingTemplate(null)
         }}
         showReason={false}
         requireReason={false}
@@ -436,20 +517,39 @@ export function ChecklistBuilderPage() {
             name: 'name',
             label: 'Template Name',
             type: 'text',
-            defaultValue: dialog?.type === 'editTemplate' ? selectedTemplate?.name || '' : '',
+            defaultValue: dialog?.type === 'editTemplate' ? editingTemplate?.name || '' : '',
           },
           {
             name: 'description',
             label: 'Description',
             type: 'textarea',
             rows: 3,
-            defaultValue: dialog?.type === 'editTemplate' ? selectedTemplate?.description || '' : '',
+            defaultValue: dialog?.type === 'editTemplate' ? editingTemplate?.description || '' : '',
+          },
+          {
+            name: 'vehicle_type',
+            label: 'Vehicle Type',
+            type: 'select',
+            defaultValue: dialog?.type === 'editTemplate' ? editingTemplate?.vehicle_type || '' : '',
+            options: [
+              { value: 'owned', label: 'Owned' },
+              { value: 'new', label: 'New' },
+            ],
+          },
+          {
+            name: 'fuel_type',
+            label: 'Fuel Type',
+            type: 'select',
+            defaultValue: dialog?.type === 'editTemplate' ? 
+              (fuelTypes.find(fuelType => fuelType.toLowerCase() === editingTemplate?.fuel_type?.toLowerCase()) || '') : '',
+            options: fuelTypes.map(fuelType => ({ value: fuelType, label: fuelType })),
+            placeholder: loadingFuelTypes ? 'Loading fuel types...' : 'Select fuel type',
           },
           {
             name: 'is_active',
             label: 'Active Template',
             type: 'checkbox',
-            defaultValue: dialog?.type === 'editTemplate' ? selectedTemplate?.is_active || false : false,
+            defaultValue: dialog?.type === 'editTemplate' ? editingTemplate?.is_active || false : false,
             checkboxLabel: 'Make this the active template (only one can be active)',
           },
         ]}
@@ -462,6 +562,8 @@ export function ChecklistBuilderPage() {
             const templateData = {
               name: form.name,
               description: form.description,
+              vehicle_type: form.vehicle_type?.toLowerCase(),
+              fuel_type: form.fuel_type?.toLowerCase(),
               is_active: form.is_active
             }
 
@@ -473,6 +575,7 @@ export function ChecklistBuilderPage() {
             }
 
             setDialog(null)
+            setEditingTemplate(null)
             await refresh()
           } catch (error) {
             if (error.response?.data) {
@@ -744,6 +847,248 @@ export function ChecklistBuilderPage() {
               >
                 Delete
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Template Dialog */}
+      {viewTemplateDialog && (
+        <div className="fixed inset-0 bg-white z-50 flex flex-col">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-cyan-600 to-violet-600 text-white p-3 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold">{viewTemplateData?.name}</h2>
+                <p className="text-cyan-100 text-xs">{viewTemplateData?.description}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                {viewTemplateData?.is_active && (
+                  <Badge className="bg-emerald-500 text-white border-emerald-400">
+                    Active
+                  </Badge>
+                )}
+                <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
+                  Version {viewTemplateData?.version || 1}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-slate-700 bg-white"
+                  onClick={() => {
+                    setViewTemplateDialog(null)
+                    setViewTemplateData(null)
+                  }}
+                >
+                  ×
+                </Button>
+              </div>
+            </div>
+            
+            {/* Template Info Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+              <div className="bg-white/10 backdrop-blur-sm rounded p-2 border border-white/20">
+                <div className="text-xs font-semibold text-cyan-100 uppercase tracking-wide">Vehicle Type</div>
+                <div className="text-sm font-bold text-white capitalize">{viewTemplateData?.vehicle_type || 'Not specified'}</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded p-2 border border-white/20">
+                <div className="text-xs font-semibold text-cyan-100 uppercase tracking-wide">Fuel Type</div>
+                <div className="text-sm font-bold text-white capitalize">{viewTemplateData?.fuel_type || 'Not specified'}</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded p-2 border border-white/20">
+                <div className="text-xs font-semibold text-cyan-100 uppercase tracking-wide">Sections</div>
+                <div className="text-sm font-bold text-white">{viewTemplateData?.sections?.length || 0}</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded p-2 border border-white/20">
+                <div className="text-xs font-semibold text-cyan-100 uppercase tracking-wide">Created</div>
+                <div className="text-sm font-bold text-white">
+                  {new Date(viewTemplateData?.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto bg-slate-50 p-3 pt-1">
+            {/* Content */}
+            <div className="space-y-3">
+              {loadingViewTemplate ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600"></div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(viewTemplateData?.sections || []).sort((a, b) => (a.order || 0) - (b.order || 0)).map((section, sectionIndex) => {
+                    const sortedQuestions = (section.questions || []).sort((a, b) => (a.order || 0) - (b.order || 0))
+                    
+                    return (
+                      <div key={section.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                        {/* Section Header */}
+                        <div className="bg-gradient-to-r from-violet-50 to-purple-50 border-b border-slate-200 p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-7 h-7 bg-violet-600 text-white rounded-full font-bold text-sm">
+                              {sectionIndex + 1}
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-base font-bold text-slate-900">{section.title}</h3>
+                              {section.description && (
+                                <p className="text-xs text-slate-600 mt-1">{section.description}</p>
+                              )}
+                            </div>
+                            <Badge tone="violet" className="text-xs">
+                              {sortedQuestions.length} questions
+                            </Badge>
+                          </div>
+                        </div>
+
+                        {/* Questions */}
+                        <div className="p-3 space-y-3 bg-white">
+                          {sortedQuestions.map((question, questionIndex) => (
+                            <div key={question.id} className="border border-slate-200 rounded-lg p-3 bg-slate-50 hover:bg-slate-100 transition-colors">
+                              <div className="flex items-start gap-2">
+                                <div className="flex items-center justify-center w-5 h-5 bg-slate-300 text-slate-700 rounded-full text-xs font-bold mt-1">
+                                  {questionIndex + 1}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <h4 className="font-semibold text-sm text-slate-900">{question.title}</h4>
+                                    {question.is_required && (
+                                      <Badge tone="rose" className="text-xs">Required</Badge>
+                                    )}
+                                    <Badge tone={inputTypeTone(question.answer_type)} className="text-xs">
+                                      {inputTypeLabel(question.answer_type)}
+                                    </Badge>
+                                  </div>
+                                  
+                                  {question.description && (
+                                    <p className="text-xs text-slate-600 mb-2">{question.description}</p>
+                                  )}
+
+                                  {/* Render input field based on answer type */}
+                                  <div className="mt-2">
+                                    {question.answer_type === 'yes_no' && (
+                                      <div className="flex gap-3 p-2 bg-white rounded border border-slate-200">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            name={`view-question-${question.id}`}
+                                            value="yes"
+                                            className="w-4 h-4 text-emerald-600"
+                                            disabled
+                                          />
+                                          <span className="text-xs text-slate-700 font-medium">Yes</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input
+                                            type="radio"
+                                            name={`view-question-${question.id}`}
+                                            value="no"
+                                            className="w-4 h-4 text-rose-600"
+                                            disabled
+                                          />
+                                          <span className="text-xs text-slate-700 font-medium">No</span>
+                                        </label>
+                                      </div>
+                                    )}
+
+                                    {(question.answer_type === 'single_choice' || question.answer_type === 'multi_choice') && (
+                                      <div className="p-2 bg-white rounded border border-slate-200 space-y-1">
+                                        {question.options?.map((option) => (
+                                          <label key={option.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-slate-50">
+                                            <input
+                                              type={question.answer_type === 'single_choice' ? 'radio' : 'checkbox'}
+                                              name={question.answer_type === 'single_choice' ? `view-question-${question.id}` : `view-question-${question.id}-${option.id}`}
+                                              value={option.value}
+                                              className="w-4 h-4 text-cyan-600"
+                                              disabled
+                                            />
+                                            <span className="text-xs text-slate-700 font-medium">{option.label}</span>
+                                          </label>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {question.answer_type === 'short_text' && (
+                                      <input
+                                        type="text"
+                                        placeholder="Enter short answer..."
+                                        className="w-full px-2 py-1 border border-slate-300 rounded text-xs bg-white"
+                                        disabled
+                                      />
+                                    )}
+
+                                    {question.answer_type === 'long_text' && (
+                                      <textarea
+                                        placeholder="Enter detailed answer..."
+                                        rows={2}
+                                        className="w-full px-2 py-1 border border-slate-300 rounded text-xs resize-none bg-white"
+                                        disabled
+                                      />
+                                    )}
+
+                                    {question.answer_type === 'number' && (
+                                      <input
+                                        type="number"
+                                        placeholder="Enter number..."
+                                        className="w-full px-2 py-1 border border-slate-300 rounded text-xs bg-white"
+                                        disabled
+                                      />
+                                    )}
+
+                                    {question.answer_type === 'date' && (
+                                      <input
+                                        type="date"
+                                        className="w-full px-2 py-1 border border-slate-300 rounded text-xs bg-white"
+                                        disabled
+                                      />
+                                    )}
+                                  </div>
+
+                                  {/* Image requirements */}
+                                  {(question.expected_images_min > 0 || question.expected_images_max > 0) && (
+                                    <div className="mt-2 flex items-center gap-2 text-xs text-slate-600 bg-amber-50 p-1 rounded">
+                                      <Image className="h-3 w-3 text-amber-600" />
+                                      <span className="font-medium">
+                                        {question.expected_images_min || 0} - {question.expected_images_max || 0} images required
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="bg-white border-t border-slate-200 p-2 shadow-lg">
+            <div className="flex items-center justify-between text-xs text-slate-600">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <User className="h-3 w-3 text-cyan-600" />
+                  <span className="font-medium">Created by: Admin User</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-3 w-3 text-cyan-600" />
+                  <span className="font-medium">Created: {new Date(viewTemplateData?.created_at).toLocaleDateString()}</span>
+                </div>
+                {viewTemplateData?.published_at && (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3 text-cyan-600" />
+                    <span className="font-medium">Published: {new Date(viewTemplateData.published_at).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <img src="/carnalysysnew1.jpg" alt="Carnalysis" className="h-5 w-auto rounded" />
+                <span className="text-xs font-semibold text-cyan-600">CARNALYSYS</span>
+              </div>
             </div>
           </div>
         </div>

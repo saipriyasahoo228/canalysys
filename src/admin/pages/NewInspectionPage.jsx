@@ -2514,7 +2514,7 @@ export function NewInspectionPage() {
                                 const list = variants
                                 return list.map((v) => (
                                   <option key={v.id} value={v.id}>
-                                    {v.name}
+                                    {v.name} ({v.fuel_type_display || v.fuel_type})
                                   </option>
                                 ))
                               })()}

@@ -220,6 +220,8 @@ export function VehicleMasterPage() {
       brand_name: v.brand_name,
       name: v.name,
       description: v.description,
+      fuel_type: v.fuel_type,
+      fuel_type_display: v.fuel_type_display,
       engine_specs: v.engine_specs,
       is_active: v.is_active,
       created_at: v.created_at,
@@ -478,11 +480,9 @@ export function VehicleMasterPage() {
               { key: 'model', label: 'Model', value: it?.model_detail?.name || '—' },
               { key: 'description', label: 'Description', value: it?.description || '—', fullWidth: true },
               {
-                key: 'engine_specs',
-                label: 'Engine specs',
-                value: it?.engine_specs
-                  ? `CC: ${it.engine_specs.cc ?? '—'}, Fuel: ${it.engine_specs.fuel_type ?? '—'}`
-                  : '—',
+                key: 'fuel_type',
+                label: 'Fuel type',
+                value: it?.fuel_type_display || it?.fuel_type || '—',
                 fullWidth: true,
               },
               { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
@@ -926,6 +926,20 @@ export function VehicleMasterPage() {
                           </div>
                         ),
                       },
+                      ...(block.kind === 'variant' ? [
+                        {
+                          key: 'fuel_type',
+                          header: 'Fuel Type',
+                          exportValue: (r) => r.fuel_type ? r.fuel_type.toUpperCase() : '---',
+                          cell: (r) => (
+                            <div className="text-sm text-slate-700">
+                              {r.fuel_type ? r.fuel_type.toUpperCase() : '---'}
+                            </div>
+                          ),
+                          className: 'text-center',
+                          tdClassName: 'text-center',
+                        },
+                      ] : []),
                       {
                         key: 'actions',
                         header: (
@@ -1306,7 +1320,6 @@ export function VehicleMasterPage() {
                 },
                 { name: 'name', label: 'Variant name *', type: 'text', defaultValue: '' },
                 { name: 'description', label: 'Description', type: 'text', defaultValue: '' },
-                { name: 'cc', label: 'Engine CC *', type: 'number', defaultValue: '' },
                 { name: 'fuel_type', label: 'Fuel type', type: 'text', defaultValue: '' },
               ]
             }
@@ -1395,8 +1408,7 @@ export function VehicleMasterPage() {
                 },
                 { name: 'name', label: 'Variant name *', type: 'text', defaultValue: dialog?.item?.name || '' },
                 { name: 'description', label: 'Description', type: 'text', defaultValue: dialog?.item?.description || '' },
-                { name: 'cc', label: 'Engine CC *', type: 'number', defaultValue: dialog?.item?.engine_specs?.cc ?? '' },
-                { name: 'fuel_type', label: 'Fuel type', type: 'text', defaultValue: dialog?.item?.engine_specs?.fuel_type ?? '' },
+                { name: 'fuel_type', label: 'Fuel type', type: 'text', defaultValue: dialog?.item?.fuel_type ?? '' },
               ]
             }
           }
@@ -1844,17 +1856,14 @@ export function VehicleMasterPage() {
                 })
                 showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
               } else if (dialog.kind === 'variant') {
-                if (!requireFields(['brandId', 'modelId', 'name', 'cc'])) return
-                const cc = String(form.cc || '').trim()
-                const fuelType = String(form.fuel_type || '').trim()
+                if (!requireFields(['brandId', 'modelId', 'name', 'fuel_type'])) return
+                const fuelType = String(form.fuel_type || '').trim().toLowerCase()
                 
-                const engine_specs = cc || fuelType ? { cc: cc ? Number(cc) : null, fuel_type: fuelType || null } : null
-
                 const res = await createVariant({
                   model: Number(form.modelId),
                   name: String(form.name || '').trim(),
                   description: String(form.description || '').trim() || null,
-                  engine_specs,
+                  fuel_type: fuelType,
                 })
                 showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
               }
@@ -1896,17 +1905,14 @@ export function VehicleMasterPage() {
                 })
                 showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
               } else if (dialog.kind === 'variant') {
-                if (!requireFields(['brandId', 'modelId', 'name', 'cc'])) return
-                const cc = String(form.cc || '').trim()
-                const fuelType = String(form.fuel_type || '').trim()
+                if (!requireFields(['brandId', 'modelId', 'name', 'fuel_type'])) return
+                const fuelType = String(form.fuel_type || '').trim().toLowerCase()
                 
-                const engine_specs = cc || fuelType ? { cc: cc ? Number(cc) : null, fuel_type: fuelType || null } : null
-
                 const res = await updateVariant(dialog.item.id, {
                   model: Number(form.modelId),
                   name: String(form.name || '').trim(),
                   description: String(form.description || '').trim() || null,
-                  engine_specs,
+                  fuel_type: fuelType,
                 })
                 showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
               }

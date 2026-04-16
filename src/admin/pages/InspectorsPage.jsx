@@ -1,6 +1,6 @@
 // TODO: Temporary fix for React development error with X icon
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Plus, Search, Trash2, User, UserCheck, UserX, XCircle, Users, CalendarCheck, CalendarX, ChevronDown, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Plus, Search, Trash2, User, UserCheck, UserX, XCircle, Users, CalendarCheck, CalendarX, ChevronDown, ChevronRight, Home } from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, cx } from '../ui/Ui'
@@ -11,7 +11,7 @@ import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { InspectorProfileDialog } from '../ui/InspectorProfileDialog'
 import { ViewProfileDialog } from '../ui/ViewProfileDialog'
 import { formatDate, formatDateTime, formatMinutes, formatTime, minutesSince } from '../utils/format'
-import { registerInspector, resendOtp, verifyEmailOtp, verifySmsOtp, listInspectors, getInspectorProfile, createInspectorProfile, updateInspectorProfile } from '../../api/inspectoronboard'
+import { registerInspector, resendOtp, verifyEmailOtp, verifySmsOtp, listInspectors, getInspectorProfile, createInspectorProfile, updateInspectorProfile, getInspectorAddresses, createInspectorAddress, updateInspectorAddress, deleteInspectorAddress } from '../../api/inspectoronboard'
 import { deleteInspector } from '../../api/inspection'
 import { getAvailabilities, updateAvailabilityStatus, createAvailability, deleteAvailability, patchAvailability, getInspectorAvailability } from '../../api/inspectoravailibility'
 import { listLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '../../api/leave'
@@ -144,6 +144,8 @@ export function InspectorsPage() {
   const [leaveDialog, setLeaveDialog] = useState(null)
   const [availabilityDialog, setAvailabilityDialog] = useState(null)
   const [inspectorAvailabilityDialog, setInspectorAvailabilityDialog] = useState(null)
+  const [addressDialog, setAddressDialog] = useState(null)
+  const [addressDataReady, setAddressDataReady] = useState(false)
   const [inspectorAvailability, setInspectorAvailability] = useState({
     inspector_id: '',
     status: '',
@@ -173,6 +175,7 @@ export function InspectorsPage() {
   const [snack, setSnack] = useState({ open: false, tone: 'info', title: '', message: '' })
   const [fieldErrors, setFieldErrors] = useState({})
   const [availabilityFieldErrors, setAvailabilityFieldErrors] = useState({})
+  const [addressFieldErrors, setAddressFieldErrors] = useState({})
   const [expandedInspectors, setExpandedInspectors] = useState(new Set())
   const [profileForm, setProfileForm] = useState({
     inspector_id: '',
@@ -180,6 +183,19 @@ export function InspectorsPage() {
     employment_type: 'full_time',
     status: 'active',
   })
+  const [addressForm, setAddressForm] = useState({
+    address_type: 'permanent',
+    street_address: '',
+    landmark: '',
+    city: '',
+    state: '',
+    country: 'India',
+    pincode: '',
+    status: 'active',
+    is_primary: true,
+  })
+  const [existingAddresses, setExistingAddresses] = useState([])
+  const [editingAddress, setEditingAddress] = useState(null)
 
   const profileOpen = dialog?.type === 'profile'
   const createOpen = dialog?.type === 'create'
@@ -197,6 +213,87 @@ export function InspectorsPage() {
   const availabilityUpdateOpen = availabilityDialog?.type === 'update'
   const availabilityCreateOpen = availabilityDialog?.type === 'create'
   const availabilityDeleteOpen = availabilityDialog?.type === 'delete'
+
+  const addressManageOpen = addressDialog?.type === 'manage' && addressDataReady
+
+  // Reset addresses when dialog closes
+  useEffect(() => {
+    if (!addressManageOpen) {
+      setExistingAddresses([])
+      setEditingAddress(null)
+      setAddressDataReady(false)
+    }
+  }, [addressManageOpen])
+
+  // Pre-populate form when dialog is about to open
+  useEffect(() => {
+    if (addressDialog?.type === 'manage' && addressDialog?.item?.user_id) {
+      // Dialog is set to manage, fetch addresses immediately
+      const fetchAddresses = async () => {
+        try {
+          const response = await getInspectorAddresses({ inspector_id: addressDialog.item.user_id })
+          
+          let addresses = response?.data || response || []
+          if (addresses && !Array.isArray(addresses)) {
+            addresses = [addresses]
+          }
+          
+          if (addresses.length === 1) {
+            const address = addresses[0]
+            // If address status is active, show the address data in form fields
+            if (address.status === 'active') {
+              console.log('Address is active, populating form with address data:', address)
+              const newForm = {
+                address_type: address.address_type || 'permanent',
+                street_address: address.street_address || '',
+                landmark: address.landmark || '',
+                city: address.city || '',
+                state: address.state || '',
+                country: address.country || 'India',
+                pincode: address.pincode || '',
+                status: address.status || 'active',
+                is_primary: address.is_primary || false,
+              }
+              console.log('Setting form with data:', newForm)
+              setAddressForm(newForm)
+              setExistingAddresses(addresses)
+              setAddressDataReady(true)
+              console.log('Form data set immediately:', newForm)
+            } else {
+              // If address status is inactive, show fresh form for new address
+              console.log('Address is inactive, showing fresh form')
+              setAddressForm({
+                address_type: 'permanent',
+                street_address: '',
+                landmark: '',
+                city: '',
+                state: '',
+                country: 'India',
+                pincode: '',
+                status: 'active',
+                is_primary: true,
+              })
+              // Don't show inactive addresses in the existing addresses list
+              setExistingAddresses([])
+              setAddressDataReady(true)
+            }
+          } else {
+            setExistingAddresses(addresses)
+            setAddressDataReady(true)
+          }
+        } catch (error) {
+          setExistingAddresses([])
+          setAddressDataReady(true)
+        }
+      }
+      fetchAddresses()
+    }
+  }, [addressDialog?.type, addressDialog?.item?.user_id])
+
+  // Debug: Track addressForm changes
+  useEffect(() => {
+    console.log('addressForm changed:', addressForm)
+  }, [addressForm])
 
   useEffect(() => {
     const onDown = (e) => {
@@ -1489,6 +1586,23 @@ export function InspectorsPage() {
             type="button"
             disabled={!permissions.manageInspectors}
             className={cx(
+              'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-100',
+              permissions.manageInspectors ? 'text-slate-900' : 'text-slate-400'
+            )}
+            onClick={() => {
+              if (!permissions.manageInspectors) return
+              setAddressDialog({ type: 'manage', item: actionsMenu.row })
+              setActionsMenu(null)
+            }}
+          >
+            <Home className="h-4 w-4" />
+            Manage Address
+          </button>
+          
+          <button
+            type="button"
+            disabled={!permissions.manageInspectors}
+            className={cx(
               'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-red-50',
               permissions.manageInspectors ? 'text-red-600' : 'text-slate-400'
             )}
@@ -2082,6 +2196,392 @@ export function InspectorsPage() {
           </div>
         </div>
       ) : null}
+
+      {/* Address Management Dialog */}
+      <ReasonDialog
+        key={`address-dialog-${addressDialog?.item?.user_id}-${JSON.stringify(addressForm)}`}
+        open={addressManageOpen}
+        title={editingAddress ? "Edit Address" : "Manage Address"}
+        description={
+          <div>
+            <div>{`Manage address for ${addressDialog?.item?.name || 'Inspector'} (${addressDialog?.item?.user_id || ''})`}</div>
+            {editingAddress && (
+              <button
+                type="button"
+                className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                onClick={() => {
+                  setEditingAddress(null)
+                  setAddressForm({
+                    address_type: 'permanent',
+                    street_address: '',
+                    landmark: '',
+                    city: '',
+                    state: '',
+                    country: 'India',
+                    pincode: '',
+                    status: 'active',
+                    is_primary: true,
+                  })
+                }}
+              >
+                + Add New Address
+              </button>
+            )}
+          </div>
+        }
+        submitLabel={editingAddress ? "Update Address" : (existingAddresses.length > 0 ? "Update Address" : "Save Address")}
+        onClose={() => {
+          setAddressDialog(null)
+          setAddressFieldErrors({})
+          setAddressForm({
+            address_type: 'permanent',
+            street_address: '',
+            landmark: '',
+            city: '',
+            state: '',
+            country: 'India',
+            pincode: '',
+            status: 'active',
+            is_primary: true,
+          })
+          setExistingAddresses([])
+          setEditingAddress(null)
+        }}
+        showReason={false}
+        requireReason={false}
+        fieldErrors={addressFieldErrors}
+        additionalActions={existingAddresses.length > 0 && !editingAddress ? [
+          {
+            label: "Delete Address",
+            tone: "danger",
+            onClick: async () => {
+              try {
+                if (!confirm('Are you sure you want to delete this address?')) return
+                const address = existingAddresses[0]
+                await deleteInspectorAddress({ 
+                  inspector_id: String(addressDialog.item.user_id || '').trim(), 
+                  address_id: String(address.id || '').trim() 
+                })
+                showSnack({
+                  tone: 'success',
+                  title: 'Success',
+                  message: 'Address deleted successfully',
+                })
+                // Reset form and close dialog
+                setAddressDialog(null)
+                setAddressForm({
+                  address_type: 'permanent',
+                  street_address: '',
+                  landmark: '',
+                  city: '',
+                  state: '',
+                  country: 'India',
+                  pincode: '',
+                  status: 'active',
+                  is_primary: true,
+                })
+                setExistingAddresses([])
+              } catch (error) {
+                showSnack({
+                  tone: 'danger',
+                  title: 'Error',
+                  message: responseToMessage(error) || 'Failed to delete address',
+                })
+              }
+            }
+          }
+        ] : []}
+        fields={[
+          {
+            name: 'address_type',
+            label: 'Address Type *',
+            type: 'select',
+            value: addressForm.address_type,
+            options: [
+              { value: 'permanent', label: 'Permanent' },
+              { value: 'temporary', label: 'Temporary' },
+              { value: 'office', label: 'Office' },
+            ],
+            onChange: (value) => setAddressForm(prev => ({ ...prev, address_type: value })),
+          },
+          {
+            name: 'street_address',
+            label: 'Street Address *',
+            type: 'textarea',
+            value: addressForm.street_address,
+            placeholder: 'Enter complete street address',
+            onChange: (value) => setAddressForm(prev => ({ ...prev, street_address: value })),
+          },
+          {
+            name: 'landmark',
+            label: 'Landmark',
+            type: 'text',
+            value: addressForm.landmark,
+            placeholder: 'Opposite Railway Station',
+            onChange: (value) => setAddressForm(prev => ({ ...prev, landmark: value })),
+          },
+          {
+            name: 'city',
+            label: 'City *',
+            type: 'text',
+            value: addressForm.city,
+            placeholder: 'Enter city name',
+            onChange: (value) => setAddressForm(prev => ({ ...prev, city: value })),
+          },
+          {
+            name: 'state',
+            label: 'State *',
+            type: 'text',
+            value: addressForm.state,
+            placeholder: 'Enter state name',
+            onChange: (value) => setAddressForm(prev => ({ ...prev, state: value })),
+          },
+          {
+            name: 'country',
+            label: 'Country *',
+            type: 'text',
+            value: addressForm.country,
+            placeholder: 'Enter country name',
+            onChange: (value) => setAddressForm(prev => ({ ...prev, country: value })),
+          },
+          {
+            name: 'pincode',
+            label: 'Pincode *',
+            type: 'text',
+            value: addressForm.pincode,
+            placeholder: 'Enter 6-digit pincode',
+            onChange: (value) => {
+              const digits = String(value || '').replace(/\D+/g, '').slice(0, 6)
+              setAddressForm(prev => ({ ...prev, pincode: digits }))
+            },
+          },
+          {
+            name: 'status',
+            label: 'Status *',
+            type: 'select',
+            value: addressForm.status,
+            options: [
+              { value: 'active', label: 'Active' },
+              { value: 'inactive', label: 'Inactive' },
+            ],
+            onChange: (value) => setAddressForm(prev => ({ ...prev, status: value })),
+          },
+          {
+            name: 'is_primary',
+            label: 'Primary Address',
+            type: 'checkbox',
+            value: addressForm.is_primary,
+            onChange: (value) => setAddressForm(prev => ({ ...prev, is_primary: value })),
+          },
+        ]}
+        onSubmit={async (form) => {
+          try {
+            if (!permissions.manageInspectors) throw new Error('Insufficient permission')
+
+            // Debug: Log the addressDialog to see what data we have
+            console.log('Address dialog data:', addressDialog)
+            
+            // Try multiple possible field names for inspector ID
+            const inspectorId = String(
+              addressDialog?.item?.user_id || 
+              addressDialog?.item?.id || 
+              addressDialog?.item?.inspector_id || 
+              ''
+            ).trim()
+            console.log('Extracted inspectorId:', inspectorId)
+            console.log('Available fields:', Object.keys(addressDialog?.item || {}))
+            
+            if (!inspectorId) {
+              setAddressFieldErrors({ 
+                general: `Inspector ID is required. Available fields: ${Object.keys(addressDialog?.item || {}).join(', ')}` 
+              })
+              return
+            }
+
+            // Validate required fields
+            const errors = {}
+            if (!form.address_type?.trim()) errors.address_type = 'This field is required'
+            if (!form.street_address?.trim()) errors.street_address = 'This field is required'
+            if (!form.city?.trim()) errors.city = 'This field is required'
+            if (!form.state?.trim()) errors.state = 'This field is required'
+            if (!form.country?.trim()) errors.country = 'This field is required'
+            if (!form.pincode?.trim()) errors.pincode = 'This field is required'
+            else if (form.pincode.length !== 6) errors.pincode = 'Pincode must be exactly 6 digits'
+
+            if (Object.keys(errors).length > 0) {
+              setAddressFieldErrors(errors)
+              return
+            }
+
+            setAddressFieldErrors({})
+
+            // Start with only the required fields
+            const payload = {
+              street_address: form.street_address,
+              city: form.city,
+              state: form.state,
+              pincode: form.pincode,
+            }
+            
+            // Add optional fields only if they have values
+            if (form.address_type && form.address_type.trim()) {
+              payload.address_type = form.address_type.trim()
+            }
+            if (form.landmark && form.landmark.trim()) {
+              payload.landmark = form.landmark.trim()
+            }
+            if (form.country && form.country.trim()) {
+              payload.country = form.country.trim()
+            }
+            if (form.status && form.status.trim()) {
+              payload.status = form.status.trim()
+            }
+            if (form.is_primary !== undefined) {
+              payload.is_primary = Boolean(form.is_primary)
+            }
+
+            let result
+            const existingAddress = existingAddresses[0]
+            if (existingAddress && existingAddress.id) {
+              result = await updateInspectorAddress({ 
+                inspector_id: inspectorId, 
+                address_id: existingAddress.id, 
+                ...payload 
+              })
+              showSnack({
+                tone: 'success',
+                title: 'Success',
+                message: responseToMessage(result) || 'Address updated successfully',
+              })
+            } else {
+              result = await createInspectorAddress({ inspector_id: inspectorId, ...payload })
+              showSnack({
+                tone: 'success',
+                title: 'Success',
+                message: responseToMessage(result) || 'Address created successfully',
+              })
+            }
+            
+            setAddressDialog(null)
+            setAddressFieldErrors({})
+            setEditingAddress(null)
+            setAddressForm({
+              address_type: 'permanent',
+              street_address: '',
+              landmark: '',
+              city: '',
+              state: '',
+              country: 'India',
+              pincode: '',
+              status: 'active',
+              is_primary: true,
+            })
+            setExistingAddresses([])
+          } catch (e) {
+            const fe = extractFieldErrors(e)
+            if (Object.keys(fe).length) {
+              setAddressFieldErrors(fe)
+              const first = Object.values(fe)[0]
+              showSnack({ tone: 'danger', title: 'Error', message: String(first || 'Failed to save address') })
+              return
+            }
+            showSnack({ tone: 'danger', title: 'Error', message: responseToMessage(e) || 'Failed to save address' })
+          }
+        }}
+      />
+
+      {/* Existing Addresses Section */}
+      {addressManageOpen && existingAddresses.length > 0 && (
+        <div className="mt-4 border rounded-lg p-4 bg-gray-50">
+          <h3 className="text-lg font-semibold mb-3">Existing Addresses</h3>
+          <div className="space-y-3">
+            {existingAddresses.map((address) => (
+              <div key={address.id} className="border rounded-lg p-4 bg-white">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-medium capitalize">{address.address_type}</span>
+                      {address.is_primary && (
+                        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">Primary</span>
+                      )}
+                      <span className={`px-2 py-1 text-xs rounded ${
+                        address.status === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {address.status}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <p>{address.street_address}</p>
+                      {address.landmark && <p className="text-xs">Landmark: {address.landmark}</p>}
+                      <p>{address.city}, {address.state}, {address.country} - {address.pincode}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    <button
+                      type="button"
+                      className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      onClick={() => {
+                        console.log('Editing address:', address)
+                        setEditingAddress(address)
+                        const newForm = {
+                          address_type: address.address_type,
+                          street_address: address.street_address,
+                          landmark: address.landmark || '',
+                          city: address.city,
+                          state: address.state,
+                          country: address.country,
+                          pincode: address.pincode,
+                          status: address.status,
+                          is_primary: address.is_primary,
+                        }
+                        console.log('Setting address form to:', newForm)
+                        setAddressForm(newForm)
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                      onClick={async () => {
+                        try {
+                          await deleteInspectorAddress({ 
+                            inspector_id: String(addressDialog.item.user_id || '').trim(), 
+                            address_id: String(address.id || '').trim() 
+                          })
+                          showSnack({
+                            tone: 'success',
+                            title: 'Success',
+                            message: 'Address deleted successfully',
+                          })
+                          // Refresh addresses list
+                          const response = await getInspectorAddresses({ inspector_id: String(addressDialog.item.user_id || '').trim() })
+                          let addresses = response?.data || response || []
+                          // If it's a single object, wrap it in an array
+                          if (addresses && !Array.isArray(addresses)) {
+                            addresses = [addresses]
+                          }
+                          setExistingAddresses(addresses)
+                        } catch (error) {
+                          showSnack({
+                            tone: 'danger',
+                            title: 'Error',
+                            message: responseToMessage(error) || 'Failed to delete address',
+                          })
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

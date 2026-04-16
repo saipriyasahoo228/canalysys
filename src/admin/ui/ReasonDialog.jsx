@@ -17,10 +17,14 @@ export function ReasonDialog({
   onSubmit,
   fields,
   fieldErrors,
+  additionalActions = [],
 }) {
   const initial = useMemo(() => {
     const o = {}
-    for (const f of fields || []) o[f.name] = f.defaultValue ?? ''
+    for (const f of fields || []) {
+      // Use value prop if available, otherwise fallback to defaultValue
+      o[f.name] = f.value !== undefined ? f.value : (f.defaultValue ?? '')
+    }
     if (showReason) o.reason = ''
     return o
   }, [fields, showReason])
@@ -37,13 +41,21 @@ export function ReasonDialog({
     const wasOpen = prevOpenRef.current
     prevOpenRef.current = open
     if (open && !wasOpen) {
-      setForm(initial)
+      // Always use the latest field values when dialog opens
+      const latestForm = {}
+      for (const f of fields || []) {
+        latestForm[f.name] = f.value !== undefined ? f.value : (f.defaultValue ?? '')
+      }
+      if (showReason) latestForm.reason = ''
+      setForm(latestForm)
       setComboText({})
       setComboOpen(null)
       setCalendarView({})
     }
-  }, [open, initial])
+  }, [open, fields, showReason])
 
+  
+  
   useEffect(() => {
     const onDown = (e) => {
       if (!boxRef.current) return
@@ -580,6 +592,23 @@ export function ReasonDialog({
           <Button variant="ghost" onClick={submitting ? undefined : onClose} disabled={submitting}>
             Cancel
           </Button>
+          {additionalActions.map((action, index) => (
+            <Button
+              key={index}
+              variant={action.tone === 'danger' ? 'destructive' : 'secondary'}
+              onClick={async () => {
+                if (submitting) return
+                try {
+                  await Promise.resolve(action.onClick())
+                } catch (error) {
+                  console.error('Additional action error:', error)
+                }
+              }}
+              disabled={submitting}
+            >
+              {action.label}
+            </Button>
+          ))}
           <Button
             variant="primary"
             onClick={async () => {

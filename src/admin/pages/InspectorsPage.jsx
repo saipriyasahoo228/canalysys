@@ -290,10 +290,6 @@ export function InspectorsPage() {
     }
   }, [addressDialog?.type, addressDialog?.item?.user_id])
 
-  // Debug: Track addressForm changes
-  useEffect(() => {
-    console.log('addressForm changed:', addressForm)
-  }, [addressForm])
 
   useEffect(() => {
     const onDown = (e) => {
@@ -2199,7 +2195,7 @@ export function InspectorsPage() {
 
       {/* Address Management Dialog */}
       <ReasonDialog
-        key={`address-dialog-${addressDialog?.item?.user_id}-${JSON.stringify(addressForm)}`}
+        key={`address-dialog-${addressDialog?.item?.user_id}-${editingAddress?.id || 'new'}`}
         open={addressManageOpen}
         title={editingAddress ? "Edit Address" : "Manage Address"}
         description={

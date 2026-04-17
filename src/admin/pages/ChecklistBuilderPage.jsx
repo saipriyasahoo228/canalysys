@@ -563,7 +563,7 @@ export function ChecklistBuilderPage() {
               name: form.name,
               description: form.description,
               vehicle_type: form.vehicle_type?.toLowerCase(),
-              fuel_type: form.fuel_type,
+              fuel_type: form.fuel_type?.toLowerCase(),
               is_active: form.is_active
             }
 

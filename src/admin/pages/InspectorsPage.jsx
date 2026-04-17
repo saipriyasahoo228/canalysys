@@ -75,7 +75,7 @@ export function InspectorsPage() {
     { intervalMs: 15_000 }
   )
 
-  const leaveRequests = leaveData?.results || []
+  const leaveRequests = leaveData?.pending_requests || []
 
   const [availabilityData, setAvailabilityData] = useState(null)
   const [availabilityLoading, setAvailabilityLoading] = useState(false)

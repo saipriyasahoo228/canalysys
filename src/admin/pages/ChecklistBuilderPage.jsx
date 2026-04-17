@@ -158,11 +158,11 @@ export function ChecklistBuilderPage() {
         const response = await listVariants({ page: 1 })
         const variants = response.items || []
         
-        // Extract unique fuel types from variants
+        // Extract unique fuel types from variants and convert to uppercase
         const uniqueFuelTypes = [...new Set(variants
-          .map(variant => variant.engine_specs?.fuel_type)
+          .map(variant => variant.fuel_type)
           .filter(fuelType => fuelType && fuelType.trim() !== '')
-        )].sort()
+        )].map(fuelType => fuelType.toUpperCase()).sort()
         
         setFuelTypes(uniqueFuelTypes)
       } catch (error) {
@@ -541,7 +541,7 @@ export function ChecklistBuilderPage() {
             label: 'Fuel Type',
             type: 'select',
             defaultValue: dialog?.type === 'editTemplate' ? 
-              (fuelTypes.find(fuelType => fuelType.toLowerCase() === editingTemplate?.fuel_type?.toLowerCase()) || '') : '',
+              (fuelTypes.find(fuelType => fuelType === editingTemplate?.fuel_type?.toUpperCase()) || '') : '',
             options: fuelTypes.map(fuelType => ({ value: fuelType, label: fuelType })),
             placeholder: loadingFuelTypes ? 'Loading fuel types...' : 'Select fuel type',
           },
@@ -563,7 +563,7 @@ export function ChecklistBuilderPage() {
               name: form.name,
               description: form.description,
               vehicle_type: form.vehicle_type?.toLowerCase(),
-              fuel_type: form.fuel_type?.toLowerCase(),
+              fuel_type: form.fuel_type,
               is_active: form.is_active
             }
 

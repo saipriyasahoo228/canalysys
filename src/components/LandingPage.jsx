@@ -137,13 +137,17 @@ const LandingPage = () => {
         .nav-cta::after { display: none !important; }
 
         /* HERO */
-        #hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; position: relative; padding: 100px 48px 60px; overflow: hidden; }
+        #hero { min-height: 70vh; display: flex; flex-direction: column; justify-content: center; position: relative; padding: 100px 0 0; overflow: hidden; }
+        .hero-video {
+          position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+          object-fit: cover; z-index: 0;
+        }
         .hero-bg {
           position: absolute; inset: 0;
-          background: radial-gradient(ellipse 80% 60% at 70% 50%, rgba(184,48,40,0.06) 0%, transparent 70%),
-                      radial-gradient(ellipse 50% 40% at 5% 80%, rgba(123,53,32,0.06) 0%, transparent 60%),
-                      linear-gradient(160deg, var(--bg) 0%, var(--bg2) 100%);
-          z-index: 0;
+          background: radial-gradient(ellipse 80% 60% at 70% 50%, rgba(0,0,0,0.3) 0%, transparent 70%),
+                      radial-gradient(ellipse 50% 40% at 5% 80%, rgba(0,0,0,0.4) 0%, transparent 60%),
+                      linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.3) 100%);
+          z-index: 1;
         }
         .hero-grid {
           position: absolute; inset: 0; z-index: 0; opacity: 0.07;
@@ -152,44 +156,57 @@ const LandingPage = () => {
         }
         .hero-diagonal { position: absolute; top: 0; right: -100px; bottom: 0; width: 55%; background: var(--bg2); clip-path: polygon(20% 0%,100% 0%,100% 100%,0% 100%); z-index: 0; }
         .hero-accent-band { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; background: linear-gradient(180deg, var(--red) 0%, var(--choc) 100%); z-index: 3; }
-        .hero-content { position: relative; z-index: 2; max-width: 680px; }
+        .hero-content { position: relative; z-index: 2; max-width: 100%; width: 100%; padding: 0 48px; }
+        .hero-content-wrapper {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(5px);
+          border: none;
+          border-radius: 0;
+          padding: 0;
+          box-shadow: none;
+        }
         .hero-badge {
           display: inline-flex; align-items: center; gap: 8px;
-          border: 1px solid var(--border-med); background: rgba(123,53,32,0.07);
+          border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.6);
           padding: 6px 16px; border-radius: 2px;
           font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 600;
-          letter-spacing: 2px; text-transform: uppercase; color: var(--choc);
-          margin-bottom: 28px; animation: fadeUp 0.8s 0.2s ease both;
+          letter-spacing: 2px; text-transform: uppercase; color: #ffffff;
+          margin-bottom: 28px; animation: fadeUp 0.8s 0.2s ease both; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
         .hero-badge::before { content: ''; width: 7px; height: 7px; background: var(--red); border-radius: 50%; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.4)} }
-        .hero-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(60px,8vw,110px); line-height: 0.95; letter-spacing: 2px; color: var(--text); animation: fadeUp 0.8s 0.35s ease both; }
-        .hero-title .accent { color: var(--choc); }
-        .hero-sub { margin-top: 24px; font-size: 18px; font-weight: 300; color: var(--text-muted); line-height: 1.7; max-width: 500px; animation: fadeUp 0.8s 0.5s ease both; }
-        .hero-sub strong { color: var(--text); font-weight: 600; }
+        .hero-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(60px,8vw,110px); line-height: 0.95; letter-spacing: 2px; color: #ffffff; text-shadow: 2px 2px 8px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5); animation: fadeUp 0.8s 0.35s ease both; }
+        .hero-title .accent { color: #ffffff; }
+        .hero-sub { margin-top: 24px; font-size: 18px; font-weight: 300; color: #ffffff; line-height: 1.7; max-width: 500px; text-shadow: 1px 1px 4px rgba(0,0,0,0.8); animation: fadeUp 0.8s 0.5s ease both; }
+        .hero-sub strong { color: #ffffff; font-weight: 600; }
         .hero-actions { margin-top: 44px; display: flex; gap: 16px; flex-wrap: wrap; animation: fadeUp 0.8s 0.65s ease both; }
         .btn-primary { background: var(--choc); color: var(--white); padding: 14px 36px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; text-decoration: none; border-radius: 2px; border: none; cursor: pointer; transition: background 0.2s, transform 0.15s; display: inline-block; }
         .btn-primary:hover { background: var(--red); transform: translateY(-2px); }
-        .btn-secondary { background: transparent; color: var(--text); padding: 14px 36px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; text-decoration: none; border-radius: 2px; border: 1.5px solid var(--border-med); cursor: pointer; transition: border-color 0.2s, color 0.2s, transform 0.15s; display: inline-block; }
-        .btn-secondary:hover { border-color: var(--choc); color: var(--choc); transform: translateY(-2px); }
-        .hero-stats { position: relative; z-index: 2; display: flex; gap: 0; margin-top: 72px; border-top: 1px solid var(--border); padding-top: 36px; max-width: 680px; animation: fadeUp 0.8s 0.8s ease both; }
+        .btn-secondary { background: transparent; color: #ffffff; padding: 14px 36px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; text-decoration: none; border-radius: 2px; border: 1.5px solid rgba(255,255,255,0.6); cursor: pointer; transition: border-color 0.2s, color 0.2s, transform 0.15s, background 0.2s; display: inline-block; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        .btn-secondary:hover { border-color: #ffffff; color: #000000; background: rgba(255,255,255,0.9); transform: translateY(-2px); text-shadow: none; }
+        .hero-stats { position: relative; z-index: 2; display: flex; gap: 0; margin-top: 72px; border-top: 1px solid var(--border); padding-top: 36px; max-width: 100%; width: 100%; padding-left: 48px; padding-right: 48px; animation: fadeUp 0.8s 0.8s ease both; }
         .hero-stat { flex: 1; padding-right: 32px; border-right: 1px solid var(--border); }
         .hero-stat:last-child { border-right: none; padding-right: 0; padding-left: 32px; }
         .hero-stat:nth-child(2) { padding-left: 32px; }
-        .hero-stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 44px; color: var(--choc); line-height: 1; }
-        .hero-stat-label { font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
+        .hero-stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 44px; color: #ffffff; line-height: 1; text-shadow: 1px 1px 3px rgba(0,0,0,0.6); }
+        .hero-stat-label { font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: #ffffff; margin-top: 4px; text-shadow: 1px 1px 2px rgba(0,0,0,0.6); }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
 
         /* SECTION BASE */
-        section { padding: 96px 48px; }
-        .section-label { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--choc); margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+        section { padding: 24px 48px; }
+        .section-label { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--choc); margin-bottom: 12px; display: flex; align-items: center; gap: 12px; }
         .section-label::before { content: ''; width: 32px; height: 2px; background: var(--choc); }
         .section-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(38px,5vw,64px); line-height: 1; letter-spacing: 1px; color: var(--text); }
-        .section-subtitle { margin-top: 16px; font-size: 16px; font-weight: 300; color: var(--text-muted); max-width: 560px; line-height: 1.7; }
+        .section-subtitle { margin-top: 12px; font-size: 16px; font-weight: 300; color: var(--text-muted); max-width: 560px; line-height: 1.7; }
 
         /* SERVICES */
         #services { background: var(--bg2); }
-        .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2px; margin-top: 56px; }
+        .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2px; margin-top: 32px; }
         .service-card { background: var(--white); padding: 40px 36px; position: relative; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s; cursor: default; border: 1px solid var(--border); }
         .service-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--choc), var(--red)); transform: scaleX(0); transform-origin: left; transition: transform 0.35s; }
         .service-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
@@ -347,10 +364,24 @@ const LandingPage = () => {
       </nav>
 
       <section id="hero">
+        <video 
+          className="hero-video" 
+          autoPlay 
+          muted 
+          loop 
+          playsInline 
+          controls={false} 
+          preload="auto"
+          onError={(e) => console.error('Video error:', e)}
+          onCanPlay={() => console.log('Video can play')}
+        >
+          <source src="/carnalysysvideo.mp4" type="video/mp4" />
+          <source src="/carnalysysvideo.webm" type="video/webm" />
+          Your browser does not support the video tag.
+        </video>
         <div className="hero-bg"></div>
         <div className="hero-grid"></div>
-        <div className="hero-diagonal"></div>
-        <div className="hero-accent-band"></div>
+        <div className="hero-content-wrapper"></div>
         <div className="hero-content">
           <div className="hero-badge">Odisha's Premier Vehicle PDI Network</div>
           <h1 className="hero-title">INSPECT<br/>BEFORE<br/><span className="accent">YOU DRIVE</span></h1>

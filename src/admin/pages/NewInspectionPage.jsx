@@ -33,6 +33,39 @@ const PAYMENT_PROVIDER_OPTIONS = [
   { value: 'payu', label: 'PayU' },
 ]
 
+const ODISHA_DISTRICTS = [
+  { value: 'angul', label: 'Angul' },
+  { value: 'boudh', label: 'Boudh' },
+  { value: 'balangir', label: 'Balangir' },
+  { value: 'bargarh', label: 'Bargarh' },
+  { value: 'balasore', label: 'Balasore' },
+  { value: 'cuttack', label: 'Cuttack' },
+  { value: 'deogarh', label: 'Deogarh' },
+  { value: 'dhenkanal', label: 'Dhenkanal' },
+  { value: 'gajapati', label: 'Gajapati' },
+  { value: 'ganjam', label: 'Ganjam' },
+  { value: 'jagatsinghpur', label: 'Jagatsinghpur' },
+  { value: 'jajpur', label: 'Jajpur' },
+  { value: 'jharsuguda', label: 'Jharsuguda' },
+  { value: 'kalahandi', label: 'Kalahandi' },
+  { value: 'kendrapara', label: 'Kendrapara' },
+  { value: 'keonjhar', label: 'Keonjhar' },
+  { value: 'khordha', label: 'Khordha' },
+  { value: 'koraput', label: 'Koraput' },
+  { value: 'kandhamal', label: 'Kandhamal' },
+  { value: 'kendujhar', label: 'Kendujhar' },
+  { value: 'malkangiri', label: 'Malkangiri' },
+  { value: 'mayurbhanj', label: 'Mayurbhanj' },
+  { value: 'nabarangpur', label: 'Nabarangpur' },
+  { value: 'nuapada', label: 'Nuapada' },
+  { value: 'nayagarh', label: 'Nayagarh' },
+  { value: 'puri', label: 'Puri' },
+  { value: 'rayagada', label: 'Rayagada' },
+  { value: 'sambalpur', label: 'Sambalpur' },
+  { value: 'sonepur', label: 'Sonepur' },
+  { value: 'sundargarh', label: 'Sundargarh' },
+]
+
 function formatDateDisplay(dateIso) {
   const d = String(dateIso || '').trim()
   if (!d) return ''
@@ -1339,7 +1372,7 @@ export function NewInspectionPage() {
   const categoryOptions = useMemo(() => {
     return categoryValues.map((category) => ({
       value: category.id,
-      label: category.name
+      label: `${category.name} (${category.category_type_detail?.name || '—'})`
     }))
   }, [categoryValues])
 
@@ -2544,7 +2577,7 @@ export function NewInspectionPage() {
                         </div>
 
                         <div>
-                          <div className="text-xs font-medium text-slate-900">House Number</div>
+                          <div className="text-xs font-medium text-slate-900">House Number <span className="text-red-500">*</span></div>
                           <div className="mt-1">
                             <Input
                               value={wizardForm.houseNumber || ''}
@@ -2554,12 +2587,13 @@ export function NewInspectionPage() {
                                 )
                               }
                               placeholder="Enter house number"
+                              required
                             />
                           </div>
                         </div>
 
                         <div>
-                          <div className="text-xs font-medium text-slate-900">Area/Street</div>
+                          <div className="text-xs font-medium text-slate-900">Area/Street <span className="text-red-500">*</span></div>
                           <div className="mt-1">
                             <Input
                               value={wizardForm.areaStreet || ''}
@@ -2569,12 +2603,13 @@ export function NewInspectionPage() {
                                 )
                               }
                               placeholder="Enter area/street"
+                              required
                             />
                           </div>
                         </div>
 
                         <div>
-                          <div className="text-xs font-medium text-slate-900">City</div>
+                          <div className="text-xs font-medium text-slate-900">City <span className="text-red-500">*</span></div>
                           <div className="mt-1">
                             <Input
                               value={wizardForm.city || ''}
@@ -2584,27 +2619,35 @@ export function NewInspectionPage() {
                                 )
                               }
                               placeholder="Enter city"
+                              required
                             />
                           </div>
                         </div>
 
                         <div>
-                          <div className="text-xs font-medium text-slate-900">District</div>
+                          <div className="text-xs font-medium text-slate-900">District <span className="text-red-500">*</span></div>
                           <div className="mt-1">
-                            <Input
+                            <Select
                               value={wizardForm.district || ''}
                               onChange={(e) =>
                                 setDialog((s) =>
                                   s && s.type === 'raise' ? { ...s, form: { ...s.form, district: e.target.value } } : s
                                 )
                               }
-                              placeholder="Enter district"
-                            />
+                              required
+                            >
+                              <option value="">Select district</option>
+                              {ODISHA_DISTRICTS.map((district) => (
+                                <option key={district.value} value={district.value}>
+                                  {district.label}
+                                </option>
+                              ))}
+                            </Select>
                           </div>
                         </div>
 
                         <div>
-                          <div className="text-xs font-medium text-slate-900">State</div>
+                          <div className="text-xs font-medium text-slate-900">State <span className="text-red-500">*</span></div>
                           <div className="mt-1">
                             <Input
                               value={wizardForm.state || ''}
@@ -2614,12 +2657,13 @@ export function NewInspectionPage() {
                                 )
                               }
                               placeholder="Enter state"
+                              required
                             />
                           </div>
                         </div>
 
                         <div>
-                          <div className="text-xs font-medium text-slate-900">Pin Code</div>
+                          <div className="text-xs font-medium text-slate-900">Pin Code <span className="text-red-500">*</span></div>
                           <div className="mt-1">
                             <Input
                               value={wizardForm.pinCode || ''}
@@ -2629,6 +2673,7 @@ export function NewInspectionPage() {
                                 )
                               }
                               placeholder="Enter pin code"
+                              required
                             />
                           </div>
                         </div>

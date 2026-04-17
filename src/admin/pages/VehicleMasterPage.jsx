@@ -237,6 +237,7 @@ export function VehicleMasterPage() {
       name: c.name,
       description: c.description,
       category_type: c.category_type,
+      category_type_detail: c.category_type_detail,
       is_active: c.is_active,
       created_at: c.created_at,
       updated_at: c.updated_at,
@@ -819,7 +820,7 @@ export function VehicleMasterPage() {
                 { kind: 'make', title: 'Brands', items: brands },
                 { kind: 'model', title: 'Models', items: models },
                 { kind: 'variant', title: 'Variants', items: variants },
-                { kind: 'categoryType', title: 'Category Types', items: categoryTypes },
+                { kind: 'categoryType', title: 'Transmission Type', items: categoryTypes },
                 { kind: 'categoryValue', title: 'Category Values', items: categoryValues },
               ].map((block) => (
                 <Card
@@ -1266,7 +1267,7 @@ export function VehicleMasterPage() {
             }
             if (dialog.kind === 'categoryType') {
               return [
-                { name: 'name', label: 'Category Type Name *', type: 'text', defaultValue: '' },
+                { name: 'name', label: 'Transmission Type Name *', type: 'text', defaultValue: '' },
                 { name: 'description', label: 'Description', type: 'text', defaultValue: '' },
               ]
             }
@@ -1357,7 +1358,7 @@ export function VehicleMasterPage() {
             }
             if (dialog.kind === 'categoryType') {
               return [
-                { name: 'name', label: 'Category Type Name *', type: 'text', defaultValue: dialog?.item?.name || '' },
+                { name: 'name', label: 'Transmission Type Name *', type: 'text', defaultValue: dialog?.item?.name || '' },
                 { name: 'description', label: 'Description', type: 'text', defaultValue: dialog?.item?.description || '' },
               ]
             }
@@ -1495,7 +1496,7 @@ export function VehicleMasterPage() {
                 label: 'Category *',
                 type: 'select',
                 defaultValue: '',
-                options: categories.map((c) => ({ value: c.id, label: c.name })),
+                options: categories.map((c) => ({ value: c.id, label: `${c.name} (${c.category_type_detail?.name || '—'})` })),
               },
               {
                 name: 'vehicle_type',
@@ -1547,7 +1548,7 @@ export function VehicleMasterPage() {
                 label: 'Category *',
                 type: 'select',
                 defaultValue: it?.category || '',
-                options: categories.map((c) => ({ value: c.id, label: c.name })),
+                options: categories.map((c) => ({ value: c.id, label: `${c.name} (${c.category_type_detail?.name || '—'})` })),
               },
               {
                 name: 'vehicle_type',
@@ -1664,7 +1665,7 @@ export function VehicleMasterPage() {
                 label: 'Category',
                 type: 'select',
                 defaultValue: '',
-                options: categories.map((c) => ({ value: c.id, label: c.name })),
+                options: categories.map((c) => ({ value: c.id, label: `${c.name} (${c.category_type_detail?.name || '—'})` })),
               },
             ]
           }
@@ -1725,7 +1726,7 @@ export function VehicleMasterPage() {
                 label: 'Category',
                 type: 'select',
                 defaultValue: it?.categoryId || categories?.[0]?.id || '',
-                options: categories.map((c) => ({ value: c.id, label: c.name })),
+                options: categories.map((c) => ({ value: c.id, label: `${c.name} (${c.category_type_detail?.name || '—'})` })),
               },
             ]
           }
@@ -1744,7 +1745,7 @@ export function VehicleMasterPage() {
                 label: 'Category',
                 type: 'select',
                 defaultValue: it?.categoryId || '',
-                options: (vm.categories || []).map((c) => ({ value: c.id, label: c.name })),
+                options: (vm.categories || []).map((c) => ({ value: c.id, label: `${c.name} (${c.category_type_detail?.name || '—'})` })),
                 disabled: true,
               },
               { name: 'baseInr', label: 'Base price (INR)', type: 'number', defaultValue: p?.baseInr ?? 500, disabled: true },
@@ -1845,7 +1846,11 @@ export function VehicleMasterPage() {
                   name: String(form.name || '').trim(),
                   description: String(form.description || '').trim() || null,
                 })
-                showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
+                showSnack({
+                  tone: 'success',
+                  title: 'Transmission Type',
+                  message: responseToMessage(res).replace(/category\s*type/gi, 'Transmission Type'),
+                })
               } else if (dialog.kind === 'categoryValue') {
                 if (!requireFields(['category_type', 'name'])) return
                 
@@ -1894,7 +1899,11 @@ export function VehicleMasterPage() {
                   name: String(form.name || '').trim(),
                   description: String(form.description || '').trim() || null,
                 })
-                showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
+                showSnack({
+                  tone: 'success',
+                  title: 'Transmission Type',
+                  message: responseToMessage(res).replace(/category\s*type/gi, 'Transmission Type'),
+                })
               } else if (dialog.kind === 'categoryValue') {
                 if (!requireFields(['category_type', 'name'])) return
                 
@@ -1927,7 +1936,11 @@ export function VehicleMasterPage() {
                 showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
               } else if (dialog.kind === 'categoryType') {
                 const res = await deleteCategoryType(dialog.item.id)
-                showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
+                showSnack({
+                  tone: 'success',
+                  title: 'Transmission Type',
+                  message: responseToMessage(res).replace(/category\s*type/gi, 'Transmission Type'),
+                })
               } else if (dialog.kind === 'categoryValue') {
                 const res = await deleteCategoryValue(dialog.item.id)
                 showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })

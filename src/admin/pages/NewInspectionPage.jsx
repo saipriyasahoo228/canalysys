@@ -89,7 +89,7 @@ function formatAddress(form) {
     form.city,
     form.district,
     form.state,
-    form.pinCode
+    form.pincode
   ].filter(Boolean)
   
   return parts.join(', ')
@@ -140,6 +140,25 @@ function formatTimeToAMPM(timeString) {
   const displayHour = hour % 12 || 12 // Convert 0 to 12
   
   return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`
+}
+
+function isSlotInPast(slot, selectedDate) {
+  if (!slot || !selectedDate) return false
+  
+  const now = new Date()
+  const today = now.toDateString()
+  const slotDate = new Date(selectedDate).toDateString()
+  
+  // Only check time for today's slots
+  if (today !== slotDate) return false
+  
+  // Parse slot start time (e.g., "11:00:00")
+  const [startHours, startMinutes] = slot.start_24h.split(':')
+  const slotStartTime = new Date()
+  slotStartTime.setHours(parseInt(startHours), parseInt(startMinutes), 0, 0)
+  
+  // If current time is past slot start time, slot is unavailable (in progress or completed)
+  return now >= slotStartTime
 }
 
 export function NewInspectionPage() {
@@ -870,7 +889,11 @@ export function NewInspectionPage() {
         model_id: parseInt(wizardForm.modelId),
         variant_id: parseInt(wizardForm.variantId),
         category_id: parseInt(wizardForm.category),
-        address: formatAddress(wizardForm), // Use formatted address instead of locationId
+        address: formatAddress(wizardForm),
+        city: wizardForm.city || '',
+        state: wizardForm.state || '',
+        country: wizardForm.country || 'India',
+        pincode: wizardForm.pincode || '',
         slot_date: wizardForm.slotDate,
         slot_time: wizardForm.slotTime,
         slot_start_time: wizardForm.slotStart,
@@ -998,7 +1021,11 @@ export function NewInspectionPage() {
         model_id: parseInt(wizardForm.modelId),
         variant_id: parseInt(wizardForm.variantId),
         category_id: parseInt(wizardForm.category),
-        address: formatAddress(wizardForm), // Use formatted address instead of locationId
+        address: formatAddress(wizardForm),
+        city: wizardForm.city || '',
+        state: wizardForm.state || '',
+        country: wizardForm.country || 'India',
+        pincode: wizardForm.pincode || '',
         slot_date: wizardForm.slotDate,
         slot_time: wizardForm.slotTime,
         slot_start_time: wizardForm.slotStart,
@@ -1457,7 +1484,8 @@ export function NewInspectionPage() {
       city: '',
       district: '',
       state: '',
-      pinCode: '',
+      pincode: '',
+      country: 'India',
       slotDate: new Date().toISOString().split('T')[0], // Set today's date as default
       slotTime: '',
       slotStart: '',
@@ -1956,7 +1984,8 @@ export function NewInspectionPage() {
                     city: '',
                     district: '',
                     state: '',
-                    pinCode: '',
+                    pincode: '',
+                    country: 'India',
                     slotDate: '',
                     slotTime: '',
                     slotStart: '',
@@ -2666,13 +2695,29 @@ export function NewInspectionPage() {
                           <div className="text-xs font-medium text-slate-900">Pin Code <span className="text-red-500">*</span></div>
                           <div className="mt-1">
                             <Input
-                              value={wizardForm.pinCode || ''}
+                              value={wizardForm.pincode || ''}
                               onChange={(e) =>
                                 setDialog((s) =>
-                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, pinCode: e.target.value } } : s
+                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, pincode: e.target.value } } : s
                                 )
                               }
                               placeholder="Enter pin code"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-xs font-medium text-slate-900">Country <span className="text-red-500">*</span></div>
+                          <div className="mt-1">
+                            <Input
+                              value={wizardForm.country || 'India'}
+                              onChange={(e) =>
+                                setDialog((s) =>
+                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, country: e.target.value } } : s
+                                )
+                              }
+                              placeholder="Enter country"
                               required
                             />
                           </div>
@@ -2757,22 +2802,24 @@ export function NewInspectionPage() {
                                   const active = selectedTimeSlot === slot.timestamp
                                   const isAvailable = slot.is_available
                                   const freeInspectors = slot.free_inspectors || 0
+                                  const isPast = isSlotInPast(slot, wizardForm.slotDate)
+                                  const isSlotActive = isAvailable && !isPast
                                   
                                   return (
                                     <button
                                       key={slot.timestamp}
                                       type="button"
-                                      disabled={!isAvailable}
+                                      disabled={!isSlotActive}
                                       className={cx(
                                         'relative rounded-xl border-2 p-3 text-center transition-all duration-200 shadow-sm hover:shadow-md',
                                         active
                                           ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-blue-100 shadow-blue-200 shadow-lg transform scale-105'
-                                          : isAvailable
+                                          : isSlotActive
                                           ? 'border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50 hover:shadow-blue-100 cursor-pointer transform hover:scale-102'
                                           : 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed opacity-60'
                                       )}
                                       onClick={() => {
-                                        if (isAvailable) {
+                                        if (isSlotActive) {
                                           setSelectedTimeSlot(slot.timestamp)
                                           setDialog((s) => 
                                             s && s.type === 'raise' ? { ...s, form: { ...s.form, slotTime: slot.timestamp, slotStart: slot.start_24h, slotEnd: slot.end_24h } } : s
@@ -2784,7 +2831,7 @@ export function NewInspectionPage() {
                                       <div className="absolute top-2 right-2">
                                         <div className={cx(
                                           'w-2 h-2 rounded-full',
-                                          active ? 'bg-blue-500' : isAvailable ? 'bg-green-500' : 'bg-red-400'
+                                          active ? 'bg-blue-500' : isPast ? 'bg-gray-400' : isAvailable ? 'bg-green-500' : 'bg-red-400'
                                         )} />
                                       </div>
                                       
@@ -2800,7 +2847,14 @@ export function NewInspectionPage() {
                                       
                                       {/* Inspector availability */}
                                       <div className="border-t border-slate-100 pt-2">
-                                        {isAvailable ? (
+                                        {isPast ? (
+                                          <div className="flex items-center justify-center space-x-1">
+                                            <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                                            <span className="text-xs font-medium text-gray-500">
+                                              Unavailable
+                                            </span>
+                                          </div>
+                                        ) : isAvailable ? (
                                           <div className="flex items-center justify-center space-x-1">
                                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                                             <span className="text-xs font-semibold text-green-600">

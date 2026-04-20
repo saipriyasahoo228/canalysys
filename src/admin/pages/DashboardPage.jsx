@@ -669,7 +669,7 @@ export function DashboardPage() {
   const locationData = pdiData?.items ? (() => {
     const locations = {}
     pdiData.items.forEach(item => {
-      const location = item.address || 'Unknown'
+      const location = item.city || 'Unknown'
       if (!locations[location]) {
         locations[location] = { name: location, total: 0, assigned: 0, unassigned: 0 }
       }
@@ -840,7 +840,7 @@ export function DashboardPage() {
           </div>
         </Card>
 
-        <Card title="Queue load by location" subtitle="Assigned vs unassigned inspections" accent="cyan">
+        <Card title="Queue load by city" subtitle="Assigned vs unassigned inspections" accent="cyan">
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={locationData} layout="horizontal" margin={{ left: 20, right: 20, top: 10, bottom: 10 }}>

@@ -4,6 +4,16 @@ import { Button, Card, cx, Input, Select } from './Ui'
 import { CustomDatePicker } from './CustomDatePicker'
 import { createInspectorProfile, getInspectorProfile, updateInspectorProfile } from '../../api/inspectoronboard'
 
+function formatDateToDDMMYYYY(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return '—'
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = String(d.getFullYear())
+  return `${dd}-${mm}-${yyyy}`
+}
+
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -147,7 +157,7 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
 
                   <div className="rounded-xl border border-slate-200 bg-white p-2">
                     <div className="text-[11px] font-medium uppercase tracking-wide text-slate-600">Date of joining</div>
-                    <div className="mt-0.5 text-sm font-semibold text-slate-900">{form.joinDate || '—'}</div>
+                    <div className="mt-0.5 text-sm font-semibold text-slate-900">{formatDateToDDMMYYYY(form.joinDate)}</div>
                   </div>
 
                   <div className="rounded-xl border border-slate-200 bg-white p-2">

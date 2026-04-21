@@ -4,6 +4,7 @@ import { Card, Badge, Button, cx } from '../ui/Ui'
 import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { Snackbar } from '../ui/Snackbar'
+import { formatDate } from '../utils/format'
 import { 
   getTimeSlotConfigurations, 
   updateTimeSlotConfiguration,
@@ -220,7 +221,7 @@ export function TimeFramesPage() {
       {/* Time Slots Display */}
       <Card
         title="Generated Time Slots"
-        subtitle={`Available slots for ${slots.date || selectedDate}`}
+        subtitle={`Available slots for ${formatDate(slots.date || selectedDate)}`}
         accent="green"
       >
         <div className="space-y-4">

@@ -498,6 +498,7 @@ export function VehicleMasterPage() {
           : []),
         ...(dialog.kind === 'categoryType'
           ? [
+              { key: 'category_type', label: 'Transmission Type', value: it?.name || '—', fullWidth: true },
               { key: 'description', label: 'Description', value: it?.description || '—', fullWidth: true },
               { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
               { key: 'created_at', label: 'Created', value: it?.created_at ? formatDateTime(it.created_at) : '—' },
@@ -506,14 +507,14 @@ export function VehicleMasterPage() {
           : []),
         ...(dialog.kind === 'categoryValue'
           ? [
-              { key: 'category_type', label: 'Category Type', value: it?.category_type_detail?.name || it?.category_type || '—' },
+              { key: 'category_type', label: 'Transmission Type', value: it?.category_type_detail?.name || it?.category_type || '—' },
+              { key: 'name', label: 'Category Type', value: it?.name || '—', fullWidth: true },
               { key: 'description', label: 'Description', value: it?.description || '—', fullWidth: true },
               { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
               { key: 'created_at', label: 'Created', value: it?.created_at ? formatDateTime(it.created_at) : '—' },
               { key: 'updated_at', label: 'Updated', value: it?.updated_at ? formatDateTime(it.updated_at) : '—' },
             ]
           : []),
-        { key: 'name', label: 'Name', value: it?.name || '—', fullWidth: true },
       ]
     }
 

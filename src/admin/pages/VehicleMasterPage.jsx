@@ -527,7 +527,7 @@ export function VehicleMasterPage() {
         { key: 'model', label: 'Model', value: it?.model_detail?.name || it?.model_name || it?.model || '—' },
         { key: 'variant', label: 'Variant', value: it?.variant_detail?.name || it?.variant_name || it?.variant || '—' },
         { key: 'category', label: 'Category', value: it?.category_detail?.name || it?.category_name || it?.category || '—' },
-        { key: 'category_type', label: 'Category Type', value: it?.category_type_name || it?.category_detail?.category_type_detail?.name || '—' },
+        { key: 'category_type', label: 'Transmission Type', value: it?.category_type_name || it?.category_detail?.category_type_detail?.name || '—' },
         { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
         { key: 'created_at', label: 'Created', value: it?.created_at ? formatDateTime(it.created_at) : '—' },
         { key: 'updated_at', label: 'Updated', value: it?.updated_at ? formatDateTime(it.updated_at) : '—' },

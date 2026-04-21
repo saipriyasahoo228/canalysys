@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 const LandingPage = () => {
   const navigate = useNavigate();
   const [countersAnimated, setCountersAnimated] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const heroStatsRef = useRef(null);
 
   useEffect(() => {
@@ -135,6 +136,37 @@ const LandingPage = () => {
         .nav-cta { background: var(--choc) !important; color: var(--white) !important; padding: 9px 22px; border-radius: 2px; font-weight: 700 !important; letter-spacing: 1px !important; transition: background 0.2s !important; }
         .nav-cta:hover { background: var(--red) !important; }
         .nav-cta::after { display: none !important; }
+
+        /* MOBILE MENU TOGGLE */
+        .mobile-menu-toggle {
+          display: none;
+          flex-direction: column;
+          justify-content: space-between;
+          width: 24px;
+          height: 18px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 0;
+          z-index: 101;
+        }
+        .hamburger-line {
+          width: 100%;
+          height: 2px;
+          background: var(--choc);
+          border-radius: 2px;
+          transition: all 0.3s ease;
+          transform-origin: center;
+        }
+        .hamburger-line.open:nth-child(1) {
+          transform: rotate(45deg) translate(5px, 5px);
+        }
+        .hamburger-line.open:nth-child(2) {
+          opacity: 0;
+        }
+        .hamburger-line.open:nth-child(3) {
+          transform: rotate(-45deg) translate(7px, -6px);
+        }
 
         /* HERO */
         #hero { min-height: 70vh; display: flex; flex-direction: column; justify-content: center; position: relative; padding: 100px 0 0; overflow: hidden; }
@@ -331,7 +363,39 @@ const LandingPage = () => {
 
         /* MOBILE */
         @media (max-width: 900px) {
-          nav { padding: 0 20px; } .nav-links { display: none; }
+          nav { padding: 0 20px; position: relative; } 
+          .mobile-menu-toggle { display: flex; position: absolute; right: 48px; top: 50%; transform: translateY(-50%); }
+          .nav-links { 
+            display: none; 
+            position: fixed; 
+            top: 68px; 
+            left: 0; 
+            right: 0; 
+            background: rgba(253,246,240,0.98); 
+            backdrop-filter: blur(14px);
+            flex-direction: column; 
+            gap: 0; 
+            padding: 20px; 
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 4px 16px rgba(123,53,32,0.1);
+            z-index: 100;
+          }
+          .nav-links.mobile-open { display: flex; }
+          .nav-links li { width: 100%; }
+          .nav-links a { 
+            display: block; 
+            padding: 16px 0; 
+            border-bottom: 1px solid var(--border); 
+            text-align: center;
+            font-size: 16px;
+          }
+          .nav-links a:last-child { border-bottom: none; }
+          .nav-cta { 
+            background: var(--choc) !important; 
+            color: var(--white) !important; 
+            margin: 8px 0;
+            border-radius: 4px !important;
+          }
           section { padding: 64px 20px; } #hero { padding: 100px 20px 48px; }
           .hero-diagonal { display: none; }
           .process-grid { grid-template-columns: 1fr; gap: 40px; } .process-visual { height: 360px; }
@@ -352,14 +416,23 @@ const LandingPage = () => {
           <img src="/carnalysysnew1.jpg" alt="CARNALYSYS Logo" style={{width: "50px", height: "50px", objectFit: "contain"}} />
           <span className="nav-logo-text">CAR<span>NALYSYS</span></span>
         </a>
-        <ul className="nav-links">
-          <li><a href="#services">Services</a></li>
-          <li><a href="#process">Process</a></li>
-          <li><a href="#coverage">Coverage</a></li>
-          <li><a href="#why">Why Us</a></li>
-          <li><a href="#team">Inspectors</a></li>
-          <li><a href="#booking" className="nav-cta">Book Inspection</a></li>
-          <li><a href="#" onClick={(e) => { e.preventDefault(); navigate('/login'); }} className="nav-cta">Admin Login</a></li>
+        <button 
+          className="mobile-menu-toggle" 
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle mobile menu"
+        >
+          <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`}></span>
+          <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`}></span>
+          <span className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`}></span>
+        </button>
+        <ul className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+          <li><a href="#services" onClick={() => setMobileMenuOpen(false)}>Services</a></li>
+          <li><a href="#process" onClick={() => setMobileMenuOpen(false)}>Process</a></li>
+          <li><a href="#coverage" onClick={() => setMobileMenuOpen(false)}>Coverage</a></li>
+          <li><a href="#why" onClick={() => setMobileMenuOpen(false)}>Why Us</a></li>
+          <li><a href="#team" onClick={() => setMobileMenuOpen(false)}>Inspectors</a></li>
+          <li><a href="#booking" className="nav-cta" onClick={() => setMobileMenuOpen(false)}>Book Inspection</a></li>
+          <li><a href="#" onClick={(e) => { e.preventDefault(); navigate('/login'); setMobileMenuOpen(false); }} className="nav-cta">Admin Login</a></li>
         </ul>
       </nav>
 

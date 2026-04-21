@@ -575,7 +575,7 @@ import { Card, Badge, cx } from '../ui/Ui'
 import { usePolling } from '../hooks/usePolling'
 import { mockApi } from '../mock/mockApi'
 import { useRbac } from '../rbac/RbacContext'
-import { formatMinutes } from '../utils/format'
+import { formatMinutes, formatDate } from '../utils/format'
 import { listPDIRequests } from '../../api/inspection'
 
 function kpiTone(label, value) {
@@ -788,8 +788,7 @@ export function DashboardPage() {
                   stroke="#94a3b8" 
                   tick={{ fontSize: 11 }}
                   tickFormatter={(value) => {
-                    const date = new Date(value)
-                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    return formatDate(value)
                   }}
                 />
                 <YAxis stroke="#94a3b8" tick={{ fontSize: 11 }} />
@@ -802,8 +801,7 @@ export function DashboardPage() {
                     fontSize: 12,
                   }}
                   labelFormatter={(value) => {
-                    const date = new Date(value)
-                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    return formatDate(value)
                   }}
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />

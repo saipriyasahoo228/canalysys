@@ -12,7 +12,7 @@ import { ReasonDialog } from '../ui/ReasonDialog'
 import { Snackbar } from '../ui/Snackbar'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { CustomDatePicker } from '../ui/CustomDatePicker'
-import { formatDate } from '../utils/format'
+import { formatDate, formatDateTime } from '../utils/format'
 import { API_BASE_URL } from '../../constant'
 import {
   listBrands,
@@ -449,7 +449,12 @@ export function VehicleMasterPage() {
       // Extract data from API response wrapper
       const detailIt = isDetailMatch ? viewDetail?.data?.data || viewDetail?.data : null
       const it = detailIt || dialog.item
-      const kindLabel = String(dialog.kind || '').toUpperCase()
+      const kindLabel = (() => {
+        const kind = String(dialog.kind || '').toUpperCase()
+        if (kind === 'CATEGORYTYPE') return 'TRANSMISSIONTYPE'
+        if (kind === 'CATEGORYVALUE') return 'CATEGORYTYPE'
+        return kind
+      })()
       return [
         { key: 'kind', label: 'Kind', value: kindLabel || '—' },
         { key: 'id', label: 'ID', value: it?.id || '—' },
@@ -458,8 +463,8 @@ export function VehicleMasterPage() {
               { key: 'description', label: 'Description', value: it?.description || '—', fullWidth: true },
               { key: 'brand_image', label: 'Brand Logo', value: it?.brand_image ? <img src={`${API_BASE_URL}${it.brand_image}`} alt="Brand Logo" style={{ maxWidth: '100px', maxHeight: '100px', objectFit: 'cover' }} /> : '—' },
               { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
-              { key: 'created_at', label: 'Created', value: it?.created_at ? new Date(it.created_at).toLocaleString() : '—' },
-              { key: 'updated_at', label: 'Updated', value: it?.updated_at ? new Date(it.updated_at).toLocaleString() : '—' },
+              { key: 'created_at', label: 'Created', value: it?.created_at ? formatDateTime(it.created_at) : '—' },
+              { key: 'updated_at', label: 'Updated', value: it?.updated_at ? formatDateTime(it.updated_at) : '—' },
             ]
           : []),
         ...(dialog.kind === 'model'
@@ -467,8 +472,8 @@ export function VehicleMasterPage() {
               { key: 'brand', label: 'Brand', value: it?.brand_detail?.name || it?.brand || '—' },
               { key: 'description', label: 'Description', value: it?.description || '—', fullWidth: true },
               { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
-              { key: 'created_at', label: 'Created', value: it?.created_at ? new Date(it.created_at).toLocaleString() : '—' },
-              { key: 'updated_at', label: 'Updated', value: it?.updated_at ? new Date(it.updated_at).toLocaleString() : '—' },
+              { key: 'created_at', label: 'Created', value: it?.created_at ? formatDateTime(it.created_at) : '—' },
+              { key: 'updated_at', label: 'Updated', value: it?.updated_at ? formatDateTime(it.updated_at) : '—' },
             ]
           : []),
         ...(dialog.kind === 'variant'
@@ -487,16 +492,16 @@ export function VehicleMasterPage() {
                 fullWidth: true,
               },
               { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
-              { key: 'created_at', label: 'Created', value: it?.created_at ? new Date(it.created_at).toLocaleString() : '—' },
-              { key: 'updated_at', label: 'Updated', value: it?.updated_at ? new Date(it.updated_at).toLocaleString() : '—' },
+              { key: 'created_at', label: 'Created', value: it?.created_at ? formatDateTime(it.created_at) : '—' },
+              { key: 'updated_at', label: 'Updated', value: it?.updated_at ? formatDateTime(it.updated_at) : '—' },
             ]
           : []),
         ...(dialog.kind === 'categoryType'
           ? [
               { key: 'description', label: 'Description', value: it?.description || '—', fullWidth: true },
               { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
-              { key: 'created_at', label: 'Created', value: it?.created_at ? new Date(it.created_at).toLocaleString() : '—' },
-              { key: 'updated_at', label: 'Updated', value: it?.updated_at ? new Date(it.updated_at).toLocaleString() : '—' },
+              { key: 'created_at', label: 'Created', value: it?.created_at ? formatDateTime(it.created_at) : '—' },
+              { key: 'updated_at', label: 'Updated', value: it?.updated_at ? formatDateTime(it.updated_at) : '—' },
             ]
           : []),
         ...(dialog.kind === 'categoryValue'
@@ -504,8 +509,8 @@ export function VehicleMasterPage() {
               { key: 'category_type', label: 'Category Type', value: it?.category_type_detail?.name || it?.category_type || '—' },
               { key: 'description', label: 'Description', value: it?.description || '—', fullWidth: true },
               { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
-              { key: 'created_at', label: 'Created', value: it?.created_at ? new Date(it.created_at).toLocaleString() : '—' },
-              { key: 'updated_at', label: 'Updated', value: it?.updated_at ? new Date(it.updated_at).toLocaleString() : '—' },
+              { key: 'created_at', label: 'Created', value: it?.created_at ? formatDateTime(it.created_at) : '—' },
+              { key: 'updated_at', label: 'Updated', value: it?.updated_at ? formatDateTime(it.updated_at) : '—' },
             ]
           : []),
         { key: 'name', label: 'Name', value: it?.name || '—', fullWidth: true },
@@ -524,8 +529,8 @@ export function VehicleMasterPage() {
         { key: 'category', label: 'Category', value: it?.category_detail?.name || it?.category_name || it?.category || '—' },
         { key: 'category_type', label: 'Category Type', value: it?.category_type_name || it?.category_detail?.category_type_detail?.name || '—' },
         { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
-        { key: 'created_at', label: 'Created', value: it?.created_at ? new Date(it.created_at).toLocaleString() : '—' },
-        { key: 'updated_at', label: 'Updated', value: it?.updated_at ? new Date(it.updated_at).toLocaleString() : '—' },
+        { key: 'created_at', label: 'Created', value: it?.created_at ? formatDateTime(it.created_at) : '—' },
+        { key: 'updated_at', label: 'Updated', value: it?.updated_at ? formatDateTime(it.updated_at) : '—' },
       ]
     }
 
@@ -821,7 +826,7 @@ export function VehicleMasterPage() {
                 { kind: 'model', title: 'Models', items: models },
                 { kind: 'variant', title: 'Variants', items: variants },
                 { kind: 'categoryType', title: 'Transmission Type', items: categoryTypes },
-                { kind: 'categoryValue', title: 'Category Values', items: categoryValues },
+                { kind: 'categoryValue', title: 'Category Type', items: categoryValues },
               ].map((block) => (
                 <Card
                   key={block.kind}
@@ -1138,7 +1143,7 @@ export function VehicleMasterPage() {
         open={viewDialogOpen}
         title={
           dialog?.type === 'viewBase'
-            ? `View ${dialog?.kind}`
+            ? `View ${dialog?.kind === 'categoryType' ? 'transmissionType' : dialog?.kind === 'categoryValue' ? 'categoryType' : dialog?.kind}`
             : dialog?.type === 'viewMapping'
               ? 'View mapping'
               : dialog?.type === 'viewPricing'
@@ -1156,11 +1161,11 @@ export function VehicleMasterPage() {
         open={!!dialog && !viewDialogOpen}
         title={
           dialog?.type === 'createBase'
-            ? `Create ${dialog.kind}`
+            ? `Create ${dialog.kind === 'categoryType' ? 'transmissionType' : dialog.kind === 'categoryValue' ? 'categoryType' : dialog.kind}`
             : dialog?.type === 'editBase'
-              ? `Update ${dialog.kind}`
+              ? `Update ${dialog.kind === 'categoryType' ? 'transmissionType' : dialog.kind === 'categoryValue' ? 'categoryType' : dialog.kind}`
             : dialog?.type === 'deleteBase'
-              ? `Delete ${dialog?.kind}`
+              ? `Delete ${dialog.kind === 'categoryType' ? 'transmissionType' : dialog.kind === 'categoryValue' ? 'categoryType' : dialog.kind}`
             : dialog?.type === 'createMapping'
               ? 'Create mapping'
             : dialog?.type === 'editMapping'
@@ -1275,12 +1280,12 @@ export function VehicleMasterPage() {
               return [
                 {
                   name: 'category_type',
-                  label: 'Category Type *',
+                  label: 'Transmission Type *',
                   type: 'select',
                   defaultValue: '',
                   options: categoryTypes.map((ct) => ({ value: ct.id, label: ct.name })),
                 },
-                { name: 'name', label: 'Category Value Name *', type: 'text', defaultValue: '' },
+                { name: 'name', label: 'Category Type *', type: 'text', defaultValue: '' },
                 { name: 'description', label: 'Description', type: 'text', defaultValue: '' },
               ]
             }
@@ -1366,12 +1371,12 @@ export function VehicleMasterPage() {
               return [
                 {
                   name: 'category_type',
-                  label: 'Category Type *',
+                  label: 'Transmission Type *',
                   type: 'select',
                   defaultValue: dialog?.item?.category_type || '',
                   options: categoryTypes.map((ct) => ({ value: ct.id, label: ct.name })),
                 },
-                { name: 'name', label: 'Category Value Name *', type: 'text', defaultValue: dialog?.item?.name || '' },
+                { name: 'name', label: 'Category Type *', type: 'text', defaultValue: dialog?.item?.name || '' },
                 { name: 'description', label: 'Description', type: 'text', defaultValue: dialog?.item?.description || '' },
               ]
             }
@@ -1859,7 +1864,7 @@ export function VehicleMasterPage() {
                   name: String(form.name || '').trim(),
                   description: String(form.description || '').trim() || null,
                 })
-                showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
+                showSnack({ tone: 'success', title: 'Category Type', message: responseToMessage(res).replace(/category\s*value/gi, 'Category Type') })
               } else if (dialog.kind === 'variant') {
                 if (!requireFields(['brandId', 'modelId', 'name', 'fuel_type'])) return
                 const fuelType = String(form.fuel_type || '').trim().toLowerCase()
@@ -1912,7 +1917,7 @@ export function VehicleMasterPage() {
                   name: String(form.name || '').trim(),
                   description: String(form.description || '').trim() || null,
                 })
-                showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
+                showSnack({ tone: 'success', title: 'Category Type', message: responseToMessage(res).replace(/category\s*value/gi, 'Category Type') })
               } else if (dialog.kind === 'variant') {
                 if (!requireFields(['brandId', 'modelId', 'name', 'fuel_type'])) return
                 const fuelType = String(form.fuel_type || '').trim().toLowerCase()
@@ -1943,7 +1948,7 @@ export function VehicleMasterPage() {
                 })
               } else if (dialog.kind === 'categoryValue') {
                 const res = await deleteCategoryValue(dialog.item.id)
-                showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
+                showSnack({ tone: 'success', title: 'Category Type', message: responseToMessage(res).replace(/category\s*value/gi, 'Category Type') })
               } else if (dialog.kind === 'variant') {
                 const res = await deleteVariant(dialog.item.id)
                 showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Eye, X, Upload, Image as ImageIcon } from 'lucide-react'
 import { cx } from '../ui/Ui'
 import { Snackbar } from '../ui/Snackbar'
+import { formatDate } from '../utils/format'
 import { 
   getBanners, 
   createBanner, 
@@ -401,7 +402,7 @@ export function BannerPage() {
                   </h3>
                   {viewingBanner.created_at && (
                     <p className="text-sm text-gray-500">
-                      Created: {new Date(viewingBanner.created_at).toLocaleDateString()}
+                      Created: {formatDate(viewingBanner.created_at)}
                     </p>
                   )}
                 </div>

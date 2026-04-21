@@ -13,7 +13,7 @@ import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, Select, cx } from '../ui/Ui'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { CustomDatePicker } from '../ui/CustomDatePicker'
-import { formatDate } from '../utils/format'
+import { formatDate, formatDateTime } from '../utils/format'
 import { RAZORPAY_KEY } from '../../config/razorpay'
 
 const VEHICLE_TYPE_OPTIONS = [
@@ -1680,7 +1680,7 @@ export function NewInspectionPage() {
       { key: 'customerName', label: 'Customer name', value: c?.fullName || '—' },
       { key: 'customerMobile', label: 'Mobile', value: c?.mobile || '—' },
       { key: 'pdiId', label: 'Booking / PDI ID', value: b?.id || '—' },
-      {key: 'createdAt', label: 'Booked at', value: b?.createdAt ? formatDateDisplay(String(b.createdAt).slice(0, 10)) : '—', fullWidth: true },
+      {key: 'createdAt', label: 'Booked at', value: b?.createdAt ? formatDate(String(b.createdAt).slice(0, 10)) : '—', fullWidth: true },
       { key: 'slot', label: 'Selected slot', value: b?.slot_date ? `${formatDateDisplay(b.slot_date)}\n${formatTimeToAMPM(b.slot_start_time)} - ${formatTimeToAMPM(b.slot_end_time)}` : '—', fullWidth: true },
       { key: 'location', label: 'Address', value: formatAddressDisplay(b?.address) || '—', fullWidth: true },
       { key: 'vehicleType', label: 'Vehicle type', value: b?.vehicle_type === 'pre_owned' ? 'Pre-Owned' : 'New' },
@@ -1713,7 +1713,7 @@ export function NewInspectionPage() {
         { key: 'mobileNumber', label: 'Mobile Number', value: detailData.mobile_number || '—' },
         { key: 'email', label: 'Email', value: detailData.email || '—', fullWidth: true },
         { key: 'createdBy', label: 'Created By', value: detailData.created_by_name || '—' },
-        { key: 'createdAt', label: 'Created At', value: detailData.created_at ? new Date(detailData.created_at).toLocaleString() : '—', fullWidth: true },
+        { key: 'createdAt', label: 'Created At', value: detailData.created_at ? formatDateTime(detailData.created_at) : '—', fullWidth: true },
       ]
     }
     
@@ -1742,7 +1742,7 @@ export function NewInspectionPage() {
         { key: 'assignedInspectorId', label: 'Assigned Inspector ID', value: detailData.assigned_inspector_id || '—' },
         { key: 'assignedInspectorName', label: 'Assigned Inspector Name', value: detailData.assigned_inspector_name || '—' },
         { key: 'assignedInspectorMobile', label: 'Assigned Inspector Mobile', value: detailData.assigned_inspector_mobile_number || '—' },
-        { key: 'createdAt', label: 'Created At', value: detailData.created_at ? new Date(detailData.created_at).toLocaleString() : '—', fullWidth: true },
+        { key: 'createdAt', label: 'Created At', value: detailData.created_at ? formatDateTime(detailData.created_at) : '—', fullWidth: true },
       ]
     }
     

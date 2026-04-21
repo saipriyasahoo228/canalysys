@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button, Card } from './Ui'
+import { formatDate } from '../utils/format'
 import { getInspectorProfile } from '../../api/inspectoronboard'
 
 export function ViewProfileDialog({ open, inspector, onClose }) {
@@ -110,7 +111,7 @@ export function ViewProfileDialog({ open, inspector, onClose }) {
                   </div>
                   <div>
                     <div className="text-xs font-medium text-slate-600">Date of Joining</div>
-                    <div className="mt-1 text-sm text-slate-900">{profileData.date_of_joining || '—'}</div>
+                    <div className="mt-1 text-sm text-slate-900">{formatDate(profileData.date_of_joining) || '—'}</div>
                   </div>
                   <div>
                     <div className="text-xs font-medium text-slate-600">Employment Type</div>

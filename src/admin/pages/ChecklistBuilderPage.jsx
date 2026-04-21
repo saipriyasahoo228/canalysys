@@ -200,13 +200,7 @@ export function ChecklistBuilderPage() {
         exportValue: (r) => (r.sections || []).length,
         cell: (r) => <div className="text-xs text-slate-600">{(r.sections || []).length} sections</div>,
       },
-      {
-        key: 'created_at',
-        header: 'Created',
-        exportValue: (r) => r.created_at,
-        cell: (r) => <div className="text-xs text-slate-600">{new Date(r.created_at).toLocaleDateString()}</div>,
-      },
-      {
+            {
         key: 'actions',
         header: <div className="w-full text-right">Actions</div>,
         cell: (r) => (

@@ -538,7 +538,7 @@ export function FinancePage() {
           {
             name: 'effective_from',
             label: 'Effective From (Optional)',
-            type: 'datetime-local',
+            type: 'date',
             defaultValue: '',
           },
           {
@@ -638,7 +638,7 @@ export function FinancePage() {
           {
             name: 'effective_from',
             label: 'Effective From (Optional)',
-            type: 'datetime-local',
+            type: 'date',
             defaultValue: '',
           },
           {

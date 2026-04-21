@@ -68,7 +68,7 @@ const LandingPage = () => {
 
   const handleBookingSubmit = (e) => {
     e.preventDefault();
-    alert('Thank you! Our team will contact you within 60 minutes to confirm your booking.');
+    alert('Thank you for contacting us! We will get back to you within 24 hours.');
   };
 
   return (
@@ -431,7 +431,7 @@ const LandingPage = () => {
           <li><a href="#coverage" onClick={() => setMobileMenuOpen(false)}>Coverage</a></li>
           <li><a href="#why" onClick={() => setMobileMenuOpen(false)}>Why Us</a></li>
           <li><a href="#team" onClick={() => setMobileMenuOpen(false)}>Inspectors</a></li>
-          <li><a href="#booking" className="nav-cta" onClick={() => setMobileMenuOpen(false)}>Book Inspection</a></li>
+          <li><a href="#booking" className="nav-cta" onClick={() => setMobileMenuOpen(false)}>Contact Us</a></li>
           <li><a href="#" onClick={(e) => { e.preventDefault(); navigate('/login'); setMobileMenuOpen(false); }} className="nav-cta">Admin Login</a></li>
         </ul>
       </nav>
@@ -460,7 +460,7 @@ const LandingPage = () => {
           <h1 className="hero-title">INSPECT<br/>BEFORE<br/><span className="accent">YOU DRIVE</span></h1>
           <p className="hero-sub"><strong>CARNALYSYS</strong> delivers certified Pre-Delivery Inspections across Odisha. Our network of expert inspectors ensures your vehicle is truly delivery-ready — before you sign.</p>
           <div className="hero-actions">
-            <a href="#booking" className="btn-primary">Book an Inspection</a>
+            <a href="#booking" className="btn-primary">Contact Us</a>
             <a href="#process" className="btn-secondary">See How It Works</a>
           </div>
         </div>
@@ -787,88 +787,52 @@ const LandingPage = () => {
         <div className="booking-bg"></div>
         <div className="booking-wrap">
           <div className="booking-info reveal">
-            <div className="section-label">Get Started</div>
-            <h2 className="section-title">BOOK YOUR<br/>PDI TODAY</h2>
-            <p className="section-subtitle">Fill in your details and we'll match you with the right inspector for your location. Quick, simple, and zero hassle.</p>
+            <div className="section-label">Get In Touch</div>
+            <h2 className="section-title">CONTACT US</h2>
+            <p className="section-subtitle">Have a question or need assistance? Fill out the form below and we'll get back to you shortly.</p>
             <div className="booking-features">
-              <div className="booking-feature">
-                <div className="bf-icon">💰</div>
-                <div>
-                  <div className="bf-title">Transparent Pricing</div>
-                  <div className="bf-desc">Flat-rate fees with no hidden charges. New car PDI starts at ₹999. Used car inspection from ₹1,499.</div>
-                </div>
-              </div>
-              <div className="booking-feature">
-                <div className="bf-icon">🕐</div>
-                <div>
-                  <div className="bf-title">Same-Day Availability</div>
-                  <div className="bf-desc">In most cities, we can arrange inspection within 24 hours of booking — including weekends.</div>
-                </div>
-              </div>
               <div className="booking-feature">
                 <div className="bf-icon">📞</div>
                 <div>
-                  <div className="bf-title">Dedicated Support</div>
-                  <div className="bf-desc">Our customer support team in Bhubaneswar is available 9 AM – 8 PM, 7 days a week.</div>
+                  <div className="bf-title">Direct Support</div>
+                  <div className="bf-desc">Our customer support team in Bhubaneswar is available 9 AM – 8 PM, 7 days a week to assist you.</div>
+                </div>
+              </div>
+              <div className="booking-feature">
+                <div className="bf-icon">🚗</div>
+                <div>
+                  <div className="bf-title">Expert Guidance</div>
+                  <div className="bf-desc">Get professional advice on vehicle inspections, PDI requirements, and automotive services across Odisha.</div>
+                </div>
+              </div>
+              <div className="booking-feature">
+                <div className="bf-icon">⚡</div>
+                <div>
+                  <div className="bf-title">Quick Response</div>
+                  <div className="bf-desc">We typically respond to all inquiries within 24 hours. For urgent matters, call us directly at +91 6370166632.</div>
                 </div>
               </div>
             </div>
           </div>
           <form className="booking-form reveal" onSubmit={handleBookingSubmit}>
-            <div className="form-title">REQUEST BOOKING</div>
+            <div className="form-title">CONTACT US</div>
             <div className="form-row">
-              <label className="form-label">Full Name</label>
+              <label className="form-label">FULL NAME</label>
               <input className="form-input" type="text" placeholder="Your full name" required />
             </div>
-            <div className="form-grid">
-              <div className="form-row">
-                <label className="form-label">Mobile Number</label>
-                <input className="form-input" type="tel" placeholder="+91 XXXXXXXXXX" required />
-              </div>
-              <div className="form-row">
-                <label className="form-label">Email Address</label>
-                <input className="form-input" type="email" placeholder="you@email.com" required />
-              </div>
-            </div>
-            <div className="form-grid">
-              <div className="form-row">
-                <label className="form-label">City / Location</label>
-                <select className="form-select" required>
-                  <option value="">Select City</option>
-                  <option>Bhubaneswar</option>
-                  <option>Cuttack</option>
-                  <option>Puri</option>
-                  <option>Rourkela</option>
-                  <option>Berhampur</option>
-                  <option>Sambalpur</option>
-                  <option>Balasore</option>
-                  <option>Baripada</option>
-                  <option>Jharsuguda</option>
-                  <option>Paradip</option>
-                  <option>Kendujhar</option>
-                </select>
-              </div>
-              <div className="form-row">
-                <label className="form-label">Inspection Type</label>
-                <select className="form-select" required>
-                  <option value="">Select Type</option>
-                  <option>New Car PDI</option>
-                  <option>Used Car Inspection</option>
-                  <option>EV Inspection</option>
-                  <option>CNG Vehicle Inspection</option>
-                  <option>Document Audit Only</option>
-                </select>
-              </div>
+            <div className="form-row">
+              <label className="form-label">MOBILE NUMBER</label>
+              <input className="form-input" type="tel" placeholder="+91 XXXXXXXXXX" required />
             </div>
             <div className="form-row">
-              <label className="form-label">Vehicle Details</label>
-              <input className="form-input" type="text" placeholder="e.g. Maruti Suzuki Baleno Delta 2024" required />
+              <label className="form-label">EMAIL ADDRESS</label>
+              <input className="form-input" type="email" placeholder="you@email.com" required />
             </div>
             <div className="form-row">
-              <label className="form-label">Preferred Inspection Date</label>
-              <input className="form-input" type="date" required />
+              <label className="form-label">DESCRIPTION</label>
+              <textarea className="form-input" placeholder="Tell us how we can help you..." rows="4" required></textarea>
             </div>
-            <button type="submit" className="form-submit">CONFIRM BOOKING REQUEST</button>
+            <button type="submit" className="form-submit">SEND MESSAGE</button>
           </form>
         </div>
       </section>

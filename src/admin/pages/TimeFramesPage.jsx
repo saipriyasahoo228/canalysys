@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Clock, Plus, Edit2, Trash2, Search, Settings, Save } from 'lucide-react'
 import { Card, Badge, Button, cx } from '../ui/Ui'
+import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { Snackbar } from '../ui/Snackbar'
 import { 
@@ -229,11 +230,11 @@ export function TimeFramesPage() {
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Select Date
               </label>
-              <input
-                type="date"
+              <CustomDatePicker
                 value={selectedDate}
-                onChange={(e) => handleDateChange(e.target.value)}
-                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                onChange={(value) => handleDateChange(value)}
+                placeholder="dd/mm/yyyy"
+                className="w-full"
               />
             </div>
             

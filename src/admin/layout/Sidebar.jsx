@@ -12,6 +12,7 @@ import {
   X,
   Clock,
   Image,
+  MessageCircle 
 } from 'lucide-react'
 import { useRbac } from '../rbac/RbacContext'
 import { cx } from '../ui/Ui'
@@ -172,6 +173,15 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
                 iconClassName="text-pink-600"
               />
             </div>
+             <div className={collapsed ? 'mx-auto w-fit' : ''}>
+              <NavItem
+                to="/requests"
+                icon={MessageCircle }
+                label="Customer Request"
+                collapsed={collapsed}
+                iconClassName="text-pink-600"
+              />
+            </div>
           </div>
           {!collapsed ? (
             <div className="border-t border-slate-200 p-3 text-xs text-slate-500">Admin console - Powered By Intulet</div>
@@ -217,6 +227,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               <NavItem to="/finance" icon={IndianRupee} label="Commission Management" collapsed={false} iconClassName="text-amber-600" />
               <NavItem to="/time-frames" icon={Clock} label="Time Frames" collapsed={false} iconClassName="text-cyan-600" />
               <NavItem to="/banners" icon={Image} label="Add Banner" collapsed={false} iconClassName="text-pink-600" />
+              <NavItem to="/requests" icon={MessageCircle } label="Customer Request" collapsed={false} iconClassName="text-pink-600" />
             </div>
           </div>
         </div>

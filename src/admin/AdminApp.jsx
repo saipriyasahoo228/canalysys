@@ -15,6 +15,7 @@ import { BannerPage } from './pages/BannerPage'
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { LoginPage } from './pages/LoginPage'
+import { RequestPage } from './pages/RequestPage'
 
 export default function AdminApp() {
   return (
@@ -43,6 +44,7 @@ export default function AdminApp() {
               <Route path="/time-frames" element={<TimeFramesPage />} />
               <Route path="/banners" element={<BannerPage />} />
               <Route path="/audit" element={<AuditLogsPage />} />
+              <Route path="/requests" element={<RequestPage />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
           </Routes>

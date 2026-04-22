@@ -1,13 +1,60 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { sendContactInfo, getInspectorsData, getInspectionProcessFeedback } from '../api/contactus';
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const [countersAnimated, setCountersAnimated] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    full_name: '',
+    mobile_number: '',
+    email_address: '',
+    description: ''
+  });
+  const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inspectors, setInspectors] = useState([]);
+  const [feedbackData, setFeedbackData] = useState([]);
   const heroStatsRef = useRef(null);
 
+  // Helper function to generate star rating
+  const generateStars = (rating) => {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    
+    let stars = '★'.repeat(fullStars);
+    if (hasHalfStar) stars += '☆';
+    stars += '☆'.repeat(emptyStars);
+    
+    return stars;
+  };
+
   useEffect(() => {
+    // Fetch inspectors data
+    const fetchInspectors = async () => {
+      try {
+        const data = await getInspectorsData();
+        setInspectors(data.inspectors || []);
+      } catch (error) {
+        console.error('Error fetching inspectors:', error);
+      }
+    };
+
+    // Fetch feedback data
+    const fetchFeedback = async () => {
+      try {
+        const data = await getInspectionProcessFeedback();
+        setFeedbackData(data.items || []);
+      } catch (error) {
+        console.error('Error fetching feedback:', error);
+      }
+    };
+
+    fetchInspectors();
+    fetchFeedback();
+
     const revealEls = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -66,9 +113,99 @@ const LandingPage = () => {
     };
   }, [countersAnimated]);
 
-  const handleBookingSubmit = (e) => {
+  const validateForm = () => {
+    const errors = {};
+    
+    // Full name validation - only alphabets, uppercase, lowercase, and space
+    if (!formData.full_name.trim()) {
+      errors.full_name = 'Full name is required';
+    } else if (!/^[A-Za-z\s]+$/.test(formData.full_name)) {
+      errors.full_name = 'Full name can only contain letters and spaces';
+    }
+    
+    // Mobile number validation - only numbers, exactly 10 digits
+    if (!formData.mobile_number.trim()) {
+      errors.mobile_number = 'Mobile number is required';
+    } else if (!/^[0-9]+$/.test(formData.mobile_number)) {
+      errors.mobile_number = 'Mobile number can only contain numbers';
+    } else if (formData.mobile_number.length !== 10) {
+      errors.mobile_number = 'Mobile number must be exactly 10 digits';
+    }
+    
+    // Email validation
+    if (!formData.email_address.trim()) {
+      errors.email_address = 'Email address is required';
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email_address)) {
+      errors.email_address = 'Please enter a valid email address';
+    }
+    
+    // Description validation
+    if (!formData.description.trim()) {
+      errors.description = 'Description is required';
+    } else if (formData.description.trim().length < 10) {
+      errors.description = 'Description must be at least 10 characters long';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Apply input restrictions
+    if (name === 'full_name') {
+      // Only allow alphabets and spaces
+      const filteredValue = value.replace(/[^A-Za-z\s]/g, '');
+      setFormData(prev => ({ ...prev, [name]: filteredValue }));
+    } else if (name === 'mobile_number') {
+      // Only allow numbers and restrict to 10 digits
+      const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+      setFormData(prev => ({ ...prev, [name]: filteredValue }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+    
+    // Clear error for this field when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleBookingSubmit = async (e) => {
     e.preventDefault();
-    alert('Thank you for contacting us! We will get back to you within 24 hours.');
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const result = await sendContactInfo(
+        formData.full_name,
+        formData.mobile_number,
+        formData.email_address,
+        formData.description
+      );
+      
+      if (result) {
+        alert('Thank you for contacting us! We will get back to you within 24 hours.');
+        // Reset form
+        setFormData({
+          full_name: '',
+          mobile_number: '',
+          email_address: '',
+          description: ''
+        });
+        setFormErrors({});
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert('Failed to submit your message. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -698,48 +835,26 @@ const LandingPage = () => {
         <h2 className="section-title reveal">MEET OUR<br/>SPECIALISTS</h2>
         <p className="section-subtitle reveal">Our field inspectors are experienced automotive technicians and engineers placed strategically across Odisha.</p>
         <div className="team-grid reveal">
-          <div className="team-card">
-            <div className="team-avatar">🧑‍🔧<div className="status-dot"></div></div>
-            <div className="team-name">Rajesh Pradhan</div>
-            <div className="team-role">Lead Inspector</div>
-            <div className="team-location">📍 Bhubaneswar</div>
-            <div className="team-inspections"><strong>148</strong>Inspections Done</div>
-          </div>
-          <div className="team-card">
-            <div className="team-avatar">👩‍🔧<div className="status-dot"></div></div>
-            <div className="team-name">Priyanka Mohanty</div>
-            <div className="team-role">Senior Inspector</div>
-            <div className="team-location">📍 Cuttack</div>
-            <div className="team-inspections"><strong>112</strong>Inspections Done</div>
-          </div>
-          <div className="team-card">
-            <div className="team-avatar">🧑‍🔧<div className="status-dot"></div></div>
-            <div className="team-name">Subrat Nayak</div>
-            <div className="team-role">Inspector</div>
-            <div className="team-location">📍 Rourkela</div>
-            <div className="team-inspections"><strong>96</strong>Inspections Done</div>
-          </div>
-          <div className="team-card">
-            <div className="team-avatar">🧑‍🔧<div className="status-dot"></div></div>
-            <div className="team-name">Aditya Sahoo</div>
-            <div className="team-role">Inspector</div>
-            <div className="team-location">📍 Berhampur</div>
-            <div className="team-inspections"><strong>87</strong>Inspections Done</div>
-          </div>
-          <div className="team-card">
-            <div className="team-avatar">👩‍🔧<div className="status-dot"></div></div>
-            <div className="team-name">Smita Dash</div>
-            <div className="team-role">Inspector</div>
-            <div className="team-location">📍 Sambalpur</div>
-            <div className="team-inspections"><strong>74</strong>Inspections Done</div>
-          </div>
-          <div className="team-card">
-            <div className="team-avatar">🧑‍🔧<div className="status-dot"></div></div>
-            <div className="team-name">Bikash Rath</div>
-            <div className="team-role">Inspector</div>
-            <div className="team-location">📍 Puri</div>
-            <div className="team-inspections"><strong>68</strong>Inspections Done</div>
-          </div>
+          {inspectors.map((inspector, index) => (
+            <div className="team-card" key={index}>
+              <div className="team-avatar">
+                <img 
+                  src={inspector.profile_photo} 
+                  alt={inspector.name}
+                  style={{width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover'}}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = '🧑‍🔧';
+                  }}
+                />
+                <div className="status-dot"></div>
+              </div>
+              <div className="team-name">{inspector.name}</div>
+              <div className="team-role">{inspector.role}</div>
+              <div className="team-location">📍 {inspector.city}</div>
+              <div className="team-inspections"><strong>{inspector.completed_inspections}</strong>Inspections Done</div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -747,39 +862,18 @@ const LandingPage = () => {
         <div className="section-label">Customer Stories</div>
         <h2 className="section-title reveal">WHAT OUR<br/>CUSTOMERS SAY</h2>
         <div className="testimonials-grid reveal">
-          <div className="testimonial-card">
-            <div className="stars">★★★★★</div>
-            <p className="testimonial-text">The CARNALYSYS report flagged a paint patch job on the bonnet that the dealer tried to hide. I nearly paid full price for a damaged vehicle. Saved me a huge amount!</p>
-            <div className="testimonial-author">
-              <div className="author-avatar">😊</div>
-              <div>
-                <div className="author-name">Deepak Mishra</div>
-                <div className="author-info">Bhubaneswar · Maruti Baleno</div>
+          {feedbackData.map((feedback, index) => (
+            <div className="testimonial-card" key={index}>
+              <div className="stars">{generateStars(feedback.average_rating)}</div>
+              <p className="testimonial-text">{feedback.overall_comments}</p>
+              <div className="testimonial-author">
+                <div className="author-avatar">😊</div>
+                <div>
+                  <div className="author-name">{feedback.customer_name}</div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="testimonial-card">
-            <div className="stars">★★★★★</div>
-            <p className="testimonial-text">Booked online at 10 PM, inspector confirmed by 9 AM next morning. The report was super detailed with 40+ photos. Very professional service.</p>
-            <div className="testimonial-author">
-              <div className="author-avatar">😊</div>
-              <div>
-                <div className="author-name">Sujata Panda</div>
-                <div className="author-info">Cuttack · Hyundai Creta</div>
-              </div>
-            </div>
-          </div>
-          <div className="testimonial-card">
-            <div className="stars">★★★★★</div>
-            <p className="testimonial-text">Buying a used car in a new city was stressful. CARNALYSYS inspector in Rourkela visited the car within 24 hours. Report helped me negotiate ₹40,000 off.</p>
-            <div className="testimonial-author">
-              <div className="author-avatar">😊</div>
-              <div>
-                <div className="author-name">Manoj Kumar Singh</div>
-                <div className="author-info">Rourkela · Tata Nexon</div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
@@ -817,22 +911,84 @@ const LandingPage = () => {
           <form className="booking-form reveal" onSubmit={handleBookingSubmit}>
             <div className="form-title">CONTACT US</div>
             <div className="form-row">
-              <label className="form-label">FULL NAME</label>
-              <input className="form-input" type="text" placeholder="Your full name" required />
+              <label className="form-label">FULL NAME *</label>
+              <input 
+                className="form-input" 
+                type="text" 
+                name="full_name"
+                value={formData.full_name}
+                onChange={handleInputChange}
+                placeholder="Your full name" 
+                required 
+              />
+              {formErrors.full_name && (
+                <div style={{color: 'var(--red)', fontSize: '12px', marginTop: '4px'}}>
+                  {formErrors.full_name}
+                </div>
+              )}
             </div>
             <div className="form-row">
-              <label className="form-label">MOBILE NUMBER</label>
-              <input className="form-input" type="tel" placeholder="+91 XXXXXXXXXX" required />
+              <label className="form-label">MOBILE NUMBER *</label>
+              <input 
+                className="form-input" 
+                type="tel" 
+                name="mobile_number"
+                value={formData.mobile_number}
+                onChange={handleInputChange}
+                placeholder="Your Contact Number" 
+                required 
+              />
+              {formErrors.mobile_number && (
+                <div style={{color: 'var(--red)', fontSize: '12px', marginTop: '4px'}}>
+                  {formErrors.mobile_number}
+                </div>
+              )}
             </div>
             <div className="form-row">
-              <label className="form-label">EMAIL ADDRESS</label>
-              <input className="form-input" type="email" placeholder="you@email.com" required />
+              <label className="form-label">EMAIL ADDRESS *</label>
+              <input 
+                className="form-input" 
+                type="email" 
+                name="email_address"
+                value={formData.email_address}
+                onChange={handleInputChange}
+                placeholder="you@email.com" 
+                required 
+              />
+              {formErrors.email_address && (
+                <div style={{color: 'var(--red)', fontSize: '12px', marginTop: '4px'}}>
+                  {formErrors.email_address}
+                </div>
+              )}
             </div>
             <div className="form-row">
-              <label className="form-label">DESCRIPTION</label>
-              <textarea className="form-input" placeholder="Tell us how we can help you..." rows="4" required></textarea>
+              <label className="form-label">DESCRIPTION *</label>
+              <textarea 
+                className="form-input" 
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Tell us how we can help you..." 
+                rows="4" 
+                required
+              ></textarea>
+              {formErrors.description && (
+                <div style={{color: 'var(--red)', fontSize: '12px', marginTop: '4px'}}>
+                  {formErrors.description}
+                </div>
+              )}
             </div>
-            <button type="submit" className="form-submit">SEND MESSAGE</button>
+            <button 
+              type="submit" 
+              className="form-submit" 
+              disabled={isSubmitting}
+              style={{
+                opacity: isSubmitting ? 0.7 : 1,
+                cursor: isSubmitting ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {isSubmitting ? 'SENDING...' : 'SEND MESSAGE'}
+            </button>
           </form>
         </div>
       </section>

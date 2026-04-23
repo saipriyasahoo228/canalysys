@@ -688,6 +688,14 @@ export function VehicleMasterPage() {
         tdClassName: 'text-center',
       },
       {
+        key: 'category_type_name',
+        header: 'Transmission Type',
+        exportValue: (r) => (r.category_type_name || '').toUpperCase(),
+        cell: (r) => <div className="text-sm text-slate-700 text-center">{(r.category_type_name || '—').toUpperCase()}</div>,
+        className: 'text-center',
+        tdClassName: 'text-center',
+      },
+      {
         key: 'price',
         header: 'Price',
         exportValue: (r) => String(r.price || ''),

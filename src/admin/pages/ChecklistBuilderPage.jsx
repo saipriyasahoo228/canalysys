@@ -18,6 +18,7 @@ function inputTypeLabel(t) {
   if (t === 'yes_no') return 'Yes/No'
   if (t === 'short_text') return 'Short Text'
   if (t === 'long_text') return 'Long Text'
+  if (t === 'alphanumeric') return 'Alphanumeric'
   if (t === 'number') return 'Number'
   if (t === 'date') return 'Date'
   return t || '—'
@@ -29,6 +30,7 @@ function inputTypeTone(t) {
   if (t === 'multi_choice') return 'violet'
   if (t === 'short_text') return 'slate'
   if (t === 'long_text') return 'slate'
+  if (t === 'alphanumeric') return 'indigo'
   if (t === 'number') return 'amber'
   if (t === 'date') return 'rose'
   return 'slate'
@@ -695,6 +697,7 @@ export function ChecklistBuilderPage() {
               { value: 'yes_no', label: 'Yes/No' },
               { value: 'short_text', label: 'Short Text' },
               { value: 'long_text', label: 'Long Text' },
+              { value: 'alphanumeric', label: 'Alphanumeric' },
               { value: 'number', label: 'Number' },
               { value: 'date', label: 'Date' },
               { value: 'single_choice', label: 'Single Choice' },

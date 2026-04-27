@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, Clock, Eye, Gauge, Search, User, UserCheck, AlertTriangle, RefreshCw, LayoutGrid, Table, X } from 'lucide-react'
+import { CheckCircle2, Clock, Eye, Gauge, Search, User, UserCheck, AlertTriangle, RefreshCw, LayoutGrid, Table, X, Calendar } from 'lucide-react'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, cx } from '../ui/Ui'
+import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { formatDate, formatDateTime, formatTime } from '../utils/format'
 import { getInspectorDashboardData } from '../../api/inspectionreport'
 
@@ -172,6 +173,16 @@ export function QueueControlPage() {
       }
     })
   }, [dashboardData])
+
+  // Date filter states
+  const [startDate, setStartDate] = useState(() => {
+    const today = new Date()
+    return today.toISOString().split('T')[0]
+  })
+  const [endDate, setEndDate] = useState(() => {
+    const today = new Date()
+    return today.toISOString().split('T')[0]
+  })
 
   // Get all PDI requests from all inspectors
   const pdiRequests = useMemo(() => {
@@ -727,8 +738,61 @@ export function QueueControlPage() {
                 </div>
               </div>
 
+              {/* Date Range Filters */}
+              <div className="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-slate-600" />
+                    <span className="text-sm font-medium text-slate-700">Filter by Date Range:</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-slate-600">From:</label>
+                    <CustomDatePicker
+                      value={startDate}
+                      onChange={setStartDate}
+                      max={endDate}
+                      className="w-32"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-slate-600">To:</label>
+                    <CustomDatePicker
+                      value={endDate}
+                      onChange={setEndDate}
+                      min={startDate}
+                      className="w-32"
+                    />
+                  </div>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const today = new Date().toISOString().split('T')[0]
+                      setStartDate(today)
+                      setEndDate(today)
+                    }}
+                  >
+                    Reset to Today
+                  </Button>
+                </div>
+              </div>
+
               {/* Inspections Table */}
-              {inspectionsModal.inspector.inspections?.length > 0 ? (
+              {(() => {
+                const filteredInspections = inspectionsModal.inspector.inspections?.filter(inspection => {
+                  if (!inspection.slot_date) return true // Include inspections without dates
+                  
+                  const inspectionDate = new Date(inspection.slot_date).toISOString().split('T')[0]
+                  const start = startDate
+                  const end = endDate
+                  
+                  return inspectionDate >= start && inspectionDate <= end
+                }) || []
+
+                return filteredInspections.length > 0 ? (
                 <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full text-sm">
                     <thead className="bg-slate-50">
@@ -746,7 +810,7 @@ export function QueueControlPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
-                      {inspectionsModal.inspector.inspections.map((inspection) => (
+                      {filteredInspections.map((inspection) => (
                         <tr key={inspection.id} className="hover:bg-slate-50">
                           <td className="px-4 py-3 font-mono text-xs">{inspection.request_id}</td>
                           <td className="px-4 py-3">
@@ -801,9 +865,10 @@ export function QueueControlPage() {
                 </div>
               ) : (
                 <div className="text-center py-8 text-slate-500">
-                  No inspection requests found for this inspector.
+                  No inspection requests found for this inspector within the selected date range.
                 </div>
-              )}
+              )
+              })()}
             </div>
 
             {/* Modal Footer */}

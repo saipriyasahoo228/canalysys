@@ -215,6 +215,34 @@ export function NewInspectionPage() {
   const [pdiReportData, setPdiReportData] = useState(null)
   const [pdiReportLoading, setPdiReportLoading] = useState(false)
 
+  // State for advanced PDI filters
+  const [selectedInspectorFilter, setSelectedInspectorFilter] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [inspectorsList, setInspectorsList] = useState([])
+  const [loadingInspectorsList, setLoadingInspectorsList] = useState(false)
+
+  // Function to fetch inspectors list for filters
+  const fetchInspectorsList = async () => {
+    try {
+      setLoadingInspectorsList(true)
+      const response = await listInspectors()
+      console.log('✅ Inspectors list fetched for filters:', response.inspectors)
+      console.log('✅ Inspector IDs and names:', response.inspectors?.map(i => ({ 
+        user_id: i.user_id, 
+        user_idType: typeof i.user_id,
+        name: i.name,
+        allFields: Object.keys(i)
+      })))
+      setInspectorsList(response.inspectors || [])
+    } catch (error) {
+      console.error('❌ Failed to fetch inspectors list:', error)
+      setInspectorsList([])
+    } finally {
+      setLoadingInspectorsList(false)
+    }
+  }
+
   // Function to fetch and show PDI report
   const fetchAndShowPDIReport = async (requestId) => {
     try {
@@ -532,8 +560,32 @@ export function NewInspectionPage() {
 
   const { data: pdiRequestsData, loading: loadingPDIRequests, error: pdiRequestsError, refresh: refreshPDIRequests } = usePolling(
     'pdi-requests',
-    () => listPDIRequests({ page: 1 }),
-    { intervalMs: 15_000 }
+    () => {
+      const params = { page: 1 }
+      
+      // Add inspector filter to API call
+      if (selectedInspectorFilter) {
+        params.inspector_id = selectedInspectorFilter
+        console.log('🔍 Adding inspector filter:', selectedInspectorFilter)
+      }
+      
+      // Add date range filters to API call (convert dd/mm/yyyy to yyyy-mm-dd)
+      if (startDate) {
+        const [day, month, year] = startDate.split('/')
+        params.start_date = `${year}-${month}-${day}`
+        console.log('🔍 Adding start_date filter:', params.start_date)
+      }
+      
+      if (endDate) {
+        const [day, month, year] = endDate.split('/')
+        params.end_date = `${year}-${month}-${day}`
+        console.log('🔍 Adding end_date filter:', params.end_date)
+      }
+      
+      console.log('🔍 Final API params:', params)
+      return listPDIRequests(params)
+    },
+    { intervalMs: 15_000, dependencies: [selectedInspectorFilter, startDate, endDate] }
   )
 
   // Function to fetch time slots for a selected date
@@ -1368,7 +1420,7 @@ export function NewInspectionPage() {
   const [categoryValues, setCategoryValues] = useState([])
   const [loadingVehicles, setLoadingVehicles] = useState(false)
 
-  // Fetch all brands and category values on component mount
+  // Fetch initial data on component mount
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -1381,6 +1433,9 @@ export function NewInspectionPage() {
         const categoryValuesArray = Array.isArray(categoryValuesData) ? categoryValuesData : (categoryValuesData?.items || [])
         setBrands(brandsArray)
         setCategoryValues(categoryValuesArray)
+        
+        // Fetch inspectors list for filters
+        await fetchInspectorsList()
       } catch (error) {
         console.error('Failed to fetch initial data:', error)
         setBrands([])
@@ -1759,7 +1814,10 @@ export function NewInspectionPage() {
   const pdiRequests = useMemo(() => {
     const items = pdiRequestsData?.items
     if (!Array.isArray(items)) return []
-    return items.map((pdi) => ({
+    
+    console.log(' Raw PDI data sample:', items[0])
+    
+    const processedItems = items.map((pdi) => ({
       id: pdi.id,
       request_id: pdi.request_id,
       created_by_name: pdi.created_by_name,
@@ -1778,8 +1836,51 @@ export function NewInspectionPage() {
       status: pdi.status,
       payment_stage: pdi.payment_stage,
       created_at: pdi.created_at,
+      assigned_inspector_id: pdi.assigned_inspector_id || pdi.assigned_inspector, // Add assigned_inspector_id for filtering
+      assigned_inspector_name: pdi.assigned_inspector_name, // Add assigned inspector name
+      assigned_inspector_mobile_number: pdi.assigned_inspector_mobile_number, // Add assigned inspector mobile
     }))
-  }, [pdiRequestsData])
+
+    // Apply advanced filters
+    return processedItems.filter((pdi) => {
+      // Inspector filter
+      if (selectedInspectorFilter) {
+        console.log('🔍 Comparing:', {
+          selectedFilter: selectedInspectorFilter,
+          selectedFilterType: typeof selectedInspectorFilter,
+          pdiInspectorId: pdi.assigned_inspector_id,
+          pdiInspectorIdType: typeof pdi.assigned_inspector_id,
+          pdiInspectorName: pdi.assigned_inspector_name,
+          match: String(pdi.assigned_inspector_id) === String(selectedInspectorFilter)
+        })
+        if (String(pdi.assigned_inspector_id) !== String(selectedInspectorFilter)) {
+          return false
+        }
+      }
+
+      // Date range filter
+      if (startDate || endDate) {
+        const pdiDate = new Date(pdi.created_at)
+        
+        if (startDate) {
+          // Parse dd/mm/yyyy format
+          const [day, month, year] = startDate.split('/')
+          const start = new Date(`${year}-${month}-${day}`)
+          if (pdiDate < start) return false
+        }
+        
+        if (endDate) {
+          // Parse dd/mm/yyyy format
+          const [day, month, year] = endDate.split('/')
+          const end = new Date(`${year}-${month}-${day}`)
+          end.setHours(23, 59, 59, 999) // Include entire end day
+          if (pdiDate > end) return false
+        }
+      }
+
+      return true
+    })
+  }, [pdiRequestsData, selectedInspectorFilter, startDate, endDate])
 
   // PDI requests table columns
   const pdiRequestsColumns = useMemo(
@@ -1853,6 +1954,19 @@ export function NewInspectionPage() {
           <Badge tone={r.payment_stage === 'advance_paid' ? 'blue' : r.payment_stage === 'fully_paid' ? 'emerald' : 'slate'}>
             {r.payment_stage === 'advance_paid' ? 'Advance Paid' : r.payment_stage === 'fully_paid' ? 'Fully Paid' : r.payment_stage ? r.payment_stage.charAt(0).toUpperCase() + r.payment_stage.slice(1) : '—'}
           </Badge>
+        ),
+      },
+      {
+        key: 'assigned_inspector_name',
+        header: 'Assigned Inspector',
+        exportValue: (r) => r.assigned_inspector_name || '—',
+        cell: (r) => (
+          <div className="text-sm text-slate-700">
+            {r.assigned_inspector_name || '—'}
+            {r.assigned_inspector_mobile_number && (
+              <div className="text-xs text-slate-500">{r.assigned_inspector_mobile_number}</div>
+            )}
+          </div>
         ),
       },
       {
@@ -2017,7 +2131,72 @@ export function NewInspectionPage() {
             Failed to load PDI requests.
           </div>
         ) : (
-          <PaginatedTable
+          <>
+            {/* Advanced Filters beside search */}
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              {/* Inspector Filter */}
+              <div className="min-w-0">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Inspector</label>
+                <Select
+                  value={selectedInspectorFilter}
+                  onChange={(e) => {
+                    console.log('🔍 Selected inspector:', e.target.value)
+                    setSelectedInspectorFilter(e.target.value)
+                  }}
+                  className="w-40"
+                >
+                  <option value="">All Inspectors</option>
+                  {inspectorsList.map((inspector) => {
+                    console.log('🔍 Inspector data:', inspector)
+                    return (
+                      <option key={inspector.user_id || inspector.name} value={inspector.user_id || inspector.name}>
+                        {inspector.name}
+                      </option>
+                    )
+                  })}
+                </Select>
+              </div>
+
+              {/* Start Date Filter */}
+              <div className="min-w-0">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Start Date</label>
+                <CustomDatePicker
+                  value={startDate}
+                  onChange={setStartDate}
+                  placeholder="dd/mm/yyyy"
+                  dateFormat="dd/mm/yyyy"
+                  className="w-32"
+                />
+              </div>
+
+              {/* End Date Filter */}
+              <div className="min-w-0">
+                <label className="block text-xs font-medium text-slate-600 mb-1">End Date</label>
+                <CustomDatePicker
+                  value={endDate}
+                  onChange={setEndDate}
+                  placeholder="dd/mm/yyyy"
+                  dateFormat="dd/mm/yyyy"
+                  className="w-32"
+                />
+              </div>
+
+              {/* Clear Filters Button */}
+              <div className="flex items-end">
+                <button
+                  onClick={() => {
+                    setSelectedInspectorFilter('')
+                    setStartDate('')
+                    setEndDate('')
+                  }}
+                  className="px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+
+            <PaginatedTable
             columns={pdiRequestsColumns}
             rows={pdiRequests}
             loading={loadingPDIRequests}
@@ -2028,6 +2207,7 @@ export function NewInspectionPage() {
             searchPlaceholder="Search by Request ID, Customer Name, Mobile, Vehicle..."
             getSearchText={(row) => `${row.request_id} ${row.name} ${row.mobile_number} ${row.brand_name} ${row.model_name} ${row.variant_name} ${row.status} ${row.payment_stage}`}
           />
+          </>
         )}
       </Card>
 

@@ -3,6 +3,7 @@ import { Eye, FilePlus2, MoreVertical, X, Download } from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
 import { listCategoryPricing } from '../../api/categorypricing'
 import { listBrands, listModels, listVariants, listCategoryValues } from '../../api/vehiclemaster'
+import { listVehicleCategoryMappings } from '../../api/categorymapping'
 import { createPDIRequest, listPDIRequests, getPDIRequestById, assignInspector, createRazorpayOrder, verifyRazorpayPayment, confirmManualPayment, createRazorpayOrderForRemaining, verifyRazorpayRemainingPayment, confirmManualRemainingPayment } from '../../api/inspection'
 import { listCustomers, createCustomer, deleteCustomer, getCustomerBookings } from '../../api/customer'
 import { getAvailabilities, getInspectorAvailabilityByDate } from '../../api/inspectoravailibility'
@@ -913,7 +914,7 @@ export function NewInspectionPage() {
         return
       }
       
-      if (!wizardForm.category) {
+      if (!selectedCategoryId) {
         alert('This field is required.')
         setPaymentLoading(false)
         return
@@ -940,7 +941,7 @@ export function NewInspectionPage() {
         brand_id: parseInt(wizardForm.makeId),
         model_id: parseInt(wizardForm.modelId),
         variant_id: parseInt(wizardForm.variantId),
-        category_id: parseInt(wizardForm.category),
+        category_id: parseInt(selectedCategoryId),
         address: formatAddress(wizardForm),
         city: wizardForm.city || '',
         state: wizardForm.state || '',
@@ -1044,7 +1045,7 @@ export function NewInspectionPage() {
         return
       }
       
-      if (!wizardForm.category) {
+      if (!selectedCategoryId) {
         alert('This field is required.')
         setPaymentLoading(false)
         return
@@ -1072,7 +1073,7 @@ export function NewInspectionPage() {
         brand_id: parseInt(wizardForm.makeId),
         model_id: parseInt(wizardForm.modelId),
         variant_id: parseInt(wizardForm.variantId),
-        category_id: parseInt(wizardForm.category),
+        category_id: parseInt(selectedCategoryId),
         address: formatAddress(wizardForm),
         city: wizardForm.city || '',
         state: wizardForm.state || '',
@@ -1418,6 +1419,8 @@ export function NewInspectionPage() {
   const [models, setModels] = useState([])
   const [variants, setVariants] = useState([])
   const [categoryValues, setCategoryValues] = useState([])
+  const [vehicleCategoryMappings, setVehicleCategoryMappings] = useState([])
+  const [loadingVehicleCategoryMappings, setLoadingVehicleCategoryMappings] = useState(false)
   const [loadingVehicles, setLoadingVehicles] = useState(false)
 
   // Fetch initial data on component mount
@@ -1450,6 +1453,7 @@ export function NewInspectionPage() {
   const makeById = useMemo(() => new Map(brands.map((x) => [x.id, x])), [brands])
   const modelById = useMemo(() => new Map(models.map((x) => [x.id, x])), [models])
   const variantById = useMemo(() => new Map(variants.map((x) => [x.id, x])), [variants])
+  const categoryById = useMemo(() => new Map(categoryValues.map((x) => [x.id, x])), [categoryValues])
 
   const categoryOptions = useMemo(() => {
     return categoryValues.map((category) => ({
@@ -1558,6 +1562,104 @@ export function NewInspectionPage() {
     return form
   }, [raiseOpen, dialog?.form])
 
+  useEffect(() => {
+    if (!raiseOpen) return
+    const modelId = String(wizardForm?.modelId || '').trim()
+    if (!modelId) return
+
+    let mounted = true
+    ;(async () => {
+      try {
+        setLoadingVehicleCategoryMappings(true)
+
+        const allItems = []
+        let page = 1
+        let totalCount = null
+
+        while (true) {
+          const response = await listVehicleCategoryMappings(page)
+          const items = Array.isArray(response?.items) ? response.items : []
+
+          if (typeof response?.count === 'number') totalCount = response.count
+          allItems.push(...items)
+
+          if (items.length === 0) break
+          if (typeof totalCount === 'number' && allItems.length >= totalCount) break
+
+          page += 1
+          if (page > 50) break
+        }
+
+        if (!mounted) return
+        setVehicleCategoryMappings(allItems)
+      } catch (error) {
+        console.error('Failed to fetch vehicle category mappings:', error)
+        if (!mounted) return
+        setVehicleCategoryMappings([])
+      } finally {
+        if (!mounted) return
+        setLoadingVehicleCategoryMappings(false)
+      }
+    })()
+
+    return () => {
+      mounted = false
+    }
+  }, [raiseOpen, wizardForm?.modelId])
+
+  const mappedCategoryOptions = useMemo(() => {
+    const modelId = String(wizardForm?.modelId || '').trim()
+    if (!modelId) return []
+
+    const makeId = String(wizardForm?.makeId || '').trim()
+
+    const filtered = (vehicleCategoryMappings || []).filter((item) => {
+      if (String(item?.model) !== modelId) return false
+      if (makeId && String(item?.brand) !== makeId) return false
+      return true
+    })
+
+    const unique = new Map()
+    for (const item of filtered) {
+      const categoryId = item?.category
+      const categoryTypeId = item?.category_type_id
+      const key = `${categoryId || ''}::${categoryTypeId || ''}`
+      if (!categoryId) continue
+      if (unique.has(key)) continue
+
+      const fromMappingLabel = item?.category_name
+      const fromMappingType = item?.category_type_name
+      const fromMaster = categoryById.get(categoryId)
+      const label = fromMappingLabel
+        ? `${fromMappingLabel} (${fromMappingType || fromMaster?.category_type_detail?.name || '—'})`
+        : `${fromMaster?.name || '—'} (${fromMaster?.category_type_detail?.name || '—'})`
+
+      unique.set(key, { value: item?.id, label })
+    }
+
+    return Array.from(unique.values())
+      .filter((x) => x.value)
+      .sort((a, b) => String(a.label).localeCompare(String(b.label)))
+  }, [wizardForm?.modelId, wizardForm?.makeId, vehicleCategoryMappings, categoryById])
+
+  const selectedVehicleCategoryMapping = useMemo(() => {
+    const selectedMappingId = String(wizardForm?.category || '').trim()
+    if (!selectedMappingId) return null
+    return (vehicleCategoryMappings || []).find((x) => String(x?.id) === selectedMappingId) || null
+  }, [vehicleCategoryMappings, wizardForm?.category])
+
+  const selectedCategoryId = selectedVehicleCategoryMapping?.category ? String(selectedVehicleCategoryMapping.category) : ''
+
+  useEffect(() => {
+    if (!raiseOpen) return
+    const selectedCategory = String(wizardForm?.category || '').trim()
+    if (!selectedCategory) return
+    const allowed = mappedCategoryOptions.some((o) => String(o.value) === selectedCategory)
+    if (allowed) return
+
+    setDialog((s) => (s && s.type === 'raise' ? { ...s, form: { ...s.form, category: '' } } : s))
+  }, [raiseOpen, wizardForm?.category, mappedCategoryOptions])
+
   // Fetch time slots when dialog opens with default date
   useEffect(() => {
     console.log('🔄 useEffect triggered - raiseOpen:', raiseOpen, 'slotDate:', wizardForm.slotDate)
@@ -1637,16 +1739,16 @@ export function NewInspectionPage() {
 
   useEffect(() => {
     const fetchPricing = async () => {
-      if (!wizardForm?.category) {
+      if (!selectedCategoryId) {
         setCategoryPricing([])
         return
       }
       try {
         setLoadingPricing(true)
-        console.log('Fetching pricing for category:', wizardForm.category, 'vehicle type:', wizardForm.vehicleType)
+        console.log('Fetching pricing for category:', selectedCategoryId, 'vehicle type:', wizardForm.vehicleType)
         const currentVehicleType = wizardForm.vehicleType === 'pre_owned' ? 'owned' : 'new'
         const pricingData = await listCategoryPricing({ 
-          category: wizardForm.category,
+          category: selectedCategoryId,
           vehicle_type: currentVehicleType 
         })
         console.log('Pricing API response:', pricingData)
@@ -1675,7 +1777,7 @@ export function NewInspectionPage() {
     }
 
     fetchPricing()
-  }, [wizardForm?.category, wizardForm?.vehicleType])
+  }, [selectedCategoryId, wizardForm?.vehicleType])
 
   const priceInr = useMemo(() => {
     if (!raiseOpen) return 0
@@ -1686,10 +1788,10 @@ export function NewInspectionPage() {
     
     // Only use category pricing API - no fallback
     const currentVehicleType = wizardForm?.vehicleType === 'pre_owned' ? 'owned' : 'new'
-    console.log('Looking for category:', Number(wizardForm?.category), 'vehicle type:', currentVehicleType)
+    console.log('Looking for category:', Number(selectedCategoryId), 'vehicle type:', currentVehicleType)
     
     const categoryPrice = pricingArray.find(p => 
-      p.category === Number(wizardForm?.category) && 
+      p.category === Number(selectedCategoryId) && 
       p.vehicle_type === currentVehicleType
     )
     
@@ -1706,7 +1808,7 @@ export function NewInspectionPage() {
     // No fallback - return 0 if no pricing data available
     console.log('No pricing data found, returning 0')
     return 0
-  }, [raiseOpen, locationExtraInr, wizardForm?.category, wizardForm?.vehicleType, categoryPricing])
+  }, [raiseOpen, locationExtraInr, selectedCategoryId, wizardForm?.vehicleType, categoryPricing])
 
   const viewItems = useMemo(() => {
     if (!dialog || dialog.type !== 'viewCustomer') return []
@@ -2688,11 +2790,11 @@ export function NewInspectionPage() {
                                 const nextMakeId = e.target.value
                                 setDialog((s) => {
                                   if (!s || s.type !== 'raise') return s
-                                  if (!nextMakeId) return { ...s, form: { ...s.form, makeId: '', modelId: '', variantId: '' } }
+                                  if (!nextMakeId) return { ...s, form: { ...s.form, makeId: '', modelId: '', variantId: '', category: '' } }
                                   const nextModelId = models?.[0]?.id || ''
                                   return {
                                     ...s,
-                                    form: { ...s.form, makeId: nextMakeId, modelId: nextModelId, variantId: '' },
+                                    form: { ...s.form, makeId: nextMakeId, modelId: nextModelId, variantId: '', category: '' },
                                   }
                                 })
                               }}
@@ -2716,11 +2818,11 @@ export function NewInspectionPage() {
                                 const nextModelId = e.target.value
                                 setDialog((s) => {
                                   if (!s || s.type !== 'raise') return s
-                                  if (!nextModelId) return { ...s, form: { ...s.form, modelId: '', variantId: '' } }
+                                  if (!nextModelId) return { ...s, form: { ...s.form, modelId: '', variantId: '', category: '' } }
                                   const nextVariantId = variants?.[0]?.id || ''
                                   return {
                                     ...s,
-                                    form: { ...s.form, modelId: nextModelId, variantId: nextVariantId },
+                                    form: { ...s.form, modelId: nextModelId, variantId: nextVariantId, category: '' },
                                   }
                                 })
                               }}
@@ -2774,9 +2876,10 @@ export function NewInspectionPage() {
                                   s && s.type === 'raise' ? { ...s, form: { ...s.form, category: e.target.value } } : s
                                 )
                               }
+                              disabled={!wizardForm.modelId || loadingVehicleCategoryMappings}
                             >
                               <option value="">Select category</option>
-                              {categoryOptions.map((o) => (
+                              {mappedCategoryOptions.map((o) => (
                                 <option key={o.value} value={o.value}>
                                   {o.label}
                                 </option>
@@ -3094,7 +3197,7 @@ export function NewInspectionPage() {
                           {(wizardForm.modelId ? modelById.get(wizardForm.modelId)?.name : '') || ''}
                         </div>
                         <div className="mt-1 text-xs text-slate-600">
-                          {wizardForm.vehicleType === 'pre_owned' ? 'Pre-Owned' : 'New'} · {wizardForm.category}
+                          {wizardForm.vehicleType === 'pre_owned' ? 'Pre-Owned' : 'New'} · {selectedVehicleCategoryMapping?.category_name || '—'}
                         </div>
                       </div>
                       <div className="rounded-xl border border-slate-200 bg-white p-3">
@@ -3173,7 +3276,7 @@ export function NewInspectionPage() {
                           {(wizardForm.modelId ? modelById.get(wizardForm.modelId)?.name : '') || ''}
                         </div>
                         <div className="mt-1 text-xs text-slate-600">
-                          {wizardForm.vehicleType === 'pre_owned' ? 'Pre-Owned' : 'New'} · {wizardForm.category}
+                          {wizardForm.vehicleType === 'pre_owned' ? 'Pre-Owned' : 'New'} · {selectedVehicleCategoryMapping?.category_name || '—'}
                         </div>
                         <div className="mt-1 text-xs text-slate-600">
                           {(wizardForm.variantId ? variantById.get(wizardForm.variantId)?.name : '') || ''}
@@ -3285,13 +3388,13 @@ export function NewInspectionPage() {
                           if (!String(wizardForm.makeId || '').trim()) return
                           if (!String(wizardForm.modelId || '').trim()) return
                           if (!String(wizardForm.variantId || '').trim()) return
-                          if (!String(wizardForm.category || '').trim()) return
+                          if (!String(selectedCategoryId || '').trim()) return
                           
                           // Check if pricing data is available
                           const pricingArray = Array.isArray(categoryPricing) ? categoryPricing : []
                           const currentVehicleType = wizardForm?.vehicleType === 'pre_owned' ? 'owned' : 'new'
                           const categoryPrice = pricingArray.find(p => 
-                            p.category === Number(wizardForm?.category) && 
+                            p.category === Number(selectedCategoryId) && 
                             p.vehicle_type === currentVehicleType
                           )
                           
@@ -3328,7 +3431,7 @@ export function NewInspectionPage() {
                             !String(wizardForm.makeId || '').trim() ||
                             !String(wizardForm.modelId || '').trim() ||
                             !String(wizardForm.variantId || '').trim() ||
-                            !String(wizardForm.category || '').trim())) ||
+                            !String(selectedCategoryId || '').trim())) ||
                         (wizardStep === 2 && !wizardForm.slotDate)
                       }
                     >

@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './components/LandingPage';
+import PrivacyPolicy from './components/PrivacyPolicy';
 import { RbacProvider } from './admin/rbac/RbacContext';
 import { AdminLayout } from './admin/layout/AdminLayout';
 import { DashboardPage } from './admin/pages/DashboardPage';
@@ -25,6 +26,7 @@ export default function App() {
         <Router>
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/login" element={<LoginPage />} />
 
             <Route

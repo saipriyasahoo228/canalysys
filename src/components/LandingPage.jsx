@@ -1002,7 +1002,7 @@ const LandingPage = () => {
             <div className="footer-contact">
               <div className="footer-contact-item"><span className="icon">📞</span>+91 6370166632</div>
               <div className="footer-contact-item"><span className="icon">✉️</span>carnalysysindia@gmail.com</div>
-              <div className="footer-contact-item"><span className="icon">📍</span>Plot No. 4907, Kalinga Nagar, Ghatikia,<br/>Near Balia Square Bus Stand,<br/>Bhubaneswar, Odisha - 751001</div>
+              <div className="footer-contact-item"><span className="icon">📍</span>Plot No. 4907, Kalinga Nagar, Ghatikia,<br/>Near Balia Square Bus Stand,<br/>Bhubaneswar, Odisha - 751003</div>
             </div>
           </div>
           <div>

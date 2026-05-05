@@ -3431,7 +3431,14 @@ export function NewInspectionPage() {
                             !String(wizardForm.makeId || '').trim() ||
                             !String(wizardForm.modelId || '').trim() ||
                             !String(wizardForm.variantId || '').trim() ||
-                            !String(selectedCategoryId || '').trim())) ||
+                            !String(selectedCategoryId || '').trim() ||
+                            !String(wizardForm.houseNumber || '').trim() ||
+                            !String(wizardForm.areaStreet || '').trim() ||
+                            !String(wizardForm.city || '').trim() ||
+                            !String(wizardForm.district || '').trim() ||
+                            !String(wizardForm.state || '').trim() ||
+                            !String(wizardForm.pincode || '').trim() ||
+                            !String(wizardForm.country || '').trim())) ||
                         (wizardStep === 2 && !wizardForm.slotDate)
                       }
                     >

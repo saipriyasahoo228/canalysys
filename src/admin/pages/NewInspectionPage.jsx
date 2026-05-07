@@ -216,6 +216,7 @@ export function NewInspectionPage() {
   const [pdiReportData, setPdiReportData] = useState(null)
   const [pdiReportPdfUrl, setPdiReportPdfUrl] = useState(null)
   const [pdiReportLoading, setPdiReportLoading] = useState(false)
+  const [loadingReportRequestId, setLoadingReportRequestId] = useState(null)
 
   // State for advanced PDI filters
   const [selectedInspectorFilter, setSelectedInspectorFilter] = useState('')
@@ -248,6 +249,7 @@ export function NewInspectionPage() {
   // Function to fetch and show PDI report
   const fetchAndShowPDIReport = async (requestId) => {
     try {
+      setLoadingReportRequestId(requestId)
       setPdiReportLoading(true)
       const [reportData, pdfBlob] = await Promise.all([
         getPDIReportByRequestId(requestId),
@@ -264,6 +266,7 @@ export function NewInspectionPage() {
       alert(error.response?.data?.detail || error.message || 'Failed to load PDI report. Please try again.')
     } finally {
       setPdiReportLoading(false)
+      setLoadingReportRequestId(null)
     }
   }
 
@@ -2460,10 +2463,11 @@ export function NewInspectionPage() {
                 {(() => {
                   const pdiRequest = pdiRequests.find(p => p.request_id === actionsMenu.requestId)
                   const isFullyPaid = pdiRequest?.payment_stage === 'fully_paid'
+                  const isLoading = loadingReportRequestId === actionsMenu.requestId
                   return (
                     <button
                       type="button"
-                      className={`w-full px-3 py-2 text-left text-sm rounded-b-xl ${
+                      className={`w-full px-3 py-2 text-left text-sm rounded-b-xl flex items-center gap-2 ${
                         isFullyPaid 
                           ? 'hover:bg-blue-50 text-blue-700 cursor-pointer' 
                           : 'bg-slate-100 text-slate-400 cursor-not-allowed'
@@ -2473,9 +2477,19 @@ export function NewInspectionPage() {
                           fetchAndShowPDIReport(actionsMenu.requestId)
                         }
                       }}
-                      disabled={!isFullyPaid}
+                      disabled={!isFullyPaid || isLoading}
                     >
-                      Generate PDI Report
+                      {isLoading ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Preparing...
+                        </>
+                      ) : (
+                        'Generate PDI Report'
+                      )}
                     </button>
                   )
                 })()}

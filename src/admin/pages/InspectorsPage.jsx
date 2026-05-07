@@ -1,6 +1,6 @@
 // TODO: Temporary fix for React development error with X icon
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Plus, Search, Trash2, User, UserCheck, UserX, XCircle, Users, CalendarCheck, CalendarX, ChevronDown, ChevronRight, Home } from 'lucide-react'
+import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Plus, Search, Trash2, User, UserCheck, UserX, XCircle, Users, CalendarCheck, CalendarX, ChevronDown, ChevronRight, Home ,Edit} from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, cx } from '../ui/Ui'
@@ -523,6 +523,7 @@ export function InspectorsPage() {
               <CheckCircle2 className="h-4 w-4" />
               Approve
             </Button>
+
             <Button
               disabled={!permissions.manageInspectors || r.status !== 'pending'}
               onClick={() => setLeaveDialog({ type: 'reject', item: r })}
@@ -706,7 +707,7 @@ export function InspectorsPage() {
                   onClick={() => setAvailabilityDialog({ type: 'update', item: r })}
                   title={permissions.manageInspectors ? 'Update Status' : 'Insufficient permission'}
                 >
-                  <CheckCircle2 className="h-4 w-4 text-slate-700" />
+                  <Edit className="h-4 w-4 text-slate-700" />
                 </Button>
                 <Button
                   variant="icon"

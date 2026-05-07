@@ -116,10 +116,10 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
                   <div className="h-14 w-14 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     {showPhoto ? (
                       <>
-                        <img 
-                          src={photo} 
-                          alt="Inspector" 
-                          className="h-full w-full object-cover"
+                        <img
+                          src={photo}
+                          alt="Inspector"
+                          className="h-full w-full object-contain"
                           onError={(e) => {
                             console.error('Image failed to load:', photo)
                             e.target.style.display = 'none'
@@ -257,12 +257,13 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
 
                   <label className="block">
                     <div className="text-xs font-medium text-slate-900">Profile photo</div>
-                    <div className="mt-1">
+                    <div className="mt-1 flex items-center gap-2">
                       <input
                         ref={fileRef}
                         type="file"
                         accept="image/*"
                         disabled={submitting}
+                        className="hidden"
                         onChange={async (e) => {
                           const file = e.target.files?.[0]
                           if (!file) return
@@ -275,6 +276,17 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
                           }
                         }}
                       />
+                      <Button
+                        type="button"
+                        variant="default"
+                        disabled={submitting}
+                        onClick={() => fileRef.current?.click()}
+                      >
+                        {selectedFile ? 'Change Image' : 'Upload Image'}
+                      </Button>
+                      {selectedFile && (
+                        <span className="text-xs text-slate-600">{selectedFile.name}</span>
+                      )}
                     </div>
                   </label>
                 </div>

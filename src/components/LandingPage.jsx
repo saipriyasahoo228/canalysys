@@ -16,7 +16,22 @@ const LandingPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inspectors, setInspectors] = useState([]);
   const [feedbackData, setFeedbackData] = useState([]);
+  const [showAppModal, setShowAppModal] = useState(false);
   const heroStatsRef = useRef(null);
+  const teamScrollRef = useRef(null);
+  const testimonialsScrollRef = useRef(null);
+
+  const scrollContainer = (ref, direction) => {
+    if (ref.current) {
+      const scrollAmount = direction === 'left' ? -260 : 260;
+      ref.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const handleServiceClick = (e) => {
+    e.preventDefault();
+    setShowAppModal(true);
+  };
 
   // Helper function to generate star rating
   const generateStars = (rating) => {
@@ -435,10 +450,22 @@ const LandingPage = () => {
 
         /* TEAM */
         #team { background: var(--bg3); }
-        .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2px; margin-top: 56px; }
-        .team-card { background: var(--white); padding: 36px 28px; text-align: center; position: relative; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s; border: 1px solid var(--border); }
-        .team-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
-        .team-avatar { width: 76px; height: 76px; border-radius: 50%; background: var(--bg2); margin: 0 auto 20px; border: 2px solid var(--border-med); display: flex; align-items: center; justify-content: center; font-size: 30px; position: relative; }
+        .team-grid { display: flex; gap: 16px; margin-top: 56px; overflow-x: auto; padding-bottom: 16px; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; }
+        .team-grid::-webkit-scrollbar { display: none; }
+        .scroll-wrapper { position: relative; }
+        .scroll-arrow {
+          position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px;
+          border-radius: 50%; background: var(--white); border: 1px solid var(--border-med);
+          box-shadow: 0 2px 12px rgba(123,53,32,0.12); cursor: pointer; z-index: 10;
+          display: flex; align-items: center; justify-content: center; font-size: 18px;
+          color: var(--choc); transition: all 0.2s; user-select: none;
+        }
+        .scroll-arrow:hover { background: var(--choc); color: var(--white); border-color: var(--choc); }
+        .scroll-arrow.left { left: -8px; }
+        .scroll-arrow.right { right: -8px; }
+        .team-card { flex: 0 0 240px; background: var(--white); padding: 36px 28px; text-align: center; position: relative; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s; border: 1px solid var(--border); border-radius: 8px; scroll-snap-align: start; }
+        .team-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(123,53,32,0.14); }
+        .team-avatar { width: 96px; height: 96px; border-radius: 50%; background: var(--white); margin: 0 auto 20px; border: 2px solid var(--border-med); display: flex; align-items: center; justify-content: center; font-size: 30px; position: relative; overflow: hidden; }
         .team-avatar .status-dot { position: absolute; bottom: 3px; right: 3px; width: 12px; height: 12px; border-radius: 50%; background: #48A870; border: 2px solid var(--white); }
         .team-name { font-family: 'Barlow Condensed', sans-serif; font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
         .team-role { font-size: 13px; color: var(--choc); font-weight: 500; margin-bottom: 6px; }
@@ -468,19 +495,21 @@ const LandingPage = () => {
 
         /* TESTIMONIALS */
         #testimonials { background: var(--bg2); }
-        .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2px; margin-top: 56px; }
-        .testimonial-card { background: var(--white); padding: 36px; position: relative; border: 1px solid var(--border); }
-        .testimonial-card::before { content: '"'; position: absolute; top: 24px; right: 28px; font-family: 'Bebas Neue', sans-serif; font-size: 80px; color: rgba(123,53,32,0.06); line-height: 1; }
-        .stars { display: flex; gap: 4px; margin-bottom: 18px; color: var(--choc); font-size: 14px; }
-        .testimonial-text { font-size: 15px; color: var(--text-muted); line-height: 1.75; font-style: italic; margin-bottom: 24px; }
-        .testimonial-author { display: flex; align-items: center; gap: 14px; }
-        .author-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--bg2); border: 2px solid var(--border-med); display: flex; align-items: center; justify-content: center; font-size: 18px; }
-        .author-name { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); }
-        .author-info { font-size: 12px; color: var(--text-muted); }
+        .testimonials-grid { display: flex; gap: 20px; margin-top: 56px; overflow-x: auto; padding-bottom: 16px; scroll-snap-type: x mandatory; scrollbar-width: none; -ms-overflow-style: none; }
+        .testimonials-grid::-webkit-scrollbar { display: none; }
+        .testimonial-card { flex: 0 0 340px; background: var(--white); padding: 32px; position: relative; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 4px 20px rgba(123,53,32,0.08); scroll-snap-align: start; display: flex; flex-direction: column; }
+        .testimonial-card::before { content: '"'; position: absolute; top: 16px; right: 24px; font-family: 'Bebas Neue', sans-serif; font-size: 64px; color: rgba(123,53,32,0.08); line-height: 1; }
+        .stars { display: flex; gap: 4px; margin-bottom: 16px; color: var(--choc); font-size: 16px; }
+        .testimonial-text { font-size: 14px; color: var(--text-muted); line-height: 1.75; margin-bottom: 20px; flex: 1; }
+        .testimonial-author { display: flex; align-items: center; gap: 12px; padding-top: 16px; border-top: 1px solid var(--border); }
+        .author-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--bg2); border: 2px solid var(--border-med); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+        .author-name { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); }
+        .author-info { font-size: 11px; color: var(--text-muted); }
+        .testimonial-date { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 
         /* FOOTER */
         footer { background: var(--choc); color: rgba(255,255,255,0.85); padding: 64px 48px 32px; }
-        .footer-top { display: grid; grid-template-columns: 1.8fr 1fr 1fr 1fr; gap: 48px; padding-bottom: 48px; border-bottom: 1px solid rgba(255,255,255,0.14); }
+        .footer-top { display: grid; grid-template-columns: 1.8fr 1fr 1fr 1fr 1fr; gap: 48px; padding-bottom: 48px; border-bottom: 1px solid rgba(255,255,255,0.14); }
         .footer-brand-name { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 4px; color: var(--white); margin-bottom: 4px; }
         .footer-brand-name span { color: var(--choc-pale); }
         .footer-tagline { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.6; margin-top: 12px; }
@@ -497,6 +526,28 @@ const LandingPage = () => {
         .footer-legal { display: flex; gap: 24px; }
         .footer-legal a { font-size: 12px; color: rgba(255,255,255,0.45); text-decoration: none; letter-spacing: 0.5px; }
         .footer-legal a:hover { color: var(--choc-pale); }
+        .footer-app { margin-top: 20px; }
+        .footer-app-title { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--choc-pale); margin-bottom: 12px; }
+        .footer-app-buttons { display: flex; flex-direction: column; gap: 10px; }
+        .app-store-btn { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 10px 14px; text-decoration: none; transition: all 0.2s; }
+        .app-store-btn:hover { background: rgba(255,255,255,0.2); border-color: var(--choc-pale); }
+        .app-store-icon { font-size: 24px; }
+        .app-store-text { display: flex; flex-direction: column; }
+        .app-store-text span:first-child { font-size: 10px; color: rgba(255,255,255,0.6); }
+        .app-store-text span:last-child { font-size: 13px; font-weight: 600; color: var(--white); }
+        .app-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
+        .app-modal { background: var(--white); border-radius: 12px; padding: 36px; max-width: 380px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+        .app-modal-icon { font-size: 48px; margin-bottom: 16px; }
+        .app-modal-title { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+        .app-modal-text { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; }
+        .app-modal-buttons { display: flex; flex-direction: column; gap: 10px; }
+        .app-modal-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+        .app-modal-btn.primary { background: var(--choc); color: var(--white); }
+        .app-modal-btn.primary:hover { background: var(--red); }
+        .app-modal-btn.ghost { background: var(--bg2); color: var(--text); border: 1px solid var(--border); }
+        .app-modal-btn.ghost:hover { background: var(--border); }
+        .app-modal-close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--bg2); cursor: pointer; font-size: 16px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .app-modal-close:hover { background: var(--border); color: var(--text); }
 
         /* MOBILE */
         @media (max-width: 900px) {
@@ -539,6 +590,7 @@ const LandingPage = () => {
           .why-grid { grid-template-columns: 1fr; } .why-card.large { grid-column: span 1; }
           .booking-wrap { grid-template-columns: 1fr; gap: 40px; }
           .footer-top { grid-template-columns: 1fr 1fr; }
+          .footer-app-buttons { flex-direction: row; }
           .hero-stats { flex-direction: column; gap: 20px; }
           .hero-stat { border-right: none; border-bottom: 1px solid var(--border); padding: 0 0 16px 0 !important; }
           .hero-stat:last-child { border-bottom: none; }
@@ -834,46 +886,55 @@ const LandingPage = () => {
         <div className="section-label">Inspector Network</div>
         <h2 className="section-title reveal">MEET OUR<br/>SPECIALISTS</h2>
         <p className="section-subtitle reveal">Our field inspectors are experienced automotive technicians and engineers placed strategically across Odisha.</p>
-        <div className="team-grid reveal">
-          {inspectors.map((inspector, index) => (
-            <div className="team-card" key={index}>
-              <div className="team-avatar">
-                <img 
-                  src={inspector.profile_photo} 
-                  alt={inspector.name}
-                  style={{width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover'}}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = '🧑‍🔧';
-                  }}
-                />
-                <div className="status-dot"></div>
+        <div className="scroll-wrapper">
+          <div className="scroll-arrow left" onClick={() => scrollContainer(teamScrollRef, 'left')}>{'<'}</div>
+          <div className="team-grid" ref={teamScrollRef}>
+            {inspectors.map((inspector, index) => (
+              <div className="team-card" key={index}>
+                <div className="team-avatar">
+                  <img
+                    src={inspector.profile_photo}
+                    alt={inspector.name}
+                    style={{width: '100%', height: '100%', borderRadius: '50%', objectFit: 'contain'}}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.parentElement.innerHTML = '🧑‍🔧';
+                    }}
+                  />
+                  <div className="status-dot"></div>
+                </div>
+                <div className="team-name">{inspector.name}</div>
+                <div className="team-role">{inspector.role}</div>
+                <div className="team-location">📍 {inspector.city}</div>
+                <div className="team-inspections"><strong>{inspector.completed_inspections}</strong>Inspections Done</div>
               </div>
-              <div className="team-name">{inspector.name}</div>
-              <div className="team-role">{inspector.role}</div>
-              <div className="team-location">📍 {inspector.city}</div>
-              <div className="team-inspections"><strong>{inspector.completed_inspections}</strong>Inspections Done</div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="scroll-arrow right" onClick={() => scrollContainer(teamScrollRef, 'right')}>{'>'}</div>
         </div>
       </section>
 
       <section id="testimonials">
         <div className="section-label">Customer Stories</div>
         <h2 className="section-title reveal">WHAT OUR<br/>CUSTOMERS SAY</h2>
-        <div className="testimonials-grid reveal">
-          {feedbackData.map((feedback, index) => (
-            <div className="testimonial-card" key={index}>
-              <div className="stars">{generateStars(feedback.average_rating)}</div>
-              <p className="testimonial-text">{feedback.overall_comments}</p>
-              <div className="testimonial-author">
-                <div className="author-avatar">😊</div>
-                <div>
-                  <div className="author-name">{feedback.customer_name}</div>
+        <div className="scroll-wrapper">
+          <div className="scroll-arrow left" onClick={() => scrollContainer(testimonialsScrollRef, 'left')}>{'<'}</div>
+          <div className="testimonials-grid" ref={testimonialsScrollRef}>
+            {feedbackData.map((feedback, index) => (
+              <div className="testimonial-card" key={index}>
+                <div className="stars">{generateStars(feedback.overall_rating)}</div>
+                <p className="testimonial-text">{feedback.overall_comments || 'No comment provided'}</p>
+                <div className="testimonial-author">
+                  <div className="author-avatar">😊</div>
+                  <div>
+                    <div className="author-name">{feedback.submitted_by_name}</div>
+                    <div className="testimonial-date">{feedback.created_at ? new Date(feedback.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="scroll-arrow right" onClick={() => scrollContainer(testimonialsScrollRef, 'right')}>{'>'}</div>
         </div>
       </section>
 
@@ -1008,11 +1069,9 @@ const LandingPage = () => {
           <div>
             <div className="footer-col-title">Services</div>
             <ul className="footer-links">
-              <li><a href="#">New Car PDI</a></li>
-              <li><a href="#">Used Car Inspection</a></li>
-              <li><a href="#">EV Inspection</a></li>
-              <li><a href="#">Document Audit</a></li>
-              <li><a href="#">Dealer Coordination</a></li>
+              <li><a href="#" onClick={handleServiceClick}>New Car PDI</a></li>
+              <li><a href="#" onClick={handleServiceClick}>Used Car Inspection</a></li>
+              <li><a href="#" onClick={handleServiceClick}>EV Inspection</a></li>
             </ul>
           </div>
           <div>
@@ -1022,18 +1081,40 @@ const LandingPage = () => {
               <li><a href="#">Cuttack</a></li>
               <li><a href="#">Rourkela</a></li>
               <li><a href="#">Berhampur</a></li>
-              <li><a href="#">All Cities →</a></li>
+              <li><a href="#coverage">All Cities →</a></li>
             </ul>
           </div>
           <div>
             <div className="footer-col-title">Company</div>
             <ul className="footer-links">
               <li><a href="#">About Us</a></li>
-              <li><a href="#">Become an Inspector</a></li>
-              <li><a href="#">Partner Dealerships</a></li>
-              <li><a href="#">Careers</a></li>
-              <li><a href="#">Contact</a></li>
+              <li><a href="#booking">Become an Inspector</a></li>
+              <li><a href="#booking">Careers</a></li>
+              <li><a href="#booking">Contact</a></li>
             </ul>
+          </div>
+          <div>
+            <div className="footer-app-title">DOWNLOAD OUR APP</div>
+            <div className="footer-app-buttons">
+              <a href="#" className="app-store-btn">
+                <svg className="app-store-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style={{minWidth:'24px'}}>
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                </svg>
+                <div className="app-store-text">
+                  <span>Download on the</span>
+                  <span>App Store</span>
+                </div>
+              </a>
+              <a href="#" className="app-store-btn">
+                <svg className="app-store-icon" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style={{minWidth:'24px'}}>
+                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.5,12.92 20.16,13.19L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/>
+                </svg>
+                <div className="app-store-text">
+                  <span>GET IT ON</span>
+                  <span>Google Play</span>
+                </div>
+              </a>
+            </div>
           </div>
         </div>
         <div className="footer-bottom">
@@ -1045,6 +1126,31 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
+
+      {showAppModal && (
+        <div className="app-modal-overlay" onClick={() => setShowAppModal(false)}>
+          <div className="app-modal" onClick={(e) => e.stopPropagation()} style={{position:'relative'}}>
+            <button className="app-modal-close" onClick={() => setShowAppModal(false)}>✕</button>
+            <div className="app-modal-icon">📱</div>
+            <div className="app-modal-title">Download the CARNALYSYS App</div>
+            <div className="app-modal-text">This service is available on our mobile app. Download now to book inspections, track reports, and manage your vehicle checks on the go.</div>
+            <div className="app-modal-buttons">
+              <a href="#" className="app-modal-btn primary">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                </svg>
+                Download on App Store
+              </a>
+              <a href="#" className="app-modal-btn ghost">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.5,12.92 20.16,13.19L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/>
+                </svg>
+                GET IT ON Google Play
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

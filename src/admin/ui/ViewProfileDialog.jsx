@@ -67,10 +67,10 @@ export function ViewProfileDialog({ open, inspector, onClose }) {
                 <div className="flex items-center gap-3">
                   <div className="h-12 w-12 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     {showPhoto ? (
-                      <img 
-                        src={photo} 
-                        alt="Inspector" 
-                        className="h-full w-full object-cover"
+                      <img
+                        src={photo}
+                        alt="Inspector"
+                        className="h-full w-full object-contain"
                         onError={(e) => {
                           e.target.style.display = 'none'
                           e.target.nextSibling.style.display = 'flex'

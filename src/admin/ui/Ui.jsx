@@ -94,6 +94,7 @@ export function PaginatedTable({
                   setPage(1)
                 }}
                 placeholder={searchPlaceholder}
+                autoComplete="off"
               />
             </div>
           ) : (

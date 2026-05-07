@@ -17,3 +17,14 @@ export const getPDIReportByRequestId = async (requestId) => {
     throw error.response?.data || error.message
   }
 }
+
+export const downloadPDIReportPDF = async (requestId) => {
+  try {
+    const response = await api.get(`/api/inspection/reports/pdi-requests/${requestId}/pdf/`, {
+      responseType: 'blob',
+    })
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}

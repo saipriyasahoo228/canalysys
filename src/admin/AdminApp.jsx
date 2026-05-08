@@ -12,6 +12,7 @@ import { RegisterCustomerPage } from './pages/RegisterCustomerPage'
 import { NewInspectionPage } from './pages/NewInspectionPage'
 import { TimeFramesPage } from './pages/TimeFramesPage'
 import { BannerPage } from './pages/BannerPage'
+import { CityConfigurationPage } from './pages/CityConfigurationPage'
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { LoginPage } from './pages/LoginPage'
@@ -40,6 +41,7 @@ export default function AdminApp() {
               <Route path="/new-inspection" element={<NewInspectionPage />} />
               <Route path="/finance" element={<FinancePage />} />
               <Route path="/vehicle-master" element={<VehicleMasterPage />} />
+              <Route path="/city-configuration" element={<CityConfigurationPage />} />
               <Route path="/checklists" element={<ChecklistBuilderPage />} />
               <Route path="/time-frames" element={<TimeFramesPage />} />
               <Route path="/banners" element={<BannerPage />} />

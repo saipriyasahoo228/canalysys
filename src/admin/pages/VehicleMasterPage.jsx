@@ -1686,16 +1686,16 @@ export function VehicleMasterPage() {
 
           if (dialog?.type === 'editMapping') {
             const it = dialog?.item
-            const defaultMakeId = it?.makeId || brands?.[0]?.id || ''
-            const defaultModelId = it?.modelId || (brands.find((b) => b.id === defaultMakeId) ? models.filter((m) => String(m.brand) === String(defaultMakeId))?.[0]?.id : '') || ''
-            const defaultVariantId = it?.variantId || (models.find((m) => m.id === defaultModelId) ? variants.filter((v) => String(v.model) === String(defaultModelId))?.[0]?.id : '') || ''
+            const defaultMakeId = it?.brand || brands?.[0]?.id || ''
+            const defaultModelId = it?.model || (brands.find((b) => b.id === defaultMakeId) ? models.filter((m) => String(m.brand) === String(defaultMakeId))?.[0]?.id : '') || ''
+            const defaultVariantId = it?.variant || (models.find((m) => m.id === defaultModelId) ? variants.filter((v) => String(v.model) === String(defaultModelId))?.[0]?.id : '') || ''
 
             return [
               {
                 name: 'condition',
                 label: 'Vehicle Type',
                 type: 'select',
-                defaultValue: it?.condition || CONDITION_OPTIONS?.[0]?.value || 'new',
+                defaultValue: it?.vehicle_type || CONDITION_OPTIONS?.[0]?.value || 'new',
                 options: CONDITION_OPTIONS,
               },
               {
@@ -1739,7 +1739,7 @@ export function VehicleMasterPage() {
                 name: 'categoryId',
                 label: 'Category',
                 type: 'select',
-                defaultValue: it?.categoryId || categories?.[0]?.id || '',
+                defaultValue: it?.category || categories?.[0]?.id || '',
                 options: categories.map((c) => ({ value: c.id, label: `${c.name} (${c.category_type_detail?.name || '—'})` })),
               },
             ]

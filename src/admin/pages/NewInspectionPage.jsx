@@ -10,6 +10,7 @@ import { getAvailabilities, getInspectorAvailabilityByDate } from '../../api/ins
 import { listInspectors } from '../../api/inspectoronboard'
 import { getPDIReportByRequestId, downloadPDIReportPDF } from '../../api/inspectionreport'
 import { getPDIAvailableSlots } from '../../api/timeSlotConfigurations'
+import { listCities } from '../../api/city'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, Select, cx } from '../ui/Ui'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
@@ -34,38 +35,6 @@ const PAYMENT_PROVIDER_OPTIONS = [
   { value: 'payu', label: 'PayU' },
 ]
 
-const ODISHA_DISTRICTS = [
-  { value: 'angul', label: 'Angul' },
-  { value: 'boudh', label: 'Boudh' },
-  { value: 'balangir', label: 'Balangir' },
-  { value: 'bargarh', label: 'Bargarh' },
-  { value: 'balasore', label: 'Balasore' },
-  { value: 'cuttack', label: 'Cuttack' },
-  { value: 'deogarh', label: 'Deogarh' },
-  { value: 'dhenkanal', label: 'Dhenkanal' },
-  { value: 'gajapati', label: 'Gajapati' },
-  { value: 'ganjam', label: 'Ganjam' },
-  { value: 'jagatsinghpur', label: 'Jagatsinghpur' },
-  { value: 'jajpur', label: 'Jajpur' },
-  { value: 'jharsuguda', label: 'Jharsuguda' },
-  { value: 'kalahandi', label: 'Kalahandi' },
-  { value: 'kendrapara', label: 'Kendrapara' },
-  { value: 'keonjhar', label: 'Keonjhar' },
-  { value: 'khordha', label: 'Khordha' },
-  { value: 'koraput', label: 'Koraput' },
-  { value: 'kandhamal', label: 'Kandhamal' },
-  { value: 'kendujhar', label: 'Kendujhar' },
-  { value: 'malkangiri', label: 'Malkangiri' },
-  { value: 'mayurbhanj', label: 'Mayurbhanj' },
-  { value: 'nabarangpur', label: 'Nabarangpur' },
-  { value: 'nuapada', label: 'Nuapada' },
-  { value: 'nayagarh', label: 'Nayagarh' },
-  { value: 'puri', label: 'Puri' },
-  { value: 'rayagada', label: 'Rayagada' },
-  { value: 'sambalpur', label: 'Sambalpur' },
-  { value: 'sonepur', label: 'Sonepur' },
-  { value: 'sundargarh', label: 'Sundargarh' },
-]
 
 function formatDateDisplay(dateIso) {
   const d = String(dateIso || '').trim()
@@ -224,6 +193,41 @@ export function NewInspectionPage() {
   const [endDate, setEndDate] = useState('')
   const [inspectorsList, setInspectorsList] = useState([])
   const [loadingInspectorsList, setLoadingInspectorsList] = useState(false)
+
+  // State for cities and districts from API
+  const [cities, setCities] = useState([])
+  const [districts, setDistricts] = useState([])
+  const [loadingCities, setLoadingCities] = useState(false)
+
+  // Fetch cities and districts on mount
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        setLoadingCities(true)
+        const data = await listCities()
+        const items = Array.isArray(data) ? data : data?.items || data?.results || []
+        setCities(items)
+        
+        // Extract unique districts from cities
+        const uniqueDistricts = {}
+        items.forEach(city => {
+          if (city.district && city.district_name) {
+            uniqueDistricts[city.district] = city.district_name
+          }
+        })
+        const districtList = Object.entries(uniqueDistricts).map(([id, name]) => ({
+          id: Number(id),
+          name: name
+        }))
+        setDistricts(districtList)
+      } catch (error) {
+        console.error('Failed to load cities:', error)
+      } finally {
+        setLoadingCities(false)
+      }
+    }
+    fetchCities()
+  }, [])
 
   // Function to fetch inspectors list for filters
   const fetchInspectorsList = async () => {
@@ -2790,39 +2794,48 @@ export function NewInspectionPage() {
                         </div>
 
                         <div>
+                          <div className="text-xs font-medium text-slate-900">District <span className="text-red-500">*</span></div>
+                          <div className="mt-1">
+                            <Select
+                              value={wizardForm.district || ''}
+                              onChange={(e) => {
+                                setDialog((s) =>
+                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, district: e.target.value, city: '' } } : s
+                                )
+                              }}
+                              required
+                            >
+                              <option value="">Select district</option>
+                              {districts.map((district) => (
+                                <option key={district.id} value={district.id}>
+                                  {district.name}
+                                </option>
+                              ))}
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div>
                           <div className="text-xs font-medium text-slate-900">City <span className="text-red-500">*</span></div>
                           <div className="mt-1">
-                            <Input
+                            <Select
                               value={wizardForm.city || ''}
                               onChange={(e) =>
                                 setDialog((s) =>
                                   s && s.type === 'raise' ? { ...s, form: { ...s.form, city: e.target.value } } : s
                                 )
                               }
-                              placeholder="Enter city"
                               required
-                            />
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-xs font-medium text-slate-900">District <span className="text-red-500">*</span></div>
-                          <div className="mt-1">
-                            <Select
-                              value={wizardForm.district || ''}
-                              onChange={(e) =>
-                                setDialog((s) =>
-                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, district: e.target.value } } : s
-                                )
-                              }
-                              required
+                              disabled={!wizardForm.district}
                             >
-                              <option value="">Select district</option>
-                              {ODISHA_DISTRICTS.map((district) => (
-                                <option key={district.value} value={district.value}>
-                                  {district.label}
-                                </option>
-                              ))}
+                              <option value="">Select city</option>
+                              {cities
+                                .filter(city => city.district === Number(wizardForm.district))
+                                .map((city) => (
+                                  <option key={city.id} value={city.name}>
+                                    {city.name}
+                                  </option>
+                                ))}
                             </Select>
                           </div>
                         </div>

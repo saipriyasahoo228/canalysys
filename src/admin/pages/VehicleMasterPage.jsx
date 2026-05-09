@@ -1057,6 +1057,14 @@ export function VehicleMasterPage() {
                 searchPlaceholder="Search mappings…"
                 enableExport
                 exportFilename="vehicle-mappings.csv"
+                getSearchText={(row) => {
+                  const type = conditionLabel(row.vehicle_type) || ''
+                  const brand = makeById.get(row.brand)?.name || ''
+                  const model = modelById.get(row.model)?.name || ''
+                  const variant = variantById.get(row.variant)?.name || ''
+                  const category = categoryById.get(row.category)?.name || ''
+                  return `${type} ${brand} ${model} ${variant} ${category}`
+                }}
               />
             </Card>
           </div>

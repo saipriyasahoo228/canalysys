@@ -5,13 +5,12 @@ import { listCategoryPricing } from '../../api/categorypricing'
 import { listBrands, listModels, listVariants, listCategoryValues } from '../../api/vehiclemaster'
 import { listVehicleCategoryMappings } from '../../api/categorymapping'
 import { createPDIRequest, listPDIRequests, getPDIRequestById, assignInspector, createRazorpayOrder, verifyRazorpayPayment, confirmManualPayment, createRazorpayOrderForRemaining, verifyRazorpayRemainingPayment, confirmManualRemainingPayment } from '../../api/inspection'
-import { listCustomers, createCustomer, deleteCustomer, getCustomerBookings } from '../../api/customer'
+import { listCustomers, deleteCustomer, getCustomerBookings } from '../../api/customer'
 import { getAvailabilities, getInspectorAvailabilityByDate } from '../../api/inspectoravailibility'
 import { listInspectors } from '../../api/inspectoronboard'
 import { getPDIReportByRequestId, downloadPDIReportPDF } from '../../api/inspectionreport'
 import { getPDIAvailableSlots } from '../../api/timeSlotConfigurations'
 import { listCities } from '../../api/city'
-import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, Select, cx } from '../ui/Ui'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { CustomDatePicker } from '../ui/CustomDatePicker'
@@ -35,6 +34,30 @@ const PAYMENT_PROVIDER_OPTIONS = [
   { value: 'payu', label: 'PayU' },
 ]
 
+function getPagedItems(response) {
+  if (Array.isArray(response)) return response
+  if (Array.isArray(response?.items)) return response.items
+  if (Array.isArray(response?.results)) return response.results
+  if (Array.isArray(response?.data)) return response.data
+  return []
+}
+
+function normalizeVehicleTypeForMapping(vehicleType) {
+  const value = String(vehicleType || '').trim()
+  if (!value) return ''
+  if (value === 'pre_owned') return 'owned'
+  return value
+}
+
+function getMappingVehicleType(item) {
+  return normalizeVehicleTypeForMapping(item?.vehicle_type || item?.vehicle_type_label)
+}
+
+function doesMappingVehicleTypeMatch(item, selectedVehicleType) {
+  const selectedType = normalizeVehicleTypeForMapping(selectedVehicleType)
+  if (!selectedType) return false
+  return getMappingVehicleType(item) === selectedType
+}
 
 function formatDateDisplay(dateIso) {
   const d = String(dateIso || '').trim()
@@ -134,29 +157,25 @@ function isSlotInPast(slot, selectedDate) {
 export function NewInspectionPage() {
   console.log('🔍 Debug - NewInspectionPage component rendering')
   
-  const { actor } = useRbac()
-
   // State for time slots
   const [timeSlots, setTimeSlots] = useState([])
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false)
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('')
   
   // State for availability data
-  const [availabilityData, setAvailabilityData] = useState([])
+  const [, setAvailabilityData] = useState([])
   const [loadingAvailability, setLoadingAvailability] = useState(false)
   const [availabilityFetched, setAvailabilityFetched] = useState(false)
   
   // State for inspector availability by date (busy/free status)
-  const [inspectorAvailabilityByDate, setInspectorAvailabilityByDate] = useState({})
-  const [loadingInspectorAvailability, setLoadingInspectorAvailability] = useState(false)
+  const [, setInspectorAvailabilityByDate] = useState({})
+  const [, setLoadingInspectorAvailability] = useState(false)
+  const [selectedFilterDate, setSelectedFilterDate] = useState('')
   
   // State for date filtering
-  const [selectedFilterDate, setSelectedFilterDate] = useState('')
-  const [showDateFilter, setShowDateFilter] = useState(false)
-  
   // State for Razorpay payment
   const [paymentLoading, setPaymentLoading] = useState(false)
-  const [showRazorpay, setShowRazorpay] = useState(false)
+  const [, setShowRazorpay] = useState(false)
   const [showManualPaymentModal, setShowManualPaymentModal] = useState(false)
   const [manualPaymentMode, setManualPaymentMode] = useState('Cash')
   const [manualReferenceNo, setManualReferenceNo] = useState('')
@@ -192,12 +211,12 @@ export function NewInspectionPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [inspectorsList, setInspectorsList] = useState([])
-  const [loadingInspectorsList, setLoadingInspectorsList] = useState(false)
+  const [, setLoadingInspectorsList] = useState(false)
 
   // State for cities and districts from API
   const [cities, setCities] = useState([])
   const [districts, setDistricts] = useState([])
-  const [loadingCities, setLoadingCities] = useState(false)
+  const [, setLoadingCities] = useState(false)
 
   // Fetch cities and districts on mount
   useEffect(() => {
@@ -415,7 +434,7 @@ export function NewInspectionPage() {
     }
   }
 
-  const { data: customers, loading: loadingCustomers, error: customersError, refresh: refreshCustomers } = usePolling(
+  const { data: customers, error: customersError, refresh: refreshCustomers } = usePolling(
     'customers',
     () => listCustomers(),
     { intervalMs: 15_000 }
@@ -483,7 +502,7 @@ export function NewInspectionPage() {
       console.log('🏁 fetchTimeSlots completed')
     }
   }
-  const generateDateSlots = (availabilityData = [], inspectorAvailabilityByDate = {}) => {
+  const _generateDateSlots = (availabilityData = [], inspectorAvailabilityByDate = {}) => {
     console.log('🗓️ generateDateSlots called with:', { availabilityData, inspectorAvailabilityByDate, selectedFilterDate })
     const slots = []
     const today = new Date()
@@ -592,7 +611,7 @@ export function NewInspectionPage() {
   }
 
   // Function to handle date filtering
-  const handleDateFilter = async (date) => {
+  const _handleDateFilter = async (date) => {
     console.log('🔄 handleDateFilter called with date:', date)
     
     try {
@@ -1264,8 +1283,6 @@ export function NewInspectionPage() {
     }
   }
 
-  const dateSlots = useMemo(() => generateDateSlots(availabilityData, inspectorAvailabilityByDate, selectedFilterDate), [availabilityData, inspectorAvailabilityByDate, selectedFilterDate])
-
   // Hardcoded locations since API endpoint doesn't exist yet
   const hardcodedLocations = [
     { id: 'LOC-BLR-01', name: 'Bangalore' },
@@ -1274,7 +1291,6 @@ export function NewInspectionPage() {
   ]
   
   const locations = hardcodedLocations
-  const loadingLocations = false
   const locationsError = null
 
   const [brands, setBrands] = useState([])
@@ -1283,7 +1299,7 @@ export function NewInspectionPage() {
   const [categoryValues, setCategoryValues] = useState([])
   const [vehicleCategoryMappings, setVehicleCategoryMappings] = useState([])
   const [loadingVehicleCategoryMappings, setLoadingVehicleCategoryMappings] = useState(false)
-  const [loadingVehicles, setLoadingVehicles] = useState(false)
+  const [, setLoadingVehicles] = useState(false)
 
   // Fetch initial data on component mount
   useEffect(() => {
@@ -1317,7 +1333,7 @@ export function NewInspectionPage() {
   const variantById = useMemo(() => new Map(variants.map((x) => [x.id, x])), [variants])
   const categoryById = useMemo(() => new Map(categoryValues.map((x) => [x.id, x])), [categoryValues])
 
-  const categoryOptions = useMemo(() => {
+  const _categoryOptions = useMemo(() => {
     return categoryValues.map((category) => ({
       value: category.id,
       label: `${category.name} (${category.category_type_detail?.name || '—'})`
@@ -1375,8 +1391,7 @@ export function NewInspectionPage() {
         if (!mounted) return
         setBookingError(e)
       } finally {
-        if (!mounted) return
-        setBookingLoading(false)
+        if (mounted) setBookingLoading(false)
       }
     })()
 
@@ -1440,12 +1455,13 @@ export function NewInspectionPage() {
 
         while (true) {
           const response = await listVehicleCategoryMappings(page)
-          const items = Array.isArray(response?.items) ? response.items : []
+          const items = getPagedItems(response)
 
           if (typeof response?.count === 'number') totalCount = response.count
           allItems.push(...items)
 
           if (items.length === 0) break
+          if (Array.isArray(response)) break
           if (typeof totalCount === 'number' && allItems.length >= totalCount) break
 
           page += 1
@@ -1459,8 +1475,7 @@ export function NewInspectionPage() {
         if (!mounted) return
         setVehicleCategoryMappings([])
       } finally {
-        if (!mounted) return
-        setLoadingVehicleCategoryMappings(false)
+        if (mounted) setLoadingVehicleCategoryMappings(false)
       }
     })()
 
@@ -1469,17 +1484,43 @@ export function NewInspectionPage() {
     }
   }, [raiseOpen, wizardForm?.modelId])
 
-  const mappedCategoryOptions = useMemo(() => {
+  const mappedRowsForSelectedModel = useMemo(() => {
     const modelId = String(wizardForm?.modelId || '').trim()
     if (!modelId) return []
 
     const makeId = String(wizardForm?.makeId || '').trim()
 
-    const filtered = (vehicleCategoryMappings || []).filter((item) => {
+    return (vehicleCategoryMappings || []).filter((item) => {
+      if (!doesMappingVehicleTypeMatch(item, wizardForm?.vehicleType)) return false
       if (String(item?.model) !== modelId) return false
       if (makeId && String(item?.brand) !== makeId) return false
       return true
     })
+  }, [wizardForm?.modelId, wizardForm?.makeId, wizardForm?.vehicleType, vehicleCategoryMappings])
+
+  const mappedVariantOptions = useMemo(() => {
+    const unique = new Map()
+    for (const item of mappedRowsForSelectedModel) {
+      const variantId = item?.variant
+      if (!variantId || unique.has(String(variantId))) continue
+
+      const fromMaster = variantById.get(variantId)
+      const fuelType = item?.variant_detail?.fuel_type_display || item?.variant_detail?.fuel_type || fromMaster?.fuel_type_display || fromMaster?.fuel_type
+      const name = item?.variant_name || fromMaster?.name || 'Variant'
+      const label = fuelType ? `${name} (${fuelType})` : name
+      unique.set(String(variantId), { value: variantId, label })
+    }
+
+    return Array.from(unique.values())
+      .filter((x) => x.value)
+      .sort((a, b) => String(a.label).localeCompare(String(b.label)))
+  }, [mappedRowsForSelectedModel, variantById])
+
+  const mappedCategoryOptions = useMemo(() => {
+    const variantId = String(wizardForm?.variantId || '').trim()
+    if (!variantId) return []
+
+    const filtered = mappedRowsForSelectedModel.filter((item) => String(item?.variant) === variantId)
 
     const unique = new Map()
     for (const item of filtered) {
@@ -1502,13 +1543,13 @@ export function NewInspectionPage() {
     return Array.from(unique.values())
       .filter((x) => x.value)
       .sort((a, b) => String(a.label).localeCompare(String(b.label)))
-  }, [wizardForm?.modelId, wizardForm?.makeId, vehicleCategoryMappings, categoryById])
+  }, [wizardForm?.variantId, mappedRowsForSelectedModel, categoryById])
 
   const selectedVehicleCategoryMapping = useMemo(() => {
     const selectedMappingId = String(wizardForm?.category || '').trim()
     if (!selectedMappingId) return null
-    return (vehicleCategoryMappings || []).find((x) => String(x?.id) === selectedMappingId) || null
-  }, [vehicleCategoryMappings, wizardForm?.category])
+    return mappedRowsForSelectedModel.find((x) => String(x?.id) === selectedMappingId) || null
+  }, [mappedRowsForSelectedModel, wizardForm?.category])
 
   const selectedCategoryId = selectedVehicleCategoryMapping?.category ? String(selectedVehicleCategoryMapping.category) : ''
 
@@ -1522,6 +1563,18 @@ export function NewInspectionPage() {
     setDialog((s) => (s && s.type === 'raise' ? { ...s, form: { ...s.form, category: '' } } : s))
   }, [raiseOpen, wizardForm?.category, mappedCategoryOptions])
 
+  useEffect(() => {
+    if (!raiseOpen) return
+    const selectedVariant = String(wizardForm?.variantId || '').trim()
+    if (!selectedVariant) return
+    if (loadingVehicleCategoryMappings) return
+
+    const allowed = mappedVariantOptions.some((o) => String(o.value) === selectedVariant)
+    if (allowed) return
+
+    setDialog((s) => (s && s.type === 'raise' ? { ...s, form: { ...s.form, variantId: '', category: '' } } : s))
+  }, [raiseOpen, wizardForm?.variantId, mappedVariantOptions, loadingVehicleCategoryMappings])
+
   // Fetch time slots when dialog opens with default date
   useEffect(() => {
     console.log('🔄 useEffect triggered - raiseOpen:', raiseOpen, 'slotDate:', wizardForm.slotDate)
@@ -1530,7 +1583,7 @@ export function NewInspectionPage() {
       console.log('🚀 Calling fetchTimeSlots for:', wizardForm.slotDate)
       fetchTimeSlots(wizardForm.slotDate)
     }
-  }, [raiseOpen])
+  }, [raiseOpen, wizardForm.slotDate])
 
   // Also fetch time slots when component first loads with default date
   useEffect(() => {
@@ -1539,7 +1592,7 @@ export function NewInspectionPage() {
       console.log('🎯 Initial load - Calling fetchTimeSlots for:', wizardForm.slotDate)
       fetchTimeSlots(wizardForm.slotDate)
     }
-  }, []) // Empty dependency array - only run once on mount
+  }, [dialog?.form?.slotDate, wizardForm.slotDate])
 
   // Fetch models when brand is selected
   useEffect(() => {
@@ -1597,7 +1650,7 @@ export function NewInspectionPage() {
   }, [raiseOpen, wizardForm?.locationId])
 
   const [categoryPricing, setCategoryPricing] = useState([])
-  const [loadingPricing, setLoadingPricing] = useState(false)
+  const [, setLoadingPricing] = useState(false)
 
   useEffect(() => {
     const fetchPricing = async () => {
@@ -1683,7 +1736,7 @@ export function NewInspectionPage() {
     ]
   }, [dialog])
 
-  const locationNameById = useMemo(() => {
+  const _locationNameById = useMemo(() => {
     const m = new Map()
     for (const l of locations || []) m.set(l.id, l.name)
     return m
@@ -1712,7 +1765,7 @@ export function NewInspectionPage() {
       { key: 'assignedInspectorName', label: 'Assigned Inspector', value: b?.assigned_inspector_name || '—' },
       { key: 'assignedInspectorMobile', label: 'Assigned Inspector Mobile', value: b?.assigned_inspector_mobile_number || '—' },
     ]
-  }, [booking, bookingOpen, dialog?.customer, locationNameById])
+  }, [booking, bookingOpen, dialog?.customer])
 
   // Format date function for dd/mm/yyyy
   const formatDateDMY = (dateString) => {
@@ -1768,11 +1821,11 @@ export function NewInspectionPage() {
     return []
   }, [detailData, detailType])
 
-  const locationOptions = useMemo(() => {
+  const _locationOptions = useMemo(() => {
     return (locations || []).map((l) => ({ value: l.id, label: l.name }))
   }, [locations])
 
-  const customerRows = Array.isArray(customers) ? customers : (customers?.results || [])
+  const _customerRows = Array.isArray(customers) ? customers : (customers?.results || [])
 
   // Process PDI requests data
   const pdiRequests = useMemo(() => {
@@ -1969,7 +2022,7 @@ export function NewInspectionPage() {
     []
   )
 
-  const columns = useMemo(
+  const _columns = useMemo(
     () => [
       {
         key: 'identity',
@@ -2533,14 +2586,12 @@ export function NewInspectionPage() {
                     const c = actionsMenu.customer
                     setActionsMenu(null)
                     if (!c?.id) return
-                    // eslint-disable-next-line no-alert
                     const ok = confirm(`Delete customer ${c.fullName || c.id}? This will also remove their bookings.`)
                     if (!ok) return
                 try {
                   await deleteCustomer(c.id)
                   await refreshCustomers()
                 } catch (e) {
-                  // eslint-disable-next-line no-alert
                   alert(e.message || 'Delete failed')
                 }
               }}
@@ -2641,10 +2692,13 @@ export function NewInspectionPage() {
                               value={wizardForm.vehicleType}
                               onChange={(e) =>
                                 setDialog((s) =>
-                                  s && s.type === 'raise' ? { ...s, form: { ...s.form, vehicleType: e.target.value } } : s
+                                  s && s.type === 'raise'
+                                    ? { ...s, form: { ...s.form, vehicleType: e.target.value, variantId: '', category: '' } }
+                                    : s
                                 )
                               }
                             >
+                              <option value="">Select vehicle type</option>
                               {VEHICLE_TYPE_OPTIONS.map((o) => (
                                 <option key={o.value} value={o.value}>
                                   {o.label}
@@ -2664,10 +2718,9 @@ export function NewInspectionPage() {
                                 setDialog((s) => {
                                   if (!s || s.type !== 'raise') return s
                                   if (!nextMakeId) return { ...s, form: { ...s.form, makeId: '', modelId: '', variantId: '', category: '' } }
-                                  const nextModelId = models?.[0]?.id || ''
                                   return {
                                     ...s,
-                                    form: { ...s.form, makeId: nextMakeId, modelId: nextModelId, variantId: '', category: '' },
+                                    form: { ...s.form, makeId: nextMakeId, modelId: '', variantId: '', category: '' },
                                   }
                                 })
                               }}
@@ -2692,10 +2745,9 @@ export function NewInspectionPage() {
                                 setDialog((s) => {
                                   if (!s || s.type !== 'raise') return s
                                   if (!nextModelId) return { ...s, form: { ...s.form, modelId: '', variantId: '', category: '' } }
-                                  const nextVariantId = variants?.[0]?.id || ''
                                   return {
                                     ...s,
-                                    form: { ...s.form, modelId: nextModelId, variantId: nextVariantId, category: '' },
+                                    form: { ...s.form, modelId: nextModelId, variantId: '', category: '' },
                                   }
                                 })
                               }}
@@ -2722,19 +2774,17 @@ export function NewInspectionPage() {
                                 const nextVariantId = e.target.value
                                 setDialog((s) => {
                                   if (!s || s.type !== 'raise') return s
-                                  return { ...s, form: { ...s.form, variantId: nextVariantId } }
+                                  return { ...s, form: { ...s.form, variantId: nextVariantId, category: '' } }
                                 })
                               }}
+                              disabled={!wizardForm.vehicleType || !wizardForm.modelId || loadingVehicleCategoryMappings}
                             >
                               <option value="">Select</option>
-                              {(() => {
-                                const list = variants
-                                return list.map((v) => (
-                                  <option key={v.id} value={v.id}>
-                                    {v.name} ({v.fuel_type_display || v.fuel_type})
-                                  </option>
-                                ))
-                              })()}
+                              {mappedVariantOptions.map((v) => (
+                                <option key={v.value} value={v.value}>
+                                  {v.label}
+                                </option>
+                              ))}
                             </Select>
                           </div>
                         </div>
@@ -2749,7 +2799,7 @@ export function NewInspectionPage() {
                                   s && s.type === 'raise' ? { ...s, form: { ...s.form, category: e.target.value } } : s
                                 )
                               }
-                              disabled={!wizardForm.modelId || loadingVehicleCategoryMappings}
+                              disabled={!wizardForm.vehicleType || !wizardForm.variantId || loadingVehicleCategoryMappings}
                             >
                               <option value="">Select category</option>
                               {mappedCategoryOptions.map((o) => (

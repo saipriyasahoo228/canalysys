@@ -48,7 +48,22 @@ export function LoginPage() {
     setSubmitting(true)
 
     try {
-      await apiLogin(m1, p1)
+      const response = await apiLogin(m1, p1)
+      
+      // Check if user is admin
+      if (!response.user?.is_admin) {
+        setError('Access denied. Admin privileges required.')
+        setSubmitting(false)
+        return
+      }
+      
+      // Store tokens and user data if needed
+      if (response.Token) {
+        localStorage.setItem('access_token', response.Token.access)
+        localStorage.setItem('refresh_token', response.Token.refresh)
+        localStorage.setItem('user', JSON.stringify(response.user))
+      }
+      
       login()
       navigate('/dashboard', { replace: true })
     } catch (err) {

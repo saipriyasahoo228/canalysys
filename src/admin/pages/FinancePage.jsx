@@ -6,7 +6,7 @@ import { Badge, Button, Card, Input, PaginatedTable, Select } from '../ui/Ui'
 import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
-import { formatDateTime, formatInr } from '../utils/format'
+import { formatDate, formatDateTime, formatInr } from '../utils/format'
 import { listCommissionRules, createGlobalCommissionRule, createInspectorCommissionRule, getCommissionReport, getMyCommissionReport } from '../../api/commission'
 import { listInspectors } from '../../api/inspectoronboard'
 
@@ -128,13 +128,13 @@ export function FinancePage() {
       {
         key: 'effective_from',
         header: 'Effective From',
-        exportValue: (r) => r.effective_from,
+        exportValue: (r) => formatDate(r.effective_from),
         cell: (r) => <div className="text-sm text-slate-600">{formatDateTime(r.effective_from)}</div>,
       },
       {
         key: 'effective_to',
         header: 'Effective To',
-        exportValue: (r) => r.effective_to,
+        exportValue: (r) => (r.effective_to ? formatDate(r.effective_to) : 'Ongoing'),
         cell: (r) => <div className="text-sm text-slate-600">{r.effective_to ? formatDateTime(r.effective_to) : 'Ongoing'}</div>,
       },
       {
@@ -527,7 +527,7 @@ export function FinancePage() {
           },
           {
             name: 'fixed_amount_paise',
-            label: 'Fixed Amount (INR) *',
+            label: 'Fixed Amount (Rs) *',
             type: 'number',
             defaultValue: '',
             placeholder: 'e.g. 500',
@@ -627,7 +627,7 @@ export function FinancePage() {
           },
           {
             name: 'fixed_amount_paise',
-            label: 'Fixed Amount (INR) *',
+            label: 'Fixed Amount (Rs) *',
             type: 'number',
             defaultValue: '',
             placeholder: 'e.g. 500',

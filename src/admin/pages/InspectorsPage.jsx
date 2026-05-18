@@ -479,7 +479,7 @@ export function InspectorsPage() {
       {
         key: 'dates',
         header: 'Leave dates',
-        exportValue: (r) => Array.isArray(r.dates) ? r.dates.join(', ') : '',
+        exportValue: (r) => Array.isArray(r.dates) ? r.dates.map((date) => formatDate(date)).join(', ') : '',
         cell: (r) => (
           <div className="text-sm text-slate-700">
             {Array.isArray(r.dates) ? r.dates.map(date => formatDate(date)).join(', ') : '—'}
@@ -495,7 +495,7 @@ export function InspectorsPage() {
       {
         key: 'requestedAt',
         header: 'Requested at',
-        exportValue: (r) => r.created_at,
+        exportValue: (r) => (r.created_at ? formatDate(r.created_at) : ''),
         cell: (r) => <div className="text-xs text-slate-600">{formatDateTime(r.created_at)}</div>,
       },
       {
@@ -670,7 +670,7 @@ export function InspectorsPage() {
       {
         key: 'submitted_date',
         header: 'Submitted',
-        exportValue: (r) => r.isSummary ? '' : r.submitted_date,
+        exportValue: (r) => r.isSummary ? '' : (r.submitted_date ? formatDate(r.submitted_date) : ''),
         cell: (r) => {
           if (r.isSummary) {
             return <div className="text-sm text-slate-500">—</div>

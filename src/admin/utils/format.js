@@ -10,7 +10,7 @@ export function formatMinutes(m) {
 export function formatInr(amount) {
   const n = Number(amount || 0)
   if (!Number.isFinite(n)) return '-'
-  return `₹${n.toLocaleString('en-IN')}`
+  return `Rs ${n.toLocaleString('en-IN')}`
 }
 
 export function formatDate(iso) {

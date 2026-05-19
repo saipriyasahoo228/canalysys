@@ -60,6 +60,7 @@ export function FinancePage() {
   // Dialog states
   const [dialog, setDialog] = useState(null)
   const [snack, setSnack] = useState({ open: false, tone: 'info', title: '', message: '' })
+  const [activeSection, setActiveSection] = useState('global')
   
   const viewOpen = dialog?.type === 'view'
   const globalRuleOpen = dialog?.type === 'globalRule'
@@ -72,12 +73,26 @@ export function FinancePage() {
   
   const responseToMessage = (res) => {
     if (!res) return ''
+    // strings
     if (typeof res === 'string') return res
+
+    // axios-style error wrapper: try to unwrap nested response/data
+    if (res?.response && res.response.data) return responseToMessage(res.response.data)
+    if (res?.data) return responseToMessage(res.data)
+
+    // common fields in API responses
+    if (typeof res?.detail === 'string') return res.detail
     if (typeof res?.error === 'string') return res.error
     if (typeof res?.msg === 'string') return res.msg
     if (typeof res?.message === 'string') return res.message
-    if (typeof res?.detail === 'string') return res.detail
-    return ''
+
+    // fallback: stringify small objects
+    try {
+      const j = JSON.stringify(res)
+      return j === '{}' ? '' : j
+    } catch (e) {
+      return ''
+    }
   }
 
   // Fetch commission report
@@ -326,7 +341,7 @@ export function FinancePage() {
   }, [dialog])
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Header Section */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -336,6 +351,8 @@ export function FinancePage() {
           </div>
           
         </div>
+
+        
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -391,6 +408,29 @@ export function FinancePage() {
           </Card>
         </div>
 
+        <div className="mt-4">
+          <div className="inline-flex items-center gap-2">
+            <button
+              onClick={() => setActiveSection('global')}
+              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium transition ${activeSection === 'global' ? 'bg-cyan-600 text-white' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
+            >
+              Global Rules
+            </button>
+            <button
+              onClick={() => setActiveSection('inspector')}
+              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium transition ${activeSection === 'inspector' ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
+            >
+              Inspector Rules
+            </button>
+            <button
+              onClick={() => setActiveSection('report')}
+              className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium transition ${activeSection === 'report' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
+            >
+              Commission Report
+            </button>
+          </div>
+        </div>
+
       {rulesError ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 shadow-sm">
           <div className="flex items-center">
@@ -410,7 +450,8 @@ export function FinancePage() {
       ) : null}
 
       <div className="space-y-6">
-        {/* Global Commission Rules Section */}
+        {activeSection === 'global' && (
+        // Global Commission Rules Section
         <Card className="border-0 shadow-xl bg-white">
           <div className="border-b border-slate-100 px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -473,8 +514,10 @@ export function FinancePage() {
             </div>
           </div>
         </Card>
+        )}
 
-        {/* Inspector Commission Rules Section */}
+        {activeSection === 'inspector' && (
+        // Inspector Commission Rules Section
         <Card className="border-0 shadow-xl bg-white">
           <div className="border-b border-slate-100 px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -537,8 +580,10 @@ export function FinancePage() {
             </div>
           </div>
         </Card>
+        )}
 
-        {/* Commission Report Section */}
+        {activeSection === 'report' && (
+        // Commission Report Section
         <Card className="border-0 shadow-xl bg-white">
           <div className="border-b border-slate-100 px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -639,6 +684,7 @@ export function FinancePage() {
             </div>
           </div>
         </Card>
+        )}
       </div>
 
       <ViewDetailsDialog open={viewOpen} title="View commission rule" onClose={() => setDialog(null)} items={viewItems} accent="cyan" />

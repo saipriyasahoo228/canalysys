@@ -50,8 +50,11 @@ export function CityConfigurationPage() {
   const [activeTab, setActiveTab] = useState('district')
   const [loading, setLoading] = useState(false)
 
-  // Inline form states
+  // Modal states for adding/editing
+  const [addDistrictModal, setAddDistrictModal] = useState({ open: false })
   const [addDistrictForm, setAddDistrictForm] = useState({ name: '', description: '' })
+  
+  const [addCityModal, setAddCityModal] = useState({ open: false })
   const [addCityForm, setAddCityForm] = useState({ districtId: '', cities: [{ name: '', description: '' }] })
 
   // Modal states for editing
@@ -107,8 +110,13 @@ export function CityConfigurationPage() {
     }
   }
 
-  // ---- Inline Add District ----
-  const saveDistrictInline = async (e) => {
+  // ---- Popup Add District ----
+  const openAddDistrictModal = () => {
+    setAddDistrictForm({ name: '', description: '' })
+    setAddDistrictModal({ open: true })
+  }
+
+  const saveDistrictModal = async (e) => {
     e.preventDefault()
     if (!addDistrictForm.name.trim()) {
       showSnack({ tone: 'danger', title: 'Validation Error', message: 'District name is required.' })
@@ -120,6 +128,7 @@ export function CityConfigurationPage() {
         description: (addDistrictForm.description || '').trim().toUpperCase(),
       }
       await createDistrict(payload)
+      setAddDistrictModal({ open: false })
       setAddDistrictForm({ name: '', description: '' })
       showSnack({ tone: 'success', title: 'Created', message: 'District created successfully.' })
       await fetchDistricts()
@@ -128,7 +137,12 @@ export function CityConfigurationPage() {
     }
   }
 
-  // ---- Inline Add Cities ----
+  // ---- Popup Add Cities ----
+  const openAddCityModal = () => {
+    setAddCityForm({ districtId: '', cities: [{ name: '', description: '' }] })
+    setAddCityModal({ open: true })
+  }
+
   const addCityField = () => {
     setAddCityForm((p) => ({ ...p, cities: [...p.cities, { name: '', description: '' }] }))
   }
@@ -147,7 +161,7 @@ export function CityConfigurationPage() {
     setAddCityForm((p) => ({ ...p, cities: p.cities.map((c, i) => (i === index ? { ...c, description: value } : c)) }))
   }
 
-  const saveCityInline = async (e) => {
+  const saveCitiesModal = async (e) => {
     e.preventDefault()
     if (!addCityForm.districtId) {
       showSnack({ tone: 'danger', title: 'Validation Error', message: 'Please select a district.' })
@@ -170,6 +184,7 @@ export function CityConfigurationPage() {
         })),
       }
       await createCities(payload)
+      setAddCityModal({ open: false })
       setAddCityForm({ districtId: '', cities: [{ name: '', description: '' }] })
       showSnack({
         tone: 'success',
@@ -182,13 +197,13 @@ export function CityConfigurationPage() {
     }
   }
 
-  // ---- District helpers (list + modal edit) ----
+  // ---- Edit District ----
   const openEditDistrict = (district) => {
     setDistrictModalForm({ name: district.name, description: district.description || '' })
     setDistrictModal({ open: true, editing: district })
   }
 
-  const saveDistrictModal = async (e) => {
+  const updateDistrictModal = async (e) => {
     e.preventDefault()
     if (!districtModalForm.name.trim()) {
       showSnack({ tone: 'danger', title: 'Validation Error', message: 'District name is required.' })
@@ -220,13 +235,13 @@ export function CityConfigurationPage() {
     }
   }
 
-  // ---- City helpers (list + modal edit) ----
+  // ---- Edit City ----
   const openEditCity = (city) => {
     setCityModalForm({ name: city.cityName, description: city.description || '' })
     setCityModal({ open: true, editing: city })
   }
 
-  const saveCityModal = async (e) => {
+  const updateCityModal = async (e) => {
     e.preventDefault()
     if (!cityModalForm.name.trim()) {
       showSnack({ tone: 'danger', title: 'Validation Error', message: 'City name is required.' })
@@ -289,50 +304,23 @@ export function CityConfigurationPage() {
         {/* District Tab */}
         {activeTab === 'district' && (
           <div className="space-y-3">
-            {/* Add District Form */}
-            <Card
-              title="Add District"
-              subtitle="Create a new district"
-              accent="slate"
-              className="mb-3"
-              right={
-                <Button onClick={saveDistrictInline} disabled={loading}>
-                  <ListPlus className="h-4 w-4" />
-                  Add
-                </Button>
-              }
-            >
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">District Name *</label>
-                  <Input
-                    value={addDistrictForm.name}
-                    onChange={(e) => setAddDistrictForm((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="Enter district name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                  <Input
-                    value={addDistrictForm.description}
-                    onChange={(e) => setAddDistrictForm((p) => ({ ...p, description: e.target.value }))}
-                    placeholder="Enter description"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            {/* Districts Table */}
+            {/* Districts Table with Add Button */}
             <Card
               title="Districts"
               subtitle="Create and manage"
               accent="slate"
+              right={
+                <Button onClick={openAddDistrictModal} disabled={loading}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add District
+                </Button>
+              }
             >
               {districts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <MapPin className="h-12 w-12 text-slate-300 mb-3" />
                   <h3 className="text-lg font-medium text-slate-900">No districts found</h3>
-                  <p className="text-sm text-slate-600 mt-1">Add a district to start managing cities.</p>
+                  <p className="text-sm text-slate-600 mt-1">Click "Add District" to start managing cities.</p>
                 </div>
               ) : (
                 <PaginatedTable
@@ -340,6 +328,7 @@ export function CityConfigurationPage() {
                     {
                       key: 'name',
                       header: 'Name',
+                      exportValue: (r) => r.name,
                       cell: (r) => (
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
@@ -353,12 +342,19 @@ export function CityConfigurationPage() {
                       ),
                     },
                     {
+                      key: 'description',
+                      header: 'Description',
+                      exportValue: (r) => r.description || '—',
+                      cell: (r) => <div className="text-sm text-slate-700">{r.description}</div>,
+                    },
+                    {
                       key: 'actions',
                       header: (
                         <div className="flex w-full justify-end">
                           <div className="w-[92px] text-center">Actions</div>
                         </div>
                       ),
+
                       cell: (r) => (
                         <div className="flex w-full justify-end">
                           <div className="flex w-[92px] items-center justify-center gap-1">
@@ -410,93 +406,29 @@ export function CityConfigurationPage() {
         {/* Cities Tab */}
         {activeTab === 'city' && (
           <div className="space-y-3">
-            {/* Add Cities Form */}
-            <Card
-              title="Add Cities"
-              subtitle="Add multiple cities to a district"
-              accent="slate"
-              className="mb-3"
-              right={
-                <Button onClick={saveCityInline}>
-                  <ListPlus className="h-4 w-4" />
-                  Add
-                </Button>
-              }
-            >
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">District Name *</label>
-                  <select
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none shadow-sm focus:border-amber-500/80 focus:ring-2 focus:ring-amber-200/70"
-                    value={addCityForm.districtId}
-                    onChange={(e) => setAddCityForm((p) => ({ ...p, districtId: e.target.value }))}
-                  >
-                    <option value="">Select a district</option>
-                    {districts.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                  {districts.length === 0 && (
-                    <p className="text-xs text-slate-500 mt-1">No districts available. Please add a district first.</p>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Cities *</label>
-                  {addCityForm.cities.map((city, index) => (
-                    <div key={index} className="space-y-2 rounded-lg border border-slate-200 p-3">
-                      <div className="flex gap-2">
-                        <Input
-                          value={city.name}
-                          onChange={(e) => updateCityName(index, e.target.value)}
-                          placeholder={`City ${index + 1} Name`}
-                          className="flex-1"
-                        />
-                        {addCityForm.cities.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="danger"
-                            size="icon"
-                            onClick={() => removeCityField(index)}
-                            title="Remove"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                      <Input
-                        value={city.description}
-                        onChange={(e) => updateCityDescription(index, e.target.value)}
-                        placeholder={`City ${index + 1} Description`}
-                      />
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="default"
-                    size="sm"
-                    onClick={addCityField}
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add More Cities
-                  </Button>
-                </div>
-              </div>
-            </Card>
-
-            {/* Cities Table */}
+            {/* Cities Table with Add Button */}
             <Card
               title="Cities"
               subtitle="Create and manage"
               accent="slate"
+              right={
+                <Button onClick={openAddCityModal} disabled={districts.length === 0}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Cities
+                </Button>
+              }
             >
-              {allCities.length === 0 ? (
+              {districts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Building2 className="h-12 w-12 text-slate-300 mb-3" />
+                  <h3 className="text-lg font-medium text-slate-900">No districts available</h3>
+                  <p className="text-sm text-slate-600 mt-1">Please add a district first before adding cities.</p>
+                </div>
+              ) : allCities.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <MapPin className="h-12 w-12 text-slate-300 mb-3" />
                   <h3 className="text-lg font-medium text-slate-900">No cities found</h3>
-                  <p className="text-sm text-slate-600 mt-1">Add cities to a district.</p>
+                  <p className="text-sm text-slate-600 mt-1">Click "Add Cities" to add cities to districts.</p>
                 </div>
               ) : (
                 <PaginatedTable
@@ -504,6 +436,7 @@ export function CityConfigurationPage() {
                     {
                       key: 'cityName',
                       header: 'City',
+                      exportValue: (r) => r.cityName,
                       cell: (r) => (
                         <div className="min-w-0">
                           <div className="truncate text-sm font-semibold text-slate-900">{r.cityName}</div>
@@ -516,7 +449,14 @@ export function CityConfigurationPage() {
                     {
                       key: 'districtName',
                       header: 'District',
+                      exportValue: (r) => r.districtName,
                       cell: (r) => <div className="text-sm text-slate-700">{r.districtName}</div>,
+                    },
+                    {
+                      key: 'description',
+                      header: 'Description',
+                      exportValue: (r) => r.description || '—',
+                      cell: (r) => <div className="text-sm text-slate-700">{r.description}</div>,
                     },
                     {
                       key: 'actions',
@@ -566,7 +506,157 @@ export function CityConfigurationPage() {
         )}
       </Card>
 
-      {/* District Edit Modal */}
+      {/* Add District Modal */}
+      {addDistrictModal.open && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+              <h2 className="text-lg font-bold text-slate-900">Add New District</h2>
+              <button
+                onClick={() => setAddDistrictModal({ open: false })}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </div>
+            <form onSubmit={saveDistrictModal} className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">District Name *</label>
+                <Input
+                  value={addDistrictForm.name}
+                  onChange={(e) => setAddDistrictForm((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Enter district name"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                <Input
+                  value={addDistrictForm.description}
+                  onChange={(e) => setAddDistrictForm((p) => ({ ...p, description: e.target.value }))}
+                  placeholder="Enter description (optional)"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button type="submit" variant="primary" className="flex-1">
+                  Create District
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  className="flex-1"
+                  onClick={() => setAddDistrictModal({ open: false })}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Cities Modal */}
+      {addCityModal.open && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl my-8">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+              <h2 className="text-lg font-bold text-slate-900">Add Cities to District</h2>
+              <button
+                onClick={() => setAddCityModal({ open: false })}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                <X className="h-5 w-5 text-slate-500" />
+              </button>
+            </div>
+            <form onSubmit={saveCitiesModal} className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Select District *</label>
+                <select
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none shadow-sm focus:border-amber-500/80 focus:ring-2 focus:ring-amber-200/70"
+                  value={addCityForm.districtId}
+                  onChange={(e) => setAddCityForm((p) => ({ ...p, districtId: e.target.value }))}
+                  required
+                >
+                  <option value="">Select a district</option>
+                  {districts.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Cities *</label>
+                <div className="space-y-3">
+                  {addCityForm.cities.map((city, index) => (
+                    <div key={index} className="space-y-2 rounded-lg border border-slate-200 p-3 bg-slate-50">
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">City Name</label>
+                          <Input
+                            value={city.name}
+                            onChange={(e) => updateCityName(index, e.target.value)}
+                            placeholder={`City ${index + 1} Name`}
+                          />
+                        </div>
+                        {addCityForm.cities.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="icon"
+                            onClick={() => removeCityField(index)}
+                            title="Remove"
+                            className="mt-5"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
+                        <Input
+                          value={city.description}
+                          onChange={(e) => updateCityDescription(index, e.target.value)}
+                          placeholder="Description (optional)"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <Button
+                type="button"
+                variant="default"
+                onClick={addCityField}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Another City
+              </Button>
+              
+              <div className="flex gap-3 pt-2">
+                <Button type="submit" variant="primary" className="flex-1">
+                  <ListPlus className="h-4 w-4 mr-2" />
+                  Add {addCityForm.cities.filter(c => c.name.trim()).length} City{addCityForm.cities.filter(c => c.name.trim()).length !== 1 ? 'ies' : ''}
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  className="flex-1"
+                  onClick={() => setAddCityModal({ open: false })}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit District Modal */}
       {districtModal.open && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
@@ -579,7 +669,7 @@ export function CityConfigurationPage() {
                 <X className="h-5 w-5 text-slate-500" />
               </button>
             </div>
-            <form onSubmit={saveDistrictModal} className="p-5 space-y-4">
+            <form onSubmit={updateDistrictModal} className="p-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">District Name *</label>
                 <Input
@@ -615,7 +705,7 @@ export function CityConfigurationPage() {
         </div>
       )}
 
-      {/* City Edit Modal */}
+      {/* Edit City Modal */}
       {cityModal.open && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
@@ -628,7 +718,7 @@ export function CityConfigurationPage() {
                 <X className="h-5 w-5 text-slate-500" />
               </button>
             </div>
-            <form onSubmit={saveCityModal} className="p-5 space-y-4">
+            <form onSubmit={updateCityModal} className="p-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">City Name *</label>
                 <Input
@@ -686,7 +776,9 @@ export function CityConfigurationPage() {
                   <div className="font-semibold text-slate-900">{viewDistrict.name}</div>
                   {viewDistrict.description ? (
                     <div className="text-sm text-slate-500">{viewDistrict.description}</div>
-                  ) : null}
+                  ) : (
+                    <div className="text-sm text-slate-400">No description provided</div>
+                  )}
                 </div>
               </div>
               <div className="pt-2">

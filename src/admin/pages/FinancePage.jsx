@@ -97,7 +97,7 @@ export function FinancePage() {
       {
         key: 'scope',
         header: 'Scope',
-        exportValue: (r) => r.scope,
+        exportValue: (r) => r.scope === 'global' ? 'Global' : `Inspector: ${r.inspector_name || r.inspector_id || r.inspector || ''}`,
         cell: (r) => (
           <Badge tone={r.scope === 'global' ? 'cyan' : 'violet'}>
             {r.scope === 'global' ? 'Global' : `Inspector: ${r.inspector_name}`}

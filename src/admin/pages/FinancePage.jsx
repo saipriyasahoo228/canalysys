@@ -233,12 +233,7 @@ export function FinancePage() {
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">Commission Management</h1>
             <p className="mt-1 text-sm sm:text-base text-slate-600">Configure commission rules and generate reports</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={async () => refreshRules()} variant="outline" size="sm">
-              <Settings2 className="h-4 w-4 mr-2" />
-              Refresh Rules
-            </Button>
-          </div>
+          
         </div>
 
         {/* KPI Cards */}

@@ -720,11 +720,6 @@
 
 
 
-
-
-
-
-
 import React, { useState, useEffect } from 'react';
 import { getContactData } from '../../api/contactus';
 import { CustomDatePicker } from '../ui/CustomDatePicker';
@@ -740,18 +735,6 @@ const RequestPage = () => {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  
-  // Dialog states for mobile
-  const [emailDialog, setEmailDialog] = useState({ open: false, email: '', name: '' });
-  const [phoneDialog, setPhoneDialog] = useState({ open: false, phone: '', name: '' });
-  const [snack, setSnack] = useState({ open: false, tone: 'success', title: '', message: '' });
-
-  const showSnack = (next) => {
-    setSnack({ open: true, tone: next.tone || 'info', title: next.title || '', message: next.message || '' });
-    setTimeout(() => {
-      setSnack({ open: false, tone: 'success', title: '', message: '' });
-    }, 3000);
-  };
 
   useEffect(() => {
     fetchContactData();
@@ -810,45 +793,6 @@ const RequestPage = () => {
     return `${day}/${month}/${year}`;
   };
 
-  // Handle email click - opens dialog on mobile/tablet
-  const handleEmailClick = (email, name) => {
-    if (email && email !== '—') {
-      // Check if device is mobile or tablet
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        setEmailDialog({ open: true, email, name });
-      } else {
-        window.location.href = `mailto:${email}`;
-      }
-    } else {
-      showSnack({ tone: 'warning', title: 'No Email', message: 'No email address available' });
-    }
-  };
-
-  // Handle phone click - opens dialog on mobile/tablet
-  const handlePhoneClick = (phone, name) => {
-    if (phone && phone !== '—') {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        setPhoneDialog({ open: true, phone, name });
-      } else {
-        window.location.href = `tel:${phone}`;
-      }
-    } else {
-      showSnack({ tone: 'warning', title: 'No Phone', message: 'No phone number available' });
-    }
-  };
-
-  // Copy to clipboard
-  const copyToClipboard = async (text, type) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      showSnack({ tone: 'success', title: 'Copied!', message: `${type} copied to clipboard` });
-    } catch (err) {
-      showSnack({ tone: 'danger', title: 'Error', message: `Failed to copy ${type.toLowerCase()}` });
-    }
-  };
-
   // Get current page data
   const getCurrentPageData = () => {
     if (rowsPerPage === 'all') {
@@ -895,9 +839,9 @@ const RequestPage = () => {
   const currentData = getCurrentPageData();
 
   const TableView = () => (
-    <div className="overflow-x-auto rounded-xl shadow-lg border border-sky-200">
+    <div className="overflow-x-auto rounded-xl shadow-lg border border-amber-200">
       <table className="min-w-full bg-white">
-        <thead className="bg-gradient-to-r from-blue-500 to-sky-500">
+        <thead className="bg-gradient-to-r from-amber-900 to-amber-900">
           <tr>
             <th className="px-4 py-3 sm:px-6 sm:py-4 text-left text-xs font-bold text-white uppercase tracking-wider">
               <div className="flex items-center">
@@ -970,26 +914,20 @@ const RequestPage = () => {
                 </div>
               </td>
               <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap">
-                <button
-                  onClick={() => handlePhoneClick(contact.mobile_number, contact.full_name)}
-                  className="flex items-center text-xs sm:text-sm text-gray-700 hover:text-sky-600 transition-colors group"
-                >
-                  <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-sky-400 group-hover:text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center text-xs sm:text-sm text-gray-700">
+                  <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                   <span className="truncate max-w-[100px] sm:max-w-none">{contact.mobile_number}</span>
-                </button>
+                </div>
               </td>
               <td className="px-4 py-3 sm:px-6 sm:py-4 whitespace-nowrap">
-                <button
-                  onClick={() => handleEmailClick(contact.email_address, contact.full_name)}
-                  className="flex items-center text-xs sm:text-sm text-gray-700 hover:text-sky-600 transition-colors group"
-                >
-                  <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-sky-400 group-hover:text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center text-xs sm:text-sm text-gray-700">
+                  <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                   <span className="truncate max-w-[120px] sm:max-w-[200px]">{contact.email_address}</span>
-                </button>
+                </div>
               </td>
               <td className="px-4 py-3 sm:px-6 sm:py-4 hidden md:table-cell">
                 <div className="text-xs sm:text-sm text-gray-700 max-w-xs">
@@ -1107,118 +1045,6 @@ const RequestPage = () => {
     </div>
   );
 
-  // Email Dialog Component
-  const EmailDialog = () => (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl animate-fade-in">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-sky-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Send Email</h3>
-                <p className="text-sm text-gray-500">To: {emailDialog.name}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setEmailDialog({ open: false, email: '', name: '' })}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="bg-sky-50 p-3 rounded-lg">
-              <p className="text-sm text-gray-600 mb-1">Email Address:</p>
-              <p className="text-sm font-mono text-sky-700 break-all">{emailDialog.email}</p>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  window.location.href = `mailto:${emailDialog.email}`;
-                  setEmailDialog({ open: false, email: '', name: '' });
-                }}
-                className="flex-1 bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 transition-colors"
-              >
-                Open Email App
-              </button>
-              <button
-                onClick={() => copyToClipboard(emailDialog.email, 'Email')}
-                className="flex-1 border border-sky-300 text-sky-700 px-4 py-2 rounded-lg hover:bg-sky-50 transition-colors"
-              >
-                Copy Email
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Phone Dialog Component
-  const PhoneDialog = () => (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl animate-fade-in">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Call Contact</h3>
-                <p className="text-sm text-gray-500">{phoneDialog.name}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setPhoneDialog({ open: false, phone: '', name: '' })}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="bg-green-50 p-3 rounded-lg">
-              <p className="text-sm text-gray-600 mb-1">Phone Number:</p>
-              <p className="text-lg font-mono text-green-700">{phoneDialog.phone}</p>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  window.location.href = `tel:${phoneDialog.phone}`;
-                  setPhoneDialog({ open: false, phone: '', name: '' });
-                }}
-                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Call Now
-              </button>
-              <button
-                onClick={() => copyToClipboard(phoneDialog.phone, 'Phone number')}
-                className="flex-1 border border-green-300 text-green-700 px-4 py-2 rounded-lg hover:bg-green-50 transition-colors"
-              >
-                Copy Number
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -1257,10 +1083,10 @@ const RequestPage = () => {
       </div>
 
       {/* Date Range Filter */}
-      <div className="bg-white rounded-lg shadow-md border border-sky-200 p-4 sm:p-6 mb-6">
+      <div className="bg-white rounded-lg shadow-md border border-amber-200 p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center space-x-2">
-            <svg className="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <h2 className="text-base sm:text-lg font-semibold text-gray-900">Date Range Filter</h2>
@@ -1298,7 +1124,7 @@ const RequestPage = () => {
           <div>
             <button
               onClick={clearFilters}
-              className="inline-flex items-center justify-center px-4 py-2 border border-sky-300 rounded-md text-sm font-medium text-sky-700 bg-white hover:bg-sky-50 transition-colors duration-200 w-full"
+              className="inline-flex items-center justify-center px-4 py-2 border border-amber-300 rounded-md text-sm font-medium text-sky-700 bg-white hover:bg-sky-50 transition-colors duration-200 w-full"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -1320,102 +1146,6 @@ const RequestPage = () => {
       ) : (
         <TableView />
       )}
-
-      {/* Email Dialog */}
-      {emailDialog.open && <EmailDialog />}
-      
-      {/* Phone Dialog */}
-      {phoneDialog.open && <PhoneDialog />}
-
-      {/* Snackbar Notification */}
-      {snack.open && (
-        <div className="fixed bottom-6 right-6 z-50 animate-slide-up">
-          <div className={`rounded-lg shadow-2xl border p-4 min-w-[280px] transform transition-all duration-300 ${
-            snack.tone === 'success' ? 'bg-gradient-to-r from-emerald-50 to-emerald-100 border-emerald-200' :
-            snack.tone === 'danger' ? 'bg-gradient-to-r from-rose-50 to-rose-100 border-rose-200' :
-            'bg-gradient-to-r from-sky-50 to-sky-100 border-sky-200'
-          }`}>
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                {snack.tone === 'success' ? (
-                  <svg className="h-5 w-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : snack.tone === 'danger' ? (
-                  <svg className="h-5 w-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg className="h-5 w-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                )}
-              </div>
-              <div className="ml-3 flex-1">
-                <div className={`font-semibold text-sm ${
-                  snack.tone === 'success' ? 'text-emerald-900' :
-                  snack.tone === 'danger' ? 'text-rose-900' :
-                  'text-sky-900'
-                }`}>
-                  {snack.title}
-                </div>
-                <div className={`mt-1 text-sm ${
-                  snack.tone === 'success' ? 'text-emerald-700' :
-                  snack.tone === 'danger' ? 'text-rose-700' :
-                  'text-sky-700'
-                }`}>
-                  {snack.message}
-                </div>
-              </div>
-              <div className="ml-4 flex-shrink-0">
-                <button
-                  onClick={() => setSnack({ open: false, tone: 'success', title: '', message: '' })}
-                  className="inline-flex rounded-md p-1 hover:bg-opacity-20 hover:bg-gray-500"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style jsx>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.2s ease-out;
-        }
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-      `}</style>
     </div>
   );
 };

@@ -10,6 +10,7 @@ function statusTone(status) {
   if (status === 'completed') return 'emerald'
   if (status === 'in_progress') return 'cyan'
   if (status === 'pending') return 'amber'
+  if (status === 'confirmed') return 'cyan'
   if (status === 'cancelled') return 'rose'
   return 'slate'
 }
@@ -18,6 +19,7 @@ function statusLabel(status) {
   if (status === 'completed') return 'Completed'
   if (status === 'in_progress') return 'In Progress'
   if (status === 'pending') return 'Pending'
+  if (status === 'confirmed') return 'Confirmed'
   if (status === 'cancelled') return 'Cancelled'
   return status || '—'
 }
@@ -119,37 +121,32 @@ export function QueueControlPage() {
     if (!dashboardData?.items) return []
 
     return dashboardData.items.map(inspector => {
-      const inspections = [
-        ...(inspector.assigned_pdi_requests || []).map(request => ({
+      const feedbackMap = new Map(
+        (inspector.feedbacks || []).map((feedback) => [
+          feedback.execution_id,
+          feedback
+        ])
+      )
+
+      const inspections = (inspector.assigned_pdi_requests || []).map(request => {
+        const feedback = feedbackMap.get(request.inspection_execution_id)
+        return {
           ...request,
-          status: request.status === 'confirmed' ? 'pending' : request.status,
-          rating: null,
-          customer_feedback: null,
+          status: request.display_status || request.status,
+          rating: feedback?.rating || null,
+          customer_feedback: feedback?.feedback || null,
           vehicle_make: request.brand_name || 'N/A',
           vehicle_model: request.model_name || 'N/A',
           vehicle_variant: request.variant_name || 'N/A',
           vehicle_category: request.category_name || 'N/A',
           vehicle_year: request.vehicle_year || 'N/A',
-          vehicle_fuel_type: request.vehicle_fuel_type || 'N/A'
-        })),
-        ...(inspector.completed_inspections || []).map(inspection => {
-          const feedback = inspector.feedbacks?.find(f => f.execution_id === inspection.execution_id)
-          return {
-            ...inspection,
-            status: 'completed',
-            rating: feedback?.rating || null,
-            customer_feedback: feedback?.feedback || null,
-            request_id: inspection.request_id,
-            vehicle_make: inspection.brand_name || 'N/A',
-            vehicle_model: inspection.model_name || 'N/A',
-            vehicle_variant: inspection.variant_name || 'N/A',
-            vehicle_category: inspection.category_name || 'N/A',
-            vehicle_year: inspection.vehicle_year || 'N/A',
-            vehicle_fuel_type: inspection.vehicle_fuel_type || 'N/A',
-            customer_name: inspection.customer_name
-          }
-        })
-      ]
+          vehicle_fuel_type: request.vehicle_fuel_type || 'N/A',
+          customer_name: request.name || '—',
+          email: request.email || '—',
+          payment_stage: request.payment_stage || 'N/A',
+          assigned_at: request.assigned_at || request.created_at || '—'
+        }
+      })
 
       const totalInspections = inspector.assigned_pdi_requests_count || 0
       const completedInspections = inspector.completed_inspections_count || 0

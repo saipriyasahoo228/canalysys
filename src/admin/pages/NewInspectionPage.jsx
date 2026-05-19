@@ -210,6 +210,7 @@ export function NewInspectionPage() {
   const [selectedInspectorFilter, setSelectedInspectorFilter] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
   const [inspectorsList, setInspectorsList] = useState([])
   const [, setLoadingInspectorsList] = useState(false)
 
@@ -1860,6 +1861,15 @@ export function NewInspectionPage() {
 
     // Apply advanced filters
     return processedItems.filter((pdi) => {
+      // Search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase()
+        const searchableText = `${pdi.request_id} ${pdi.name} ${pdi.mobile_number} ${pdi.brand_name} ${pdi.model_name} ${pdi.variant_name} ${pdi.status} ${pdi.payment_stage}`.toLowerCase()
+        if (!searchableText.includes(searchLower)) {
+          return false
+        }
+      }
+
       // Inspector filter
       if (selectedInspectorFilter) {
         console.log('🔍 Comparing:', {
@@ -1897,7 +1907,7 @@ export function NewInspectionPage() {
 
       return true
     })
-  }, [pdiRequestsData, selectedInspectorFilter, startDate, endDate])
+  }, [pdiRequestsData, searchTerm, selectedInspectorFilter, startDate, endDate])
 
   // PDI requests table columns
   const pdiRequestsColumns = useMemo(
@@ -1963,13 +1973,23 @@ export function NewInspectionPage() {
           </Badge>
         ),
       },
+      // {
+      //   key: 'payment_stage',
+      //   header: 'Payment Stage',
+      //   exportValue: (r) => r.payment_stage ? r.payment_stage.charAt(0).toUpperCase() + r.payment_stage.slice(1) : '—',
+      //   cell: (r) => (
+      //     <Badge tone={r.payment_stage === 'advance_paid' ? 'blue' : r.payment_stage === 'fully_paid' ? 'emerald' : 'slate'}>
+      //       {r.payment_stage === 'advance_paid' ? 'Advance Paid' : r.payment_stage === 'fully_paid' ? 'Fully Paid' : r.payment_stage ? r.payment_stage.charAt(0).toUpperCase() + r.payment_stage.slice(1) : '—'}
+      //     </Badge>
+      //   ),
+      // },
       {
         key: 'payment_stage',
         header: 'Payment Stage',
-        exportValue: (r) => r.payment_stage ? r.payment_stage.charAt(0).toUpperCase() + r.payment_stage.slice(1) : '—',
+        exportValue: (r) => r.payment_stage ? r.payment_stage.replace(/_/g, ' ').charAt(0).toUpperCase() + r.payment_stage.replace(/_/g, ' ').slice(1) : '—',
         cell: (r) => (
           <Badge tone={r.payment_stage === 'advance_paid' ? 'blue' : r.payment_stage === 'fully_paid' ? 'emerald' : 'slate'}>
-            {r.payment_stage === 'advance_paid' ? 'Advance Paid' : r.payment_stage === 'fully_paid' ? 'Fully Paid' : r.payment_stage ? r.payment_stage.charAt(0).toUpperCase() + r.payment_stage.slice(1) : '—'}
+            {r.payment_stage ? r.payment_stage.replace(/_/g, ' ').charAt(0).toUpperCase() + r.payment_stage.replace(/_/g, ' ').slice(1) : '—'}
           </Badge>
         ),
       },
@@ -2149,10 +2169,23 @@ export function NewInspectionPage() {
           </div>
         ) : (
           <>
-            {/* Advanced Filters beside search */}
-            <div className="flex flex-wrap items-center gap-3 mb-4">
+            {/* Search, Filters and Clear Button in one row */}
+            <div className="flex flex-col sm:flex-row gap-3 items-end mb-4">
+              {/* Search Bar */}
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Search</label>
+                <Input
+                  type="text"
+                  id="pdi-table-search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by Request ID, Name, Mobile, Vehicle..."
+                  className="w-full"
+                />
+              </div>
+
               {/* Inspector Filter */}
-              <div className="min-w-0">
+              <div className="w-full sm:w-40">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Inspector</label>
                 <Select
                   value={selectedInspectorFilter}
@@ -2160,7 +2193,7 @@ export function NewInspectionPage() {
                     console.log('🔍 Selected inspector:', e.target.value)
                     setSelectedInspectorFilter(e.target.value)
                   }}
-                  className="w-40"
+                  className="w-full"
                 >
                   <option value="">All Inspectors</option>
                   {inspectorsList.map((inspector) => {
@@ -2175,42 +2208,41 @@ export function NewInspectionPage() {
               </div>
 
               {/* Start Date Filter */}
-              <div className="min-w-0">
-                <label className="block text-xs font-medium text-slate-600 mb-1">Start Date</label>
+              <div className="w-full sm:w-32">
+                <label className="block text-xs font-medium text-slate-600 mb-1">From</label>
                 <CustomDatePicker
                   value={startDate}
                   onChange={setStartDate}
                   placeholder="dd/mm/yyyy"
                   dateFormat="dd/mm/yyyy"
-                  className="w-32"
+                  className="w-full"
                 />
               </div>
 
               {/* End Date Filter */}
-              <div className="min-w-0">
-                <label className="block text-xs font-medium text-slate-600 mb-1">End Date</label>
+              <div className="w-full sm:w-32">
+                <label className="block text-xs font-medium text-slate-600 mb-1">To</label>
                 <CustomDatePicker
                   value={endDate}
                   onChange={setEndDate}
                   placeholder="dd/mm/yyyy"
                   dateFormat="dd/mm/yyyy"
-                  className="w-32"
+                  className="w-full"
                 />
               </div>
 
               {/* Clear Filters Button */}
-              <div className="flex items-end">
-                <button
-                  onClick={() => {
-                    setSelectedInspectorFilter('')
-                    setStartDate('')
-                    setEndDate('')
-                  }}
-                  className="px-3 py-2 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setSearchTerm('')
+                  setSelectedInspectorFilter('')
+                  setStartDate('')
+                  setEndDate('')
+                }}
+                className="w-full sm:w-auto px-4 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors whitespace-nowrap"
+              >
+                Clear Filters
+              </button>
             </div>
 
             <PaginatedTable
@@ -2220,9 +2252,7 @@ export function NewInspectionPage() {
             emptyMessage="No PDI requests found"
             pageSize={10}
             rowKey={(row) => row.id}
-            enableSearch={true}
-            searchPlaceholder="Search by Request ID, Customer Name, Mobile, Vehicle..."
-            getSearchText={(row) => `${row.request_id} ${row.name} ${row.mobile_number} ${row.brand_name} ${row.model_name} ${row.variant_name} ${row.status} ${row.payment_stage}`}
+            enableSearch={false}
           />
           </>
         )}

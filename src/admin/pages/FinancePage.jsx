@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, Eye, IndianRupee, ReceiptText, Search, Settings2, Wallet, Plus, Percent, Calendar, XCircle } from 'lucide-react'
+import { CheckCircle2, Eye, IndianRupee, ReceiptText, Search, Settings2, Wallet, Plus, Percent, Calendar, XCircle, Edit2, Globe, User } from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, Select } from '../ui/Ui'
@@ -7,7 +7,7 @@ import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { formatDate, formatDateTime, formatInr } from '../utils/format'
-import { listCommissionRules, createGlobalCommissionRule, createInspectorCommissionRule, getCommissionReport, getMyCommissionReport } from '../../api/commission'
+import { listCommissionRules, createGlobalCommissionRule, createInspectorCommissionRule, updateInspectorCommissionRule, getCommissionReport, getMyCommissionReport } from '../../api/commission'
 import { listInspectors } from '../../api/inspectoronboard'
 
 export function FinancePage() {
@@ -29,6 +29,17 @@ export function FinancePage() {
   
   const commissionRules = rulesData?.items || []
   const inspectors = inspectorsData?.inspectors || []
+
+  // Separate global and inspector rules
+  const globalRules = useMemo(() => 
+    commissionRules.filter(rule => rule.scope === 'global'),
+    [commissionRules]
+  )
+  
+  const inspectorRules = useMemo(() => 
+    commissionRules.filter(rule => rule.scope === 'inspector'),
+    [commissionRules]
+  )
 
   const inspectorById = useMemo(() => {
     const m = new Map()
@@ -53,6 +64,7 @@ export function FinancePage() {
   const viewOpen = dialog?.type === 'view'
   const globalRuleOpen = dialog?.type === 'globalRule'
   const inspectorRuleOpen = dialog?.type === 'inspectorRule'
+  const editRuleOpen = dialog?.type === 'editRule'
 
   const showSnack = (next) => {
     setSnack({ open: true, tone: next?.tone || 'info', title: next?.title || '', message: next?.message || '' })
@@ -91,19 +103,21 @@ export function FinancePage() {
     }
   }
 
-  // Commission rules columns
+  // Handle update commission rule
+  const handleUpdateRule = async (ruleId, inspectorId, formData) => {
+    try {
+      const result = await updateInspectorCommissionRule(inspectorId, ruleId, formData)
+      showSnack({ tone: 'success', title: 'Success', message: result.message || 'Commission rule updated successfully' })
+      refreshRules()
+      setDialog(null)
+    } catch (e) {
+      showSnack({ tone: 'danger', title: 'Error', message: responseToMessage(e) || 'Failed to update commission rule' })
+    }
+  }
+
+  // Commission rules columns (without scope column since tables are separated)
   const rulesColumns = useMemo(
     () => [
-      {
-        key: 'scope',
-        header: 'Scope',
-        exportValue: (r) => r.scope === 'global' ? 'Global' : `Inspector: ${r.inspector_name || r.inspector_id || r.inspector || ''}`,
-        cell: (r) => (
-          <Badge tone={r.scope === 'global' ? 'cyan' : 'violet'}>
-            {r.scope === 'global' ? 'Global' : `Inspector: ${r.inspector_name}`}
-          </Badge>
-        ),
-      },
       {
         key: 'commission_type',
         header: 'Type',
@@ -118,10 +132,10 @@ export function FinancePage() {
       {
         key: 'amount',
         header: 'Commission',
-        exportValue: (r) => formatInr(r.fixed_amount),
+        exportValue: (r) => r.commission_type === 'percent' ? `${r.percent}%` : formatInr(r.fixed_amount),
         cell: (r) => (
           <span className="font-semibold">
-            {formatInr(r.fixed_amount)}
+            {r.commission_type === 'percent' ? `${r.percent}%` : formatInr(r.fixed_amount)}
           </span>
         ),
       },
@@ -154,6 +168,93 @@ export function FinancePage() {
           <div className="flex items-center justify-end gap-1">
             <Button variant="icon" size="icon" onClick={() => setDialog({ type: 'view', item: r })} title={'View'}>
               <Eye className="h-4 w-4 text-slate-700" />
+            </Button>
+            {r.scope === 'inspector' && (
+              <Button variant="icon" size="icon" onClick={() => setDialog({ type: 'editRule', item: r })} title={'Edit'}>
+                <Edit2 className="h-4 w-4 text-blue-600" />
+              </Button>
+            )}
+          </div>
+        ),
+        className: 'text-right',
+        tdClassName: 'text-right',
+      },
+    ],
+    []
+  )
+
+  // Inspector rules columns (includes inspector name)
+  const inspectorRulesColumns = useMemo(
+    () => [
+      {
+        key: 'inspector_name',
+        header: 'Inspector',
+        exportValue: (r) => r.inspector_name ? `${r.inspector_name} (${r.inspector_id || '—'})` : (r.inspector_id || '—'),
+        cell: (r) => (
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-r from-violet-500 to-violet-600 flex items-center justify-center">
+              <User className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-slate-900">{r.inspector_name}</div>
+              <div className="text-xs text-slate-500">{r.inspector_id}</div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'commission_type',
+        header: 'Type',
+        exportValue: (r) => r.commission_type,
+        cell: (r) => (
+          <div className="flex items-center gap-1">
+            {r.commission_type === 'percent' ? <Percent className="h-4 w-4" /> : <IndianRupee className="h-4 w-4" />}
+            <span className="capitalize">{r.commission_type}</span>
+          </div>
+        ),
+      },
+      {
+        key: 'amount',
+        header: 'Commission',
+        exportValue: (r) => r.commission_type === 'percent' ? `${r.percent}%` : formatInr(r.fixed_amount),
+        cell: (r) => (
+          <span className="font-semibold">
+            {r.commission_type === 'percent' ? `${r.percent}%` : formatInr(r.fixed_amount)}
+          </span>
+        ),
+      },
+      {
+        key: 'effective_from',
+        header: 'Effective From',
+        exportValue: (r) => formatDate(r.effective_from),
+        cell: (r) => <div className="text-sm text-slate-600">{formatDateTime(r.effective_from)}</div>,
+      },
+      {
+        key: 'effective_to',
+        header: 'Effective To',
+        exportValue: (r) => (r.effective_to ? formatDate(r.effective_to) : 'Ongoing'),
+        cell: (r) => <div className="text-sm text-slate-600">{r.effective_to ? formatDateTime(r.effective_to) : 'Ongoing'}</div>,
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        exportValue: (r) => r.is_active ? 'Active' : 'Inactive',
+        cell: (r) => (
+          <Badge tone={r.is_active ? 'emerald' : 'slate'}>
+            {r.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+        ),
+      },
+      {
+        key: 'actions',
+        header: <div className="w-full pr-6 text-right">Actions</div>,
+        cell: (r) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button variant="icon" size="icon" onClick={() => setDialog({ type: 'view', item: r })} title={'View'}>
+              <Eye className="h-4 w-4 text-slate-700" />
+            </Button>
+            <Button variant="icon" size="icon" onClick={() => setDialog({ type: 'editRule', item: r })} title={'Edit'}>
+              <Edit2 className="h-4 w-4 text-blue-600" />
             </Button>
           </div>
         ),
@@ -213,7 +314,7 @@ export function FinancePage() {
     return [
       { key: 'id', label: 'Rule ID', value: it?.id || '—' },
       { key: 'scope', label: 'Scope', value: it?.scope === 'global' ? 'Global' : `Inspector: ${it?.inspector_name}` },
-      { key: 'commission_type', label: 'Commission Type', value: it?.commission_type || '—' },
+      { key: 'commission_type', label: 'Commission Type', value: it?.commission_type ? it.commission_type.charAt(0).toUpperCase() + it.commission_type.slice(1).toLowerCase() : '—' },
       { key: 'amount', label: 'Commission Amount', value: it?.commission_type === 'percent' ? `${it?.percent}%` : formatInr(it?.fixed_amount || it?.fixed_amount_paise) },
       { key: 'effective_from', label: 'Effective From', value: formatDateTime(it?.effective_from) },
       { key: 'effective_to', label: 'Effective To', value: it?.effective_to ? formatDateTime(it?.effective_to) : 'Ongoing' },
@@ -242,14 +343,31 @@ export function FinancePage() {
             <div className="relative p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-cyan-600">Commission Rules</p>
+                  <p className="text-xs sm:text-sm font-medium text-cyan-600">Global Rules</p>
                   <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold text-cyan-900">
-                    {rulesLoading && !rulesData ? '—' : commissionRules.length}
+                    {rulesLoading && !rulesData ? '—' : globalRules.length}
                   </p>
-                  <p className="mt-1 text-xs text-cyan-700">Active rules configured</p>
+                  <p className="mt-1 text-xs text-cyan-700">Global commission rules</p>
                 </div>
                 <div className="ml-3 sm:ml-4 rounded-full bg-cyan-200 p-2 sm:p-3">
-                  <Settings2 className="h-5 w-5 sm:h-6 sm:w-6 text-cyan-700" />
+                  <Globe className="h-5 w-5 sm:h-6 sm:w-6 text-cyan-700" />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-violet-50 to-violet-100">
+            <div className="relative p-4 sm:p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-violet-600">Inspector Rules</p>
+                  <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold text-violet-900">
+                    {rulesLoading && !rulesData ? '—' : inspectorRules.length}
+                  </p>
+                  <p className="mt-1 text-xs text-violet-700">Inspector-specific rules</p>
+                </div>
+                <div className="ml-3 sm:ml-4 rounded-full bg-violet-200 p-2 sm:p-3">
+                  <User className="h-5 w-5 sm:h-6 sm:w-6 text-violet-700" />
                 </div>
               </div>
             </div>
@@ -267,23 +385,6 @@ export function FinancePage() {
                 </div>
                 <div className="ml-3 sm:ml-4 rounded-full bg-emerald-200 p-2 sm:p-3">
                   <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-700" />
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-violet-50 to-violet-100">
-            <div className="relative p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-violet-600">Report Entries</p>
-                  <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold text-violet-900">
-                    {reportLoading ? '—' : (reportData?.items ? reportData.items.reduce((acc, r) => acc + (r.completed_count || 0), 0) : 0)}
-                  </p>
-                  <p className="mt-1 text-xs text-violet-700">Completed inspections</p>
-                </div>
-                <div className="ml-3 sm:ml-4 rounded-full bg-violet-200 p-2 sm:p-3">
-                  <ReceiptText className="h-5 w-5 sm:h-6 sm:w-6 text-violet-700" />
                 </div>
               </div>
             </div>
@@ -309,49 +410,39 @@ export function FinancePage() {
       ) : null}
 
       <div className="space-y-6">
-        {/* Commission Rules Section */}
+        {/* Global Commission Rules Section */}
         <Card className="border-0 shadow-xl bg-white">
           <div className="border-b border-slate-100 px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-base sm:text-lg font-semibold text-slate-900">Commission Rules</h2>
-                <p className="text-xs sm:text-sm text-slate-600 mt-1">Global and inspector-specific configurations</p>
+              <div className="flex items-center gap-2">
+                <Globe className="h-5 w-5 text-cyan-600" />
+                <div>
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Global Commission Rules</h2>
+                  <p className="text-xs sm:text-sm text-slate-600 mt-1">Rules that apply to all inspectors unless overridden</p>
+                </div>
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-                {permissions.managePricing && (
-                  <>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setDialog({ type: 'globalRule' })}
-                      className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 w-full sm:w-auto"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Global Rule
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDialog({ type: 'inspectorRule' })}
-                      className="border-violet-200 text-violet-700 hover:bg-violet-50 w-full sm:w-auto"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Inspector Rule
-                    </Button>
-                  </>
-                )}
-              </div>
+              {permissions.managePricing && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setDialog({ type: 'globalRule' })}
+                  className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Global Rule
+                </Button>
+              )}
             </div>
           </div>
           <div className="p-4 sm:p-6">
             <div className={rulesLoading && !rulesData ? 'opacity-60' : ''}>
-              {commissionRules.length === 0 && !rulesLoading ? (
+              {globalRules.length === 0 && !rulesLoading ? (
                 <div className="text-center py-8 sm:py-12">
                   <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                    <Settings2 className="h-6 w-6 sm:h-8 sm:w-8 text-slate-400" />
+                    <Globe className="h-6 w-6 sm:h-8 sm:w-8 text-slate-400" />
                   </div>
-                  <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No commission rules</h3>
-                  <p className="text-sm text-slate-600 mb-4">Create your first commission rule to get started</p>
+                  <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No global rules</h3>
+                  <p className="text-sm text-slate-600 mb-4">Create a global commission rule to apply to all inspectors</p>
                   {permissions.managePricing && (
                     <Button
                       variant="primary"
@@ -367,14 +458,78 @@ export function FinancePage() {
                 <div className="overflow-x-auto">
                   <PaginatedTable
                     columns={rulesColumns}
-                    rows={commissionRules}
+                    rows={globalRules}
                     rowKey={(r) => r.id}
                     initialRowsPerPage={10}
                     rowsPerPageOptions={[10, 20, 50, 'all']}
                     enableSearch
-                    searchPlaceholder="Search commission rules…"
+                    searchPlaceholder="Search global rules…"
                     enableExport
-                    exportFilename="commission-rules.csv"
+                    exportFilename="global-commission-rules.csv"
+                    className="border-0 min-w-[600px]"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Inspector Commission Rules Section */}
+        <Card className="border-0 shadow-xl bg-white">
+          <div className="border-b border-slate-100 px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-violet-600" />
+                <div>
+                  <h2 className="text-base sm:text-lg font-semibold text-slate-900">Inspector Commission Rules</h2>
+                  <p className="text-xs sm:text-sm text-slate-600 mt-1">Rules that override global rules for specific inspectors</p>
+                </div>
+              </div>
+              {permissions.managePricing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDialog({ type: 'inspectorRule' })}
+                  className="border-violet-200 text-violet-700 hover:bg-violet-50 w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Inspector Rule
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="p-4 sm:p-6">
+            <div className={rulesLoading && !rulesData ? 'opacity-60' : ''}>
+              {inspectorRules.length === 0 && !rulesLoading ? (
+                <div className="text-center py-8 sm:py-12">
+                  <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                    <User className="h-6 w-6 sm:h-8 sm:w-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No inspector rules</h3>
+                  <p className="text-sm text-slate-600 mb-4">Create inspector-specific rules to override global settings</p>
+                  {permissions.managePricing && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setDialog({ type: 'inspectorRule' })}
+                      className="border-violet-200 text-violet-700 hover:bg-violet-50"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Inspector Rule
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <PaginatedTable
+                    columns={inspectorRulesColumns}
+                    rows={inspectorRules}
+                    rowKey={(r) => r.id}
+                    initialRowsPerPage={10}
+                    rowsPerPageOptions={[10, 20, 50, 'all']}
+                    enableSearch
+                    searchPlaceholder="Search inspector rules…"
+                    enableExport
+                    exportFilename="inspector-commission-rules.csv"
                     className="border-0 min-w-[600px]"
                   />
                 </div>
@@ -404,8 +559,7 @@ export function FinancePage() {
                 ) : (
                   <>
                     <ReceiptText className="h-4 w-4 mr-2 " />
-                      <span className="text-white">Generate Report</span>
-
+                    <span className="text-white">Generate Report</span>
                   </>
                 )}
               </Button>
@@ -532,9 +686,10 @@ export function FinancePage() {
           },
           {
             name: 'effective_from',
-            label: 'Effective From (Optional)',
+            label: 'Effective From',
             type: 'date',
             defaultValue: '',
+            placeholder: 'dd/mm/yyyy',
           },
           {
             name: 'is_active',
@@ -565,11 +720,15 @@ export function FinancePage() {
                 showSnack({ tone: 'danger', title: 'Error', message: 'Fixed amount must be greater than 0' })
                 return
               }
-              payload.fixed_amount_paise = Math.round(parseFloat(form.fixed_amount_paise) * 100) // Convert INR to paise
+              payload.fixed_amount_paise = Math.round(parseFloat(form.fixed_amount_paise) * 100)
             }
             
             if (form.effective_from) {
               payload.effective_from = form.effective_from
+            }
+            
+            if (form.effective_to) {
+              payload.effective_to = form.effective_to
             }
             
             const result = await createGlobalCommissionRule(payload)
@@ -632,9 +791,18 @@ export function FinancePage() {
           },
           {
             name: 'effective_from',
-            label: 'Effective From (Optional)',
+            label: 'Effective From',
             type: 'date',
             defaultValue: '',
+            placeholder: 'dd/mm/yyyy',
+          },
+          {
+            name: 'effective_to',
+            label: 'Effective To',
+            type: 'date',
+            defaultValue: '',
+            placeholder: 'dd/mm/yyyy',
+            helpText: 'Leave empty for ongoing rule',
           },
           {
             name: 'is_active',
@@ -670,11 +838,15 @@ export function FinancePage() {
                 showSnack({ tone: 'danger', title: 'Error', message: 'Fixed amount must be greater than 0' })
                 return
               }
-              payload.fixed_amount_paise = Math.round(parseFloat(form.fixed_amount_paise) * 100) // Convert INR to paise
+              payload.fixed_amount_paise = Math.round(parseFloat(form.fixed_amount_paise) * 100)
             }
             
             if (form.effective_from) {
               payload.effective_from = form.effective_from
+            }
+            
+            if (form.effective_to) {
+              payload.effective_to = form.effective_to
             }
             
             const result = await createInspectorCommissionRule(form.inspector_id, payload)
@@ -683,6 +855,111 @@ export function FinancePage() {
             setDialog(null)
           } catch (e) {
             showSnack({ tone: 'danger', title: 'Error', message: responseToMessage(e) || 'Failed to create inspector commission rule' })
+          }
+        }}
+      />
+
+      {/* Edit Inspector Commission Rule Dialog */}
+      <ReasonDialog
+        open={editRuleOpen}
+        title="Edit Inspector Commission Rule"
+        description="Update the commission rule for this inspector."
+        submitLabel="Update Rule"
+        onClose={() => setDialog(null)}
+        showReason={false}
+        requireReason={false}
+        fields={[
+          {
+            name: 'commission_type',
+            label: 'Commission Type *',
+            type: 'select',
+            defaultValue: dialog?.item?.commission_type || 'percent',
+            options: [
+              { value: 'percent', label: 'Percentage' },
+              { value: 'fixed', label: 'Fixed Amount' },
+            ],
+          },
+          {
+            name: 'percent',
+            label: 'Percentage (%) *',
+            type: 'number',
+            defaultValue: dialog?.item?.percent || '',
+            placeholder: 'e.g. 12.5',
+            step: '0.01',
+            min: '0',
+            max: '100',
+            condition: (form) => form.commission_type === 'percent',
+          },
+          {
+            name: 'fixed_amount_paise',
+            label: 'Fixed Amount (Rs) *',
+            type: 'number',
+            defaultValue: dialog?.item?.fixed_amount || '',
+            placeholder: 'e.g. 500',
+            step: '0.01',
+            min: '0',
+            condition: (form) => form.commission_type === 'fixed',
+          },
+          {
+            name: 'effective_from',
+            label: 'Effective From',
+            type: 'date',
+            defaultValue: dialog?.item?.effective_from ? dialog.item.effective_from.split('T')[0] : '',
+          },
+          {
+            name: 'effective_to',
+            label: 'Effective To',
+            type: 'date',
+            defaultValue: dialog?.item?.effective_to ? dialog.item.effective_to.split('T')[0] : '',
+            helpText: 'Leave empty for ongoing rule',
+          },
+          {
+            name: 'is_active',
+            label: 'Active',
+            type: 'checkbox',
+            defaultValue: dialog?.item?.is_active ?? true,
+            checkboxLabel: 'Enable this commission rule',
+            className: 'flex items-start space-x-2',
+          },
+        ]}
+        onSubmit={async (form) => {
+          try {
+            if (!permissions.managePricing) throw new Error('Insufficient permission')
+            
+            const payload = {
+              commission_type: form.commission_type,
+              is_active: form.is_active,
+            }
+            
+            if (form.commission_type === 'percent') {
+              if (!form.percent || parseFloat(form.percent) <= 0) {
+                showSnack({ tone: 'danger', title: 'Error', message: 'Percentage must be greater than 0' })
+                return
+              }
+              payload.percent = parseFloat(form.percent)
+              payload.fixed_amount_paise = null
+            } else {
+              if (!form.fixed_amount_paise || parseFloat(form.fixed_amount_paise) <= 0) {
+                showSnack({ tone: 'danger', title: 'Error', message: 'Fixed amount must be greater than 0' })
+                return
+              }
+              payload.fixed_amount_paise = Math.round(parseFloat(form.fixed_amount_paise) * 100)
+              payload.percent = null
+            }
+            
+            if (form.effective_from) {
+              payload.effective_from = form.effective_from
+            }
+            
+            if (form.effective_to) {
+              payload.effective_to = form.effective_to
+            } else {
+              payload.effective_to = null
+            }
+            
+            await handleUpdateRule(dialog.item.id, dialog.item.inspector_id, payload)
+          } catch (e) {
+            showSnack({ tone: 'danger', title: 'Error', message: responseToMessage(e) || 'Failed to update commission rule' })
           }
         }}
       />
@@ -741,3 +1018,11 @@ export function FinancePage() {
     </div>
   )
 }
+
+
+
+
+
+
+
+

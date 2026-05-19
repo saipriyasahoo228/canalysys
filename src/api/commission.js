@@ -46,3 +46,9 @@ export const getMyCommissionReport = async (fromDate, toDate) => {
   const response = await api.get(`/api/staff/commissions/report/me/?${params.toString()}`);
   return response.data;
 };
+
+// Update/Patch an existing inspector commission rule
+export const updateInspectorCommissionRule = async (inspectorId, ruleId, ruleData) => {
+  const response = await api.patch(`/api/staff/commissions/inspectors/${inspectorId}/${ruleId}/`, ruleData);
+  return response.data;
+};

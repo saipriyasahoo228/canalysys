@@ -41,8 +41,8 @@ export const API_BASE_URL = API_URI;
 
 
 // const DEFAULT_API = {
-//   development: 'http://127.0.0.1:8000',
-//   production: 'http://127.0.0.1:8000'
+//   development: 'http://192.168.1.34:8000',
+//   production: 'http://192.168.1.34:8000'
 // };
 
 // // Vite uses import.meta.env instead of process.env

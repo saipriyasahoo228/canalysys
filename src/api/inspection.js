@@ -118,3 +118,35 @@ export const deleteInspector = async (inspectorId) => {
     throw error.response?.data || error.message
   }
 }
+
+export const createPaymentLink = async (requestId, purpose = 'advance') => {
+  try {
+    const response = await api.post(`/api/pdi-requests/${requestId}/payments/payment-link/`, {
+      purpose
+    })
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}
+
+export const getPaymentStatus = async (requestId) => {
+  try {
+    const response = await api.get(`/api/pdi-requests/${requestId}/payments/status/`)
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}
+
+export const verifyPaymentLink = async (requestId, purpose = '') => {
+  try {
+    const response = await api.post(`/api/pdi-requests/${requestId}/payments/verify-payment-link/`, {
+      purpose
+    })
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}
+

@@ -4,7 +4,7 @@ import { usePolling } from '../hooks/usePolling'
 import { listCategoryPricing } from '../../api/categorypricing'
 import { listBrands, listModels, listVariants, listCategoryValues } from '../../api/vehiclemaster'
 import { listVehicleCategoryMappings } from '../../api/categorymapping'
-import { createPDIRequest, listPDIRequests, getPDIRequestById, assignInspector, createRazorpayOrder, verifyRazorpayPayment, confirmManualPayment, createRazorpayOrderForRemaining, verifyRazorpayRemainingPayment, confirmManualRemainingPayment } from '../../api/inspection'
+import { createPDIRequest, listPDIRequests, getPDIRequestById, assignInspector, confirmManualPayment, confirmManualRemainingPayment, createPaymentLink, getPaymentStatus, verifyPaymentLink } from '../../api/inspection'
 import { listCustomers, deleteCustomer, getCustomerBookings } from '../../api/customer'
 import { getAvailabilities, getInspectorAvailabilityByDate } from '../../api/inspectoravailibility'
 import { listInspectors } from '../../api/inspectoronboard'
@@ -15,7 +15,6 @@ import { Badge, Button, Card, Input, PaginatedTable, Select, cx } from '../ui/Ui
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { formatDate, formatDateTime } from '../utils/format'
-import { RAZORPAY_KEY } from '../../config/razorpay'
 
 const VEHICLE_TYPE_OPTIONS = [
   { value: 'new', label: 'New' },
@@ -27,11 +26,6 @@ const PAYMENT_METHOD_OPTIONS = [
   { value: 'net_banking', label: 'Net Banking' },
   { value: 'upi', label: 'UPI Payments' },
   { value: 'wallet', label: 'Wallets (Paytm, Amazon Pay)' },
-]
-
-const PAYMENT_PROVIDER_OPTIONS = [
-  { value: 'razorpay', label: 'Razorpay' },
-  { value: 'payu', label: 'PayU' },
 ]
 
 function getPagedItems(response) {
@@ -173,13 +167,18 @@ export function NewInspectionPage() {
   const [selectedFilterDate, setSelectedFilterDate] = useState('')
   
   // State for date filtering
-  // State for Razorpay payment
+  // State for payment processing
   const [paymentLoading, setPaymentLoading] = useState(false)
-  const [, setShowRazorpay] = useState(false)
   const [showManualPaymentModal, setShowManualPaymentModal] = useState(false)
   const [manualPaymentMode, setManualPaymentMode] = useState('Cash')
   const [manualReferenceNo, setManualReferenceNo] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('online') // 'online' or 'cash'
+  
+  // State for QR code display
+  const [showPaymentQRModal, setShowPaymentQRModal] = useState(false)
+  const [paymentQRData, setPaymentQRData] = useState(null)
+  const [paymentStatusLoading, setPaymentStatusLoading] = useState(false)
+  const [verifyPaymentLoading, setVerifyPaymentLoading] = useState(false)
   
   // State for remaining payment
   const [showRemainingPaymentModal, setShowRemainingPaymentModal] = useState(false)
@@ -945,9 +944,8 @@ export function NewInspectionPage() {
         return
       }
       
-      // Step 1: Create PDI request first
+      // Step 1: Create PDI request
       const pdiData = {
-        customer_id: '', // Will be updated after customer creation
         name: customerName,
         mobile_number: customerPhone,
         email: customerEmail,
@@ -965,17 +963,15 @@ export function NewInspectionPage() {
         slot_time: wizardForm.slotTime,
         slot_start_time: wizardForm.slotStart,
         slot_end_time: wizardForm.slotEnd,
-        amount_paise: priceInr * 100, // Send full amount
-        advance_amount_paise: 50000, // But specify advance is 500
-        remaining_amount_paise: (priceInr - 500) * 100 // Calculate remaining
+        amount_paise: priceInr * 100,
+        advance_amount_paise: 50000,
+        remaining_amount_paise: (priceInr - 500) * 100
       }
       
       console.log('💰 PDI Amount being sent:', priceInr, 'paise:', priceInr * 100)
       
       const pdiResponse = await createPDIRequest(pdiData)
       console.log('✅ PDI request created:', pdiResponse)
-      console.log('📋 PDI Data sent:', pdiData)
-      console.log('📋 PDI Response:', pdiResponse.data)
       
       const requestId = pdiResponse.data.id
       const clientRequestId = pdiResponse.data.request_id
@@ -983,115 +979,43 @@ export function NewInspectionPage() {
       console.log('🔍 Request ID:', requestId)
       console.log('🔍 Client Request ID:', clientRequestId)
       
-      // Step 2: Create Razorpay order (use clientRequestId string, not requestId number)
-      const orderResponse = await createRazorpayOrder(clientRequestId, clientRequestId)
-      console.log('✅ Razorpay order response:', orderResponse)
+      // Step 2: Create payment link using new API
+      const paymentLinkResponse = await createPaymentLink(clientRequestId, 'advance')
+      console.log('✅ Payment link created:', paymentLinkResponse)
       
-      // Handle case where order already exists - create a new one instead
-      if (orderResponse.message === 'Order already created') {
-        console.log('ℹ️ Order already exists, creating new Razorpay order...')
-        // For existing orders, we should create a new one or use a different approach
-        // Let the backend handle creating a fresh order
-        try {
-          const newOrderResponse = await createRazorpayOrder(clientRequestId, clientRequestId + '_new')
-          console.log('✅ New Razorpay order created:', newOrderResponse)
-          // Use the new order response
-          Object.assign(orderResponse, newOrderResponse)
-        } catch (newOrderError) {
-          console.error('❌ Failed to create new order:', newOrderError)
-          throw new Error('Unable to create payment order. Please try again.')
-        }
-      }
+      const paymentLinkUrl = paymentLinkResponse.payment_link_url
+      const paymentLinkId = paymentLinkResponse.payment_link_id
       
-      console.log('📦 Final Razorpay Order Data:', orderResponse)
+      // Show QR code modal instead of alert
+      setPaymentQRData({
+        requestId: clientRequestId,
+        url: paymentLinkUrl,
+        linkId: paymentLinkId,
+        amount: '₹500',
+        type: 'advance',
+        status: 'unpaid',
+        amountPaid: 0
+      })
+      setShowPaymentQRModal(true)
       
-      // Load Razorpay script
-      const script = document.createElement('script')
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-      script.async = true
-      document.body.appendChild(script)
+      // Refresh and close dialog after short delay
+      setTimeout(async () => {
+        await refreshCustomers()
+        setAvailabilityFetched(false)
+        await fetchAvailabilityData()
+        setDialog(null)
+      }, 2000)
       
-      script.onload = () => {
-        const options = {
-          key: orderResponse.key_id,
-          order_id: orderResponse.razorpay_order_id,
-          amount: orderResponse.amount_paise,
-          currency: orderResponse.currency,
-          name: 'PDI Advance Payment',
-          description: `Advance payment of ₹500 for PDI request ${clientRequestId}`,
-          image: '/logo.png',
-          prefill: {
-            name: customerName,
-            email: customerEmail,
-            contact: customerPhone,
-          },
-          theme: {
-            color: '#3399cc',
-          },
-          modal: {
-            ondismiss: function() {
-              console.log('Payment modal dismissed')
-              setShowRazorpay(false)
-              setPaymentLoading(false)
-            }
-          },
-          handler: async function (response) {
-            try {
-              console.log('Payment successful:', response)
-              
-              // Step 3: Verify payment with backend
-              const verificationResponse = await verifyRazorpayPayment(
-                clientRequestId, // Use string request_id instead of numeric
-                response.razorpay_order_id,
-                response.razorpay_payment_id,
-                response.razorpay_signature
-              )
-              
-              console.log('✅ Payment verified:', verificationResponse)
-              
-              if (verificationResponse.message === 'Advance payment verified and request confirmed') {
-                alert('Payment successful! Your PDI request has been confirmed.')
-                setShowRazorpay(false)
-                
-                // Refresh customers and availability data, then close all dialogs
-                await refreshCustomers()
-                setAvailabilityFetched(false) // Reset to force refresh
-                await fetchAvailabilityData()
-                setDialog(null)
-              } else {
-                alert('Payment verification failed. Please contact support.')
-                setShowRazorpay(false)
-              }
-            } catch (error) {
-              console.error('Payment handler error:', error)
-              // Show backend error message directly
-              alert(error.response?.data?.detail || error.message || 'Payment processing failed. Please try again.')
-              setShowRazorpay(false)
-            }
-          }
-        }
-        
-        console.log('💰 Razorpay Options Amount:', orderResponse.amount_paise, 'INR:', orderResponse.amount_paise / 100)
-        
-        const rzp = new window.Razorpay(options)
-        rzp.open()
-        setShowRazorpay(true)
-      }
-      
-      script.onerror = () => {
-        console.error('Failed to load Razorpay SDK')
-        alert('Payment gateway is currently unavailable. Please try again later.')
-        setPaymentLoading(false)
-      }
-      } catch (error) {
-      console.error('Payment error:', error)
-      // Show backend error message directly
-      alert(error.response?.data?.detail || error.message || 'Payment failed. Please try again.')
+    } catch (error) {
+      console.error('Payment link error:', error)
+      alert(error.response?.data?.detail || error.message || 'Failed to generate payment link. Please try again.')
+      setPaymentLoading(false)
+    } finally {
       setPaymentLoading(false)
     }
   }
 
-  // Handler for remaining payment via Razorpay
+  // Handler for remaining payment via payment link
   const handleRemainingRazorpayPayment = async () => {
     if (!remainingPaymentData || !remainingPaymentRequestId) {
       alert('Payment details not available. Please try again.')
@@ -1120,116 +1044,111 @@ export function NewInspectionPage() {
         return
       }
       
-      // Step 1: Create Razorpay order for remaining payment
-      const orderResponse = await createRazorpayOrderForRemaining(clientRequestId, clientRequestId)
-      console.log('✅ Razorpay order response for remaining payment:', orderResponse)
+      // Step 1: Create payment link for remaining payment
+      const paymentLinkResponse = await createPaymentLink(clientRequestId, 'remaining')
+      console.log('✅ Remaining payment link created:', paymentLinkResponse)
       
-      // Handle case where order already exists - create a new one instead
-      if (orderResponse.message === 'Order already created') {
-        console.log('ℹ️ Order already exists for remaining payment, creating new Razorpay order...')
-        // For existing orders, we should create a new one or use a different approach
-        // Let the backend handle creating a fresh order
-        try {
-          const newOrderResponse = await createRazorpayOrderForRemaining(clientRequestId, clientRequestId + '_remaining_new')
-          console.log('✅ New Razorpay order created for remaining payment:', newOrderResponse)
-          // Use the new order response
-          Object.assign(orderResponse, newOrderResponse)
-        } catch (newOrderError) {
-          console.error('❌ Failed to create new remaining order:', newOrderError)
-          // Show backend error message directly
-          alert(newOrderError.response?.data?.detail || newOrderError.message || 'Unable to create payment order for remaining payment. Please try again.')
-          setRemainingPaymentLoading(false)
-          return
-        }
-      }
+      const paymentLinkUrl = paymentLinkResponse.payment_link_url
+      const paymentLinkId = paymentLinkResponse.payment_link_id
       
-      console.log('📦 Final Razorpay Order Data for remaining payment:', orderResponse)
+      // Show QR code modal instead of alert
+      setPaymentQRData({
+        requestId: clientRequestId,
+        url: paymentLinkUrl,
+        linkId: paymentLinkId,
+        amount: `₹${(remainingAmount / 100).toFixed(2)}`,
+        type: 'remaining',
+        status: paymentStage || 'unpaid',
+        amountPaid: 0
+      })
+      setShowPaymentQRModal(true)
       
-      // Load Razorpay script
-      const script = document.createElement('script')
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-      script.async = true
-      document.body.appendChild(script)
+      // Keep modal open for customer to scan
+      setShowRemainingPaymentModal(false)
+      setRemainingPaymentLoading(false)
       
-      script.onload = () => {
-        const options = {
-          key: orderResponse.key_id,
-          order_id: orderResponse.razorpay_order_id,
-          amount: orderResponse.amount_paise,
-          currency: orderResponse.currency,
-          name: 'PDI Remaining Payment',
-          description: `Remaining payment of ₹${(remainingAmount / 100).toFixed(2)} for PDI request ${clientRequestId}`,
-          image: '/logo.png',
-          prefill: {
-            name: remainingPaymentData.name,
-            email: remainingPaymentData.email,
-            contact: remainingPaymentData.mobile_number,
-          },
-          theme: {
-            color: '#f97316', // Orange color for remaining payment
-          },
-          modal: {
-            ondismiss: function() {
-              console.log('Remaining payment modal dismissed')
-              setRemainingPaymentLoading(false)
-            }
-          },
-          handler: async function (response) {
-            try {
-              console.log('Remaining payment successful:', response)
-              
-              // Step 2: Verify remaining payment with backend
-              const verificationResponse = await verifyRazorpayRemainingPayment(
-                clientRequestId,
-                response.razorpay_order_id,
-                response.razorpay_payment_id,
-                response.razorpay_signature,
-                clientRequestId
-              )
-              
-              console.log('✅ Remaining payment verified:', verificationResponse)
-              
-              if (verificationResponse.message === 'Remaining payment verified' || verificationResponse.message === 'Remaining payment verified and request fully paid' || verificationResponse.message === 'Order already created') {
-                // Show appropriate message based on the response
-                if (verificationResponse.message === 'Order already created') {
-                  alert('Order already created! Your payment is now complete.')
-                } else {
-                  alert('Remaining payment successful! Your payment is now complete.')
-                }
-                
-                setShowRemainingPaymentModal(false)
-                setRemainingPaymentLoading(false)
-                
-                // Refresh PDI requests to show updated payment status
-                refreshPDIRequests()
-              } else {
-                alert('Remaining payment verification failed. Please contact support.')
-                setRemainingPaymentLoading(false)
-              }
-            } catch (error) {
-              console.error('Remaining payment handler error:', error)
-              alert('Remaining payment processing failed. Please try again.')
-              setRemainingPaymentLoading(false)
-            }
-          }
-        }
-        
-        const rzp = new window.Razorpay(options)
-        rzp.open()
-      }
+      // Refresh PDI requests to show updated payment status
+      setTimeout(() => {
+        refreshPDIRequests()
+      }, 2000)
       
-      script.onerror = () => {
-        console.error('Failed to load Razorpay SDK for remaining payment')
-        alert('Payment gateway is currently unavailable. Please try again later.')
-        setRemainingPaymentLoading(false)
-      }
     } catch (error) {
-      console.error('Remaining payment error:', error)
-      // Show backend error message directly
-      alert(error.response?.data?.detail || error.message || 'Remaining payment failed. Please try again.')
+      console.error('Remaining payment link error:', error)
+      alert(error.response?.data?.detail || error.message || 'Failed to generate remaining payment link. Please try again.')
       setRemainingPaymentLoading(false)
     }
   }
+
+  const fetchPaymentStatusForRequest = async (requestId) => {
+    try {
+      const statusData = await getPaymentStatus(requestId)
+      setPaymentQRData((prev) => prev ? {
+        ...prev,
+        status: statusData.payment_stage,
+        amountPaid: statusData.amount_paid_paise,
+        transactions: statusData.transactions
+      } : prev)
+      return statusData
+    } catch (error) {
+      console.error('Failed to fetch payment status:', error)
+      return null
+    }
+  }
+
+  const refreshPaymentStatus = async () => {
+    if (!paymentQRData?.requestId) return
+    setPaymentStatusLoading(true)
+    try {
+      await fetchPaymentStatusForRequest(paymentQRData.requestId)
+    } finally {
+      setPaymentStatusLoading(false)
+    }
+  }
+
+  const handleVerifyPaymentLink = async () => {
+    if (!paymentQRData?.requestId) {
+      alert('Payment request information is missing.')
+      return
+    }
+
+    setVerifyPaymentLoading(true)
+    try {
+      const verifyResponse = await verifyPaymentLink(paymentQRData.requestId, paymentQRData.type)
+      console.log('✅ Payment link verify response:', verifyResponse)
+
+      setPaymentQRData((prev) => prev ? {
+        ...prev,
+        status: verifyResponse.payment_stage || prev.status,
+        transactionStatus: verifyResponse.transaction_status || prev.transactionStatus,
+        amountPaid: prev.amountPaid
+      } : prev)
+
+      alert(verifyResponse.message || 'Payment verification completed.')
+      await fetchPaymentStatusForRequest(paymentQRData.requestId)
+    } catch (error) {
+      console.error('Payment link verify error:', error)
+      alert(error.response?.data?.detail || error.message || 'Verification failed. Please try again.')
+    } finally {
+      setVerifyPaymentLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!showPaymentQRModal || !paymentQRData?.requestId) return undefined
+
+    const startPolling = async () => {
+      await fetchPaymentStatusForRequest(paymentQRData.requestId)
+    }
+
+    startPolling()
+    const intervalId = window.setInterval(() => {
+      fetchPaymentStatusForRequest(paymentQRData.requestId)
+    }, 5000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [showPaymentQRModal, paymentQRData?.requestId])
 
   // Handler for remaining manual payment
   const handleRemainingManualPayment = async () => {
@@ -3292,8 +3211,8 @@ export function NewInspectionPage() {
                               className="h-4 w-4 text-blue-600"
                             />
                             <div className="flex-1">
-                              <div className="font-medium text-slate-900">Online Payment</div>
-                              <div className="text-xs text-slate-600">Pay securely via Razorpay (Card, UPI, Net Banking)</div>
+                              <div className="font-medium text-slate-900">Online Payment Link</div>
+                              <div className="text-xs text-slate-600">Generate & share payment link with customer</div>
                             </div>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-slate-200 p-3 transition hover:bg-slate-50">
@@ -3307,7 +3226,7 @@ export function NewInspectionPage() {
                             />
                             <div className="flex-1">
                               <div className="font-medium text-slate-900">Cash Payment</div>
-                              <div className="text-xs text-slate-600">Pay cash at the inspection center</div>
+                              <div className="text-xs text-slate-600">Collect cash from customer at counter</div>
                             </div>
                           </label>
                         </div>
@@ -3414,12 +3333,11 @@ export function NewInspectionPage() {
                         if (paymentMethod === 'online') {
                           await handleRazorpayPayment()
                         } else {
-                          // Handle cash payment - use manual payment confirmation
                           await handleManualPayment()
                         }
                       }}
                     >
-                      {paymentLoading ? 'Processing...' : paymentMethod === 'online' ? `Pay ₹500 Advance Online` : 'Book & Pay Cash'}
+                      {paymentLoading ? 'Processing...' : paymentMethod === 'online' ? 'Generate Payment Link' : 'Book & Collect Cash'}
                     </Button>
                   )}
                 </div>
@@ -3543,8 +3461,8 @@ export function NewInspectionPage() {
                       className="h-4 w-4 text-blue-600"
                     />
                     <div className="flex-1">
-                      <div className="font-medium text-slate-900">Online Payment</div>
-                      <div className="text-xs text-slate-600">Pay securely via Razorpay (Card, UPI, Net Banking)</div>
+                      <div className="font-medium text-slate-900">Online Payment Link</div>
+                      <div className="text-xs text-slate-600">Generate & share payment link with customer</div>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer rounded-lg border border-slate-200 p-3 transition hover:bg-slate-50">
@@ -3558,7 +3476,7 @@ export function NewInspectionPage() {
                     />
                     <div className="flex-1">
                       <div className="font-medium text-slate-900">Cash Payment</div>
-                      <div className="text-xs text-slate-600">Pay cash at the inspection center</div>
+                      <div className="text-xs text-slate-600">Collect cash from customer at counter</div>
                     </div>
                   </label>
                 </div>
@@ -3612,7 +3530,7 @@ export function NewInspectionPage() {
                   }}
                   disabled={remainingPaymentLoading || (remainingPaymentMethod === 'cash' && !remainingManualReferenceNo.trim())}
                 >
-                  {remainingPaymentLoading ? 'Processing...' : remainingPaymentMethod === 'online' ? `Pay ₹${(remainingPaymentData.remaining_amount_paise / 100).toFixed(2)} Online` : 'Confirm Cash Payment'}
+                  {remainingPaymentLoading ? 'Processing...' : remainingPaymentMethod === 'online' ? `Generate Payment Link - ₹${(remainingPaymentData.remaining_amount_paise / 100).toFixed(2)}` : 'Confirm Cash Payment'}
                 </Button>
               </div>
             </div>
@@ -3679,6 +3597,126 @@ export function NewInspectionPage() {
           </div>
         </div>
       )}
+
+      {/* Payment QR Code Modal */}
+      {showPaymentQRModal && paymentQRData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-3xl max-h-[85vh] shadow-xl flex flex-col overflow-hidden">
+            <div className="p-8 overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold">Payment Link QR Code</h3>
+                <button
+                  onClick={() => {
+                    setShowPaymentQRModal(false)
+                    setPaymentQRData(null)
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="space-y-4 pb-8">
+                {/* QR Code Display */}
+                <div className="flex justify-center">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(paymentQRData.url)}`}
+                    alt="Payment Link QR Code"
+                    className="border-2 border-slate-200 rounded-lg p-2 bg-white"
+                  />
+                </div>
+
+                {/* Payment Details */}
+                <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-slate-600">Amount:</span>
+                    <span className="text-lg font-bold text-slate-900">{paymentQRData.amount}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-slate-600">Type:</span>
+                    <span className="text-sm font-semibold text-slate-900 capitalize">{paymentQRData.type}</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200">
+                    <span className="text-xs font-medium text-slate-600">Link ID:</span>
+                    <p className="text-xs text-slate-700 break-all font-mono mt-1">{paymentQRData.linkId}</p>
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-slate-600">Payment Status:</span>
+                    <span className="text-sm font-semibold text-slate-900 capitalize">{paymentQRData.status || 'unpaid'}</span>
+                  </div>
+                  {paymentQRData.amountPaid != null ? (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-slate-600">Amount Paid:</span>
+                      <span className="text-sm font-semibold text-slate-900">₹{(paymentQRData.amountPaid / 100).toFixed(2)}</span>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Instructions */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-900">
+                    <strong>📱 Instructions:</strong>
+                    <br />
+                    1. Show this QR code to the customer
+                    <br />
+                    2. Customer scans with phone
+                    <br />
+                    3. Customer completes payment
+                    <br />
+                    4. You can verify payment status afterward
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-8 py-4">
+              <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+                {/* <Button
+                  variant="secondary"
+                  onClick={refreshPaymentStatus}
+                  disabled={paymentStatusLoading}
+                  className="w-full"
+                >
+                  {paymentStatusLoading ? 'Refreshing...' : 'Refresh Status'}
+                </Button> */}
+                <Button
+                  variant="outline"
+                  onClick={handleVerifyPaymentLink}
+                  disabled={verifyPaymentLoading}
+                  className="w-full"
+                >
+                  {verifyPaymentLoading ? 'Verifying...' : 'Verify Status'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(paymentQRData.url)
+                    alert('Payment link copied to clipboard!')
+                  }}
+                  className="w-full"
+                >
+                  Copy Link
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setShowPaymentQRModal(false)
+                    setPaymentQRData(null)
+                  }}
+                  className="w-full"
+                >
+                  Done
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+

@@ -1729,8 +1729,22 @@ export function NewInspectionPage() {
         { key: 'amount', label: 'Total Amount', value: `₹${(detailData.amount_paise / 100).toFixed(2)}` },
         { key: 'advancePaid', label: 'Advance Paid', value: `₹${(detailData.advance_amount_paise / 100).toFixed(2)}` },
         { key: 'remainingAmount', label: 'Remaining Amount', value: `₹${(detailData.remaining_amount_paise / 100).toFixed(2)}` },
-        { key: 'paymentStage', label: 'Payment Stage', value: detailData.payment_stage || '—' },
-        { key: 'status', label: 'Status', value: detailData.status || '—' },
+        // { key: 'paymentStage', label: 'Payment Stage', value: detailData.payment_stage || '—' },
+        { 
+  key: 'paymentStage', 
+  label: 'Payment Stage', 
+  value: detailData.payment_stage 
+    ? detailData.payment_stage.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+    : '—' 
+},
+        // { key: 'status', label: 'Status', value: detailData.status || '—' },
+        { 
+  key: 'status', 
+  label: 'Status', 
+  value: detailData.status 
+    ? detailData.status.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+    : '—' 
+},
         { key: 'assignedInspectorId', label: 'Assigned Inspector ID', value: detailData.assigned_inspector_id || '—' },
         { key: 'assignedInspectorName', label: 'Assigned Inspector Name', value: detailData.assigned_inspector_name || '—' },
         { key: 'assignedInspectorMobile', label: 'Assigned Inspector Mobile', value: detailData.assigned_inspector_mobile_number || '—' },

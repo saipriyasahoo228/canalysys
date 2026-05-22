@@ -28,6 +28,45 @@ const PAYMENT_METHOD_OPTIONS = [
   { value: 'wallet', label: 'Wallets (Paytm, Amazon Pay)' },
 ]
 
+const INDIAN_STATE_OPTIONS = [
+  'Andhra Pradesh',
+  'Arunachal Pradesh',
+  'Assam',
+  'Bihar',
+  'Chhattisgarh',
+  'Goa',
+  'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jharkhand',
+  'Karnataka',
+  'Kerala',
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Manipur',
+  'Meghalaya',
+  'Mizoram',
+  'Nagaland',
+  'Odisha',
+  'Punjab',
+  'Rajasthan',
+  'Sikkim',
+  'Tamil Nadu',
+  'Telangana',
+  'Tripura',
+  'Uttar Pradesh',
+  'Uttarakhand',
+  'West Bengal',
+  'Andaman and Nicobar Islands',
+  'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi',
+  'Jammu and Kashmir',
+  'Ladakh',
+  'Lakshadweep',
+  'Puducherry',
+]
+
 function getPagedItems(response) {
   if (Array.isArray(response)) return response
   if (Array.isArray(response?.items)) return response.items
@@ -2856,16 +2895,22 @@ export function NewInspectionPage() {
                         <div>
                           <div className="text-xs font-medium text-slate-900">State <span className="text-red-500">*</span></div>
                           <div className="mt-1">
-                            <Input
+                            <Select
                               value={wizardForm.state || ''}
                               onChange={(e) =>
                                 setDialog((s) =>
                                   s && s.type === 'raise' ? { ...s, form: { ...s.form, state: e.target.value } } : s
                                 )
                               }
-                              placeholder="Enter state"
                               required
-                            />
+                            >
+                              <option value="">Select state</option>
+                              {INDIAN_STATE_OPTIONS.map((state) => (
+                                <option key={state} value={state}>
+                                  {state}
+                                </option>
+                              ))}
+                            </Select>
                           </div>
                         </div>
 
@@ -3733,4 +3778,3 @@ export function NewInspectionPage() {
     </div>
   )
 }
-

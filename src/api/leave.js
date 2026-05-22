@@ -18,16 +18,24 @@ export const listLeaveRequests = async (filters = {}) => {
 
 // Approve leave request
 export const approveLeaveRequest = async (leaveId, adminComment = '') => {
-  const response = await api.post(`/api/staff/leaves/${leaveId}/approve/`, {
-    admin_comment: adminComment
-  });
-  return response.data;
+  try {
+    const response = await api.post(`/api/staff/leaves/${leaveId}/approve/`, {
+      admin_comment: adminComment
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
 };
 
 // Reject leave request
 export const rejectLeaveRequest = async (leaveId, adminComment = '') => {
-  const response = await api.post(`/api/staff/leaves/${leaveId}/reject/`, {
-    admin_comment: adminComment
-  });
-  return response.data;
+  try {
+    const response = await api.post(`/api/staff/leaves/${leaveId}/reject/`, {
+      admin_comment: adminComment
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
 };

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { CheckCircle2, Eye, XCircle } from 'lucide-react'
+import { approveLeaveRequest, rejectLeaveRequest } from '../../api/leave'
 import { usePolling } from '../hooks/usePolling'
 import { mockApi } from '../mock/mockApi'
 import { useRbac } from '../rbac/RbacContext'
@@ -14,8 +15,38 @@ function statusTone(s) {
   return 'amber'
 }
 
+function getBackendMessages(error) {
+  const parseJson = (value) => {
+    if (typeof value !== 'string') return value
+    try {
+      return JSON.parse(value)
+    } catch {
+      return value
+    }
+  }
+
+  const candidates = [
+    error?.response?.data,
+    error?.data,
+    error,
+    error?.request?.response,
+    error?.response?.request?.responseText,
+  ].map(parseJson)
+
+  for (const candidate of candidates) {
+    const messages = candidate?.meta?.messages
+    if (Array.isArray(messages) && messages.length) return messages.filter(Boolean).join('\n')
+  }
+
+  for (const candidate of candidates) {
+    if (typeof candidate?.detail === 'string' && candidate.detail.trim()) return candidate.detail.trim()
+  }
+
+  return error?.message || 'Action failed'
+}
+
 export function InspectorLeaveRequestsPage() {
-  const { actor, permissions } = useRbac()
+  const { permissions } = useRbac()
   const { data, loading, error, refresh } = usePolling('inspector-leave-requests', () => mockApi.getInspectorLeaveRequests(), {
     intervalMs: 15_000,
   })
@@ -179,11 +210,11 @@ export function InspectorLeaveRequestsPage() {
         onSubmit={async () => {
           try {
             if (!permissions.manageInspectors) throw new Error('Insufficient permission')
-            await mockApi.approveInspectorLeaveRequest({ actor, requestId: dialog?.item?.id })
+            await approveLeaveRequest(dialog?.item?.id)
             setDialog(null)
           } catch (e) {
             // eslint-disable-next-line no-alert
-            alert(e.message || 'Action failed')
+            alert(getBackendMessages(e))
           }
         }}
       />
@@ -200,15 +231,11 @@ export function InspectorLeaveRequestsPage() {
         onSubmit={async (form) => {
           try {
             if (!permissions.manageInspectors) throw new Error('Insufficient permission')
-            await mockApi.rejectInspectorLeaveRequest({
-              actor,
-              requestId: dialog?.item?.id,
-              reason: form.reason,
-            })
+            await rejectLeaveRequest(dialog?.item?.id, form.reason)
             setDialog(null)
           } catch (e) {
             // eslint-disable-next-line no-alert
-            alert(e.message || 'Action failed')
+            alert(getBackendMessages(e))
           }
         }}
       />

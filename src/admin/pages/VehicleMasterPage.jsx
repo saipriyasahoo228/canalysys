@@ -523,7 +523,12 @@ export function VehicleMasterPage() {
       const it = viewMappingDetail?.data || dialog.item
       return [
         { key: 'mappingId', label: 'Mapping ID', value: it?.id || '—' },
-        { key: 'vehicle_type', label: 'Vehicle Type', value: it?.vehicle_type_label || conditionLabel(it?.vehicle_type) || '—' },
+        // { key: 'vehicle_type', label: 'Vehicle Type', value: it?.vehicle_type_label || conditionLabel(it?.vehicle_type) || '—' },
+        { 
+      key: 'vehicle_type', 
+      label: 'Vehicle Type', 
+      value: capitalizeFirst(it?.vehicle_type_label || conditionLabel(it?.vehicle_type) || '—') 
+    },
         { key: 'brand', label: 'Brand', value: it?.brand_detail?.name || it?.brand_name || it?.brand || '—' },
         { key: 'model', label: 'Model', value: it?.model_detail?.name || it?.model_name || it?.model || '—' },
         { key: 'variant', label: 'Variant', value: it?.variant_detail?.name || it?.variant_name || it?.variant || '—' },

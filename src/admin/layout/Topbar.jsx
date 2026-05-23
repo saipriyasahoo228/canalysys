@@ -6,6 +6,22 @@ import { useAuth } from '../auth/AuthContext'
 import { getNotifications, markNotificationAsRead } from '../../api/notification'
 import { changePassword } from '../../api/changepassword' // Import the changePassword function
 
+function formatNotificationDateTime(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return ''
+
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = String(d.getFullYear())
+  const hours = d.getHours()
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  const displayHour = hours % 12 || 12
+
+  return `${dd}/${mm}/${yyyy}, ${displayHour}:${minutes} ${ampm}`
+}
+
 export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
   const navigate = useNavigate()
   const { logout } = useAuth()
@@ -235,6 +251,11 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
                               <div className="mt-0.5 text-xs text-slate-600">
                                 {n.data?.customer_id ? `Customer ID: ${n.data.customer_id}` : n.body}
                               </div>
+                              {n.created_at && (
+                                <div className="mt-1 text-[11px] font-medium text-slate-400">
+                                  {formatNotificationDateTime(n.created_at)}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 ml-2">
                               {!n.read_at && (
@@ -356,6 +377,11 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
                             <div className="mt-0.5 text-xs text-slate-600">
                               {n.data?.customer_id ? `Customer ID: ${n.data.customer_id}` : n.body}
                             </div>
+                            {n.created_at && (
+                              <div className="mt-1 text-[11px] font-medium text-slate-400">
+                                {formatNotificationDateTime(n.created_at)}
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 ml-2">
                             {!n.read_at && (

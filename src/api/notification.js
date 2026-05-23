@@ -31,3 +31,13 @@ export const markMultipleNotificationsAsRead = async (notificationIds) => {
     throw error.response?.data || error.message
   }
 }
+
+// Mark all notifications as read
+export const markAllNotificationsAsRead = async () => {
+  try {
+    const response = await api.patch('/api/notifications/read-all/')
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}

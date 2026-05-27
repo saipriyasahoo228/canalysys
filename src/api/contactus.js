@@ -36,3 +36,27 @@ export const getInspectionProcessFeedback = async () => {
   const response = await api.get('/api/public/inspection/process-feedback/');
   return response.data;
 };
+
+
+// Simple connection to the /api/callbacks/ endpoint
+export const getCallbacks = async () => {
+  try {
+    const response = await api.get('/api/callbacks/');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching callbacks:', error);
+    throw error;
+  }
+};
+
+
+// Complete a callback request (mark as completed)
+export const completeCallback = async (callbackId) => {
+  try {
+    const response = await api.patch(`/api/callbacks/${callbackId}/complete/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error completing callback:', error);
+    throw error;
+  }
+};

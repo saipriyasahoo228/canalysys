@@ -1121,7 +1121,7 @@ const LandingPage = () => {
           <div className="footer-copy">© 2026 <span>CARNALYSYS</span>. All rights reserved. Built for Odisha.</div>
           <div className="footer-legal">
             <a href="#" onClick={(e) => { e.preventDefault(); navigate('/privacy-policy'); }}>Privacy Policy</a>
-            <a href="#">Terms of Service</a>
+            {/* <a href="#">Terms of Service</a> */}
             <a href="https://www.intulet.com/">Powered By Intulet Technologies</a>
           </div>
         </div>

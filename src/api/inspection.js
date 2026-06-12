@@ -150,3 +150,11 @@ export const verifyPaymentLink = async (requestId, purpose = '') => {
   }
 }
 
+export const deletePdiRequest = async (requestId) => {
+  try {
+    const response = await api.delete(`/api/pdi-requests/${requestId}/delete/`)
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}

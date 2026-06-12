@@ -552,6 +552,7 @@
 
 
 
+import { useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -572,6 +573,7 @@ import {
 } from 'recharts'
 import { AlertTriangle, ClipboardCheck, ClipboardList, Clock, Gauge, Layers, UserX, IndianRupeeIcon } from 'lucide-react'
 import { Card, Badge, cx } from '../ui/Ui'
+import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { usePolling } from '../hooks/usePolling'
 import { mockApi } from '../mock/mockApi'
 import { useRbac } from '../rbac/RbacContext'
@@ -603,27 +605,27 @@ export function DashboardPage() {
   )
 
   const k = data?.kpi
+  const [dateFilter, setDateFilter] = useState({ from: '', to: '' })
   const cardValueClass = 'mt-1 text-lg font-semibold tracking-tight text-slate-900'
   const cardHintClass = 'mt-1 text-xs text-slate-500'
-
-  // Calculate today's fully paid inspections
-  const todayFullyPaidCount = pdiData?.items ? (() => {
-    const today = new Date().toISOString().split('T')[0]
-    return pdiData.items.filter(item => 
-      item.slot_date === today && 
-      item.payment_stage === 'fully_paid'
-    ).length
-  })() : 0
+  const pdiItems = pdiData?.items ?? []
+  const filteredPdiItems = pdiItems.filter((item) => {
+    const date = item?.slot_date
+    if (!date) return true
+    if (dateFilter.from && date < dateFilter.from) return false
+    if (dateFilter.to && date > dateFilter.to) return false
+    return true
+  })
 
   // Calculate total counts
-  const totalCount = pdiData?.count || 0
-  const fullyPaidCount = pdiData?.items ? pdiData.items.filter(item => item.payment_stage === 'fully_paid').length : 0
-  const advancePaidCount = pdiData?.items ? pdiData.items.filter(item => item.payment_stage === 'advance_paid').length : 0
+  const totalCount = filteredPdiItems.length
+  const fullyPaidCount = filteredPdiItems.filter(item => item.payment_stage === 'fully_paid').length
+  const advancePaidCount = filteredPdiItems.filter(item => item.payment_stage === 'advance_paid').length
 
   // Calculate payment stages distribution
-  const paymentStagesData = pdiData?.items ? (() => {
+  const paymentStagesData = (() => {
     const stages = { unpaid: 0, advance_paid: 0, fully_paid: 0 }
-    pdiData.items.forEach(item => {
+    filteredPdiItems.forEach(item => {
       if (stages[item.payment_stage] !== undefined) {
         stages[item.payment_stage]++
       }
@@ -633,12 +635,12 @@ export function DashboardPage() {
       { name: 'Advance Paid', value: stages.advance_paid, color: '#f59e0b' },
       { name: 'Fully Paid', value: stages.fully_paid, color: '#10b981' }
     ]
-  })() : []
+  })()
 
   // Calculate vehicle types distribution
-  const vehicleTypesData = pdiData?.items ? (() => {
+  const vehicleTypesData = (() => {
     const types = { new: 0, owned: 0 }
-    pdiData.items.forEach(item => {
+    filteredPdiItems.forEach(item => {
       if (types[item.vehicle_type] !== undefined) {
         types[item.vehicle_type]++
       }
@@ -647,12 +649,12 @@ export function DashboardPage() {
       { name: 'New Vehicles', value: types.new },
       { name: 'Pre-owned Vehicles', value: types.owned }
     ]
-  })() : []
+  })()
 
   // Calculate date-wise trend data
-  const dateWiseTrend = pdiData?.items ? (() => {
+  const dateWiseTrend = (() => {
     const dateCounts = {}
-    pdiData.items.forEach(item => {
+    filteredPdiItems.forEach(item => {
       const date = item.slot_date
       if (!dateCounts[date]) {
         dateCounts[date] = { date, total: 0, fullyPaid: 0, advancePaid: 0, unpaid: 0 }
@@ -663,12 +665,12 @@ export function DashboardPage() {
       if (item.payment_stage === 'unpaid') dateCounts[date].unpaid++
     })
     return Object.values(dateCounts).sort((a, b) => a.date.localeCompare(b.date))
-  })() : []
+  })()
 
   // Calculate location-wise data
-  const locationData = pdiData?.items ? (() => {
+  const locationData = (() => {
     const locations = {}
-    pdiData.items.forEach(item => {
+    filteredPdiItems.forEach(item => {
       const location = item.city || 'Unknown'
       if (!locations[location]) {
         locations[location] = { name: location, total: 0, assigned: 0, unassigned: 0 }
@@ -681,12 +683,12 @@ export function DashboardPage() {
       }
     })
     return Object.values(locations)
-  })() : []
+  })()
 
   // Calculate vehicle brands distribution
-  const vehicleBrandsData = pdiData?.items ? (() => {
+  const vehicleBrandsData = (() => {
     const brands = {}
-    pdiData.items.forEach(item => {
+    filteredPdiItems.forEach(item => {
       const brand = item.brand_name || 'Unknown'
       if (!brands[brand]) {
         brands[brand] = { name: brand, count: 0 }
@@ -694,11 +696,11 @@ export function DashboardPage() {
       brands[brand].count++
     })
     return Object.values(brands).slice(0, 6) // Top 6 brands
-  })() : []
+  })()
 
   // Calculate customer-inspector assignments
-  const customerAssignments = pdiData?.items ? (() => {
-    return pdiData.items
+  const customerAssignments = (() => {
+    return filteredPdiItems
       .filter(item => item.assigned_inspector)
       .slice(0, 8) // Show top 8 assignments
       .map(item => ({
@@ -708,10 +710,39 @@ export function DashboardPage() {
         date: item.slot_date,
         vehicle: `${item.brand_name} ${item.model_name}`
       }))
-  })() : []
+  })()
 
   return (
     <div className="space-y-3">
+      <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Date filter</h2>
+            <p className="text-xs text-slate-500">Filter dashboard data by slot date.</p>
+          </div>
+          <div className="grid w-full gap-3 sm:grid-cols-2 sm:w-auto">
+            <div>
+              <label className="mb-2 block text-xs font-medium text-slate-700">From date</label>
+              <CustomDatePicker
+                value={dateFilter.from}
+                onChange={(value) => setDateFilter(prev => ({ ...prev, from: value }))}
+                placeholder="dd/mm/yyyy"
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-xs font-medium text-slate-700">To date</label>
+              <CustomDatePicker
+                value={dateFilter.to}
+                onChange={(value) => setDateFilter(prev => ({ ...prev, to: value }))}
+                placeholder="dd/mm/yyyy"
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-3">
         <Card accent="cyan" className="p-0" kpi>
           <div className="relative p-3">

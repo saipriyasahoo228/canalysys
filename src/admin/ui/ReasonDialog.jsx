@@ -582,7 +582,7 @@ export function ReasonDialog({
                   value={form.reason}
                   disabled={submitting}
                   onChange={(e) => setForm((s) => ({ ...s, reason: e.target.value }))}
-                  placeholder={reasonPlaceholder || 'Required for audit log'}
+                  // placeholder={reasonPlaceholder || 'Required for audit log'}
                 />
               </div>
             </div>

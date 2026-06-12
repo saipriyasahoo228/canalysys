@@ -27,15 +27,24 @@ export const listCommissionRules = async (filters = {}) => {
 };
 
 // Get commission report (admin)
-export const getCommissionReport = async (fromDate, toDate, inspectorId = null) => {
-  const params = new URLSearchParams();
-  params.append('from', fromDate);
-  params.append('to', toDate);
-  if (inspectorId) params.append('inspector_id', inspectorId);
+// export const getCommissionReport = async (fromDate, toDate, inspectorId = null) => {
+//   const params = new URLSearchParams();
+//   params.append('from', fromDate);
+//   params.append('to', toDate);
+//   if (inspectorId) params.append('inspector_id', inspectorId);
   
-  const response = await api.get(`/api/staff/commissions/report/?${params.toString()}`);
-  return response.data;
-};
+//   const response = await api.get(`/api/staff/commissions/report/?${params.toString()}`);
+//   return response.data;
+// };
+
+// In your API service file
+export const getCommissionReport = async (from, to, inspectorId = null, category = null) => {
+  const params = { from, to }
+  if (inspectorId) params.inspector_id = inspectorId
+  if (category) params.category = category  // Only add if category has a value
+  const response = await api.get('/api/staff/commissions/report/', { params })
+  return response.data
+}
 
 // Get my commission report (inspector)
 export const getMyCommissionReport = async (fromDate, toDate) => {

@@ -1,6 +1,6 @@
 // TODO: Temporary fix for React development error with X icon
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, Eye, Gauge, MapPin, MoreVertical, Plus, Search, Trash2, User, UserCheck, UserX, XCircle, Users, CalendarCheck, CalendarX, ChevronDown, ChevronRight, Home ,Edit} from 'lucide-react'
+import { CheckCircle2, Eye, EyeOff, Gauge, MapPin, MoreVertical, Plus, Search, Trash2, User, UserCheck, UserX, XCircle, Users, CalendarCheck, CalendarX, ChevronDown, ChevronRight, Home ,Edit} from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, cx } from '../ui/Ui'
@@ -12,6 +12,7 @@ import { InspectorProfileDialog } from '../ui/InspectorProfileDialog'
 import { ViewProfileDialog } from '../ui/ViewProfileDialog'
 import { formatDate, formatDateTime, formatMinutes, formatTime, minutesSince } from '../utils/format'
 import { registerInspector, resendOtp, verifyEmailOtp, verifySmsOtp, listInspectors, getInspectorProfile, createInspectorProfile, updateInspectorProfile, getInspectorAddresses, createInspectorAddress, updateInspectorAddress, deleteInspectorAddress } from '../../api/inspectoronboard'
+import { requestResetInspectorPassword, verifyResetInspectorPasswordOTP, confirmResetInspectorPassword } from '../../api/changepassword'
 import { deleteInspector } from '../../api/inspection'
 import { getAvailabilities, updateAvailabilityStatus, createAvailability, deleteAvailability, patchAvailability, getInspectorAvailability } from '../../api/inspectoravailibility'
 import { listLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '../../api/leave'
@@ -320,11 +321,23 @@ export function InspectorsPage() {
   }, [createOpen])
 
   const [verifyForm, setVerifyForm] = useState({ email_otp: '', sms_otp: '' })
+  const [resetPasswordForm, setResetPasswordForm] = useState({ contact_method: 'email', otp: '', new_password: '', confirm_password: '' })
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const resetPasswordOpen = dialog?.type === 'resetPassword'
 
   useEffect(() => {
     if (!verifyOpen) return
     setVerifyForm({ email_otp: '', sms_otp: '' })
   }, [verifyOpen])
+
+  useEffect(() => {
+    if (!resetPasswordOpen) return
+    const contactMethod = dialog?.item?.email ? 'email' : dialog?.item?.mobile_number ? 'sms' : 'email'
+    setResetPasswordForm({ contact_method: contactMethod, otp: '', new_password: '', confirm_password: '' })
+    setShowNewPassword(false)
+    setShowConfirmPassword(false)
+  }, [resetPasswordOpen, dialog?.item?.email, dialog?.item?.mobile_number])
 
   useEffect(() => {
     if (manageProfileOpen && dialog?.item?.user_id) {
@@ -1584,6 +1597,23 @@ export function InspectorsPage() {
             )}
             onClick={() => {
               if (!permissions.manageInspectors) return
+              setDialog({ type: 'resetPassword', item: actionsMenu.row, step: 'request' })
+              setActionsMenu(null)
+            }}
+          >
+            <UserCheck className="h-4 w-4" />
+            Reset Password
+          </button>
+
+          <button
+            type="button"
+            disabled={!permissions.manageInspectors}
+            className={cx(
+              'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-100',
+              permissions.manageInspectors ? 'text-slate-900' : 'text-slate-400'
+            )}
+            onClick={() => {
+              if (!permissions.manageInspectors) return
               setAddressDialog({ type: 'manage', item: actionsMenu.row })
               setActionsMenu(null)
             }}
@@ -1929,6 +1959,223 @@ export function InspectorsPage() {
         </div>
       ) : null}
 
+      {resetPasswordOpen ? (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setDialog(null)} />
+          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-lg">
+            <div className="px-4 py-3">
+              <div className="text-sm font-semibold">Reset inspector password</div>
+              <div className="mt-1 text-xs text-slate-500">Use OTP verification and confirm a new password.</div>
+            </div>
+            <div className="space-y-3 px-4 pb-4">
+              <div>
+                <div className="text-xs font-medium text-slate-900">Inspector</div>
+                <div className="mt-1 text-xs text-slate-600">{dialog?.item?.name || '—'} ({dialog?.item?.user_id || '—'})</div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <div className="text-xs font-medium text-slate-900">Email</div>
+                  <div className="mt-1 text-xs text-slate-600">{dialog?.item?.email || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-medium text-slate-900">Mobile</div>
+                  <div className="mt-1 text-xs text-slate-600">{dialog?.item?.mobile_number || '—'}</div>
+                </div>
+              </div>
+
+              {dialog?.step === 'request' ? (
+                <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs text-slate-600">Request a reset OTP to the inspector's registered contact.</div>
+                  <div className="space-y-3">
+                    <div className="text-xs font-medium text-slate-900">Contact method</div>
+                    <div className="flex flex-wrap gap-2">
+                      {dialog?.item?.email ? (
+                        <button
+                          type="button"
+                          className={cx(
+                            'rounded-full border px-3 py-1 text-xs font-medium',
+                            resetPasswordForm.contact_method === 'email'
+                              ? 'border-slate-900 bg-slate-900 text-white'
+                              : 'border-slate-300 bg-white text-slate-700'
+                          )}
+                          onClick={() => setResetPasswordForm((s) => ({ ...s, contact_method: 'email' }))}
+                        >
+                          Email
+                        </button>
+                      ) : null}
+                      {dialog?.item?.mobile_number ? (
+                        <button
+                          type="button"
+                          className={cx(
+                            'rounded-full border px-3 py-1 text-xs font-medium',
+                            resetPasswordForm.contact_method === 'sms'
+                              ? 'border-slate-900 bg-slate-900 text-white'
+                              : 'border-slate-300 bg-white text-slate-700'
+                          )}
+                          onClick={() => setResetPasswordForm((s) => ({ ...s, contact_method: 'sms' }))}
+                        >
+                          SMS
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="text-xs text-slate-500">Selected: {resetPasswordForm.contact_method === 'email' ? 'Email' : 'SMS'}</div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button
+                      onClick={async () => {
+                        if (!resetPasswordForm.contact_method) {
+                          showSnack({ tone: 'danger', title: 'Error', message: 'Select a contact method' })
+                          return
+                        }
+                        try {
+                          const res = await requestResetInspectorPassword(dialog.item.user_id, {
+                            contact_method: resetPasswordForm.contact_method,
+                          })
+                          showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) || 'OTP sent' })
+                          setDialog((prev) => prev ? { ...prev, step: 'verify' } : null)
+                        } catch (e) {
+                          showSnack({ tone: 'danger', title: 'Error', message: responseToMessage(e) || 'OTP request failed' })
+                        }
+                      }}
+                    >
+                      Request OTP
+                    </Button>
+                    <Button variant="secondary" onClick={() => setDialog(null)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {dialog?.step === 'verify' ? (
+                <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs text-slate-600">Enter the OTP received by the inspector, or resend if needed.</div>
+                  <div>
+                    <div className="text-xs font-medium text-slate-900">OTP</div>
+                    <Input
+                      value={resetPasswordForm.otp}
+                      onChange={(e) => setResetPasswordForm((s) => ({ ...s, otp: e.target.value }))}
+                      placeholder="Enter OTP"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const res = await verifyResetInspectorPasswordOTP(dialog.item.user_id, {
+                            otp: resetPasswordForm.otp,
+                          })
+                          showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) || 'OTP verified' })
+                          setDialog((prev) => prev ? { ...prev, step: 'confirm' } : null)
+                        } catch (e) {
+                          showSnack({ tone: 'danger', title: 'Error', message: responseToMessage(e) || 'Verification failed' })
+                        }
+                      }}
+                    >
+                      Verify OTP
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={async () => {
+                        try {
+                          const res = await resendOtp({
+                            email: dialog.item.email,
+                            mobile_number: dialog.item.mobile_number,
+                          })
+                          showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) || 'OTP resent' })
+                        } catch (e) {
+                          showSnack({ tone: 'danger', title: 'Error', message: responseToMessage(e) || 'Resend failed' })
+                        }
+                      }}
+                    >
+                      Resend OTP
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {dialog?.step === 'confirm' ? (
+                <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs text-slate-600">Enter a new password and confirm it.</div>
+                  <div>
+                    <div className="text-xs font-medium text-slate-900">New Password</div>
+                    <div className="relative">
+                      <Input
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={resetPasswordForm.new_password}
+                        onChange={(e) => setResetPasswordForm((s) => ({ ...s, new_password: e.target.value }))}
+                        placeholder="New password"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900"
+                        onClick={() => setShowNewPassword((prev) => !prev)}
+                      >
+                        {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium text-slate-900">Confirm Password</div>
+                    <div className="relative">
+                      <Input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={resetPasswordForm.confirm_password}
+                        onChange={(e) => setResetPasswordForm((s) => ({ ...s, confirm_password: e.target.value }))}
+                        placeholder="Confirm new password"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900"
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      >
+                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button
+                      onClick={async () => {
+                        if (!resetPasswordForm.new_password) {
+                          showSnack({ tone: 'danger', title: 'Error', message: 'New password is required' })
+                          return
+                        }
+                        if (resetPasswordForm.new_password !== resetPasswordForm.confirm_password) {
+                          showSnack({ tone: 'danger', title: 'Error', message: 'Passwords do not match' })
+                          return
+                        }
+                        try {
+                          const res = await confirmResetInspectorPassword(dialog.item.user_id, {
+                            otp: resetPasswordForm.otp,
+                            password: resetPasswordForm.new_password,
+                            new_password: resetPasswordForm.new_password,
+                          })
+                          showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) || 'Password reset successfully' })
+                          setDialog(null)
+                        } catch (e) {
+                          showSnack({ tone: 'danger', title: 'Error', message: responseToMessage(e) || 'Password reset failed' })
+                        }
+                      }}
+                    >
+                      Reset Password
+                    </Button>
+                    <Button variant="secondary" onClick={() => setDialog(null)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="secondary" onClick={() => setDialog(null)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <Snackbar open={snack.open} tone={snack.tone} title={snack.title} message={snack.message} onClose={() => setSnack((s) => ({ ...s, open: false }))} />
 
       <ReasonDialog
@@ -1989,7 +2236,7 @@ export function InspectorsPage() {
                   disabled={!!dialog?.item?.employment_type}
                 >
                   <option value="full_time">Full Time</option>
-                  <option value="contract">Contract</option>
+                  {/* <option value="contract">Contract</option> */}
                   <option value="freelancer">Freelancer</option>
                 </select>
               </div>

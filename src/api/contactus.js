@@ -60,3 +60,18 @@ export const completeCallback = async (callbackId) => {
     throw error;
   }
 };
+
+
+
+//Total Customer Registrations
+export const getCustomers = async (page = 1, limit = 10) => {
+  try {
+    const response = await api.get('/api/admin/customers/', {
+      params: { page, limit }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching customers:', error);
+    throw error;
+  }
+};

@@ -222,7 +222,7 @@ export function InspectorProfileDialog({ open, inspector, onClose, onSave }) {
                         onChange={(e) => setForm((s) => ({ ...s, employmentType: e.target.value }))}
                       >
                         <option value="full_time">Full-time</option>
-                        <option value="contract">Contract</option>
+                        {/* <option value="contract">Contract</option> */}
                         <option value="freelancer">Freelancer</option>
                       </Select>
                     </div>

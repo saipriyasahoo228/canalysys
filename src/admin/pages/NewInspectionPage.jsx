@@ -4,7 +4,7 @@ import { usePolling } from '../hooks/usePolling'
 import { listCategoryPricing } from '../../api/categorypricing'
 import { listBrands, listModels, listVariants, listCategoryValues } from '../../api/vehiclemaster'
 import { listVehicleCategoryMappings } from '../../api/categorymapping'
-import { createPDIRequest, listPDIRequests, getPDIRequestById, assignInspector, confirmManualPayment, confirmManualRemainingPayment, createPaymentLink, getPaymentStatus, verifyPaymentLink } from '../../api/inspection'
+import { createPDIRequest, listPDIRequests, getPDIRequestById, assignInspector, confirmManualPayment, confirmManualRemainingPayment, createPaymentLink, getPaymentStatus, verifyPaymentLink, deletePdiRequest } from '../../api/inspection'
 import { listCustomers, deleteCustomer, getCustomerBookings } from '../../api/customer'
 import { getAvailabilities, getInspectorAvailabilityByDate } from '../../api/inspectoravailibility'
 import { listInspectors } from '../../api/inspectoronboard'
@@ -2552,6 +2552,25 @@ export function NewInspectionPage() {
                     </button>
                   )
                 })()}
+                      <button
+                        type="button"
+                        className={`w-full px-3 py-2 text-left text-sm hover:bg-rose-50 text-rose-700 ${actionsMenu.showUpward ? 'rounded-t-xl' : 'rounded-b-xl'}`}
+                        onClick={async () => {
+                          const ok = window.confirm('Are you sure you want to delete this request? This action cannot be undone.')
+                          if (!ok) return
+                          try {
+                            await deletePdiRequest(actionsMenu.requestId)
+                            // refresh the list
+                            if (typeof refreshPDIRequests === 'function') refreshPDIRequests()
+                            setActionsMenu(null)
+                            window.alert('Request deleted')
+                          } catch (e) {
+                            window.alert(e?.message || e || 'Delete failed')
+                          }
+                        }}
+                      >
+                        Delete Request
+                      </button>
               </>
             )}
             

@@ -518,19 +518,38 @@ export function NewInspectionPage() {
       setSelectedTimeSlot('')
       return
     }
-    
+
     try {
       setLoadingTimeSlots(true)
-      console.log('🕐 Fetching PDI time slots for date:', date)
-      
-      const response = await getPDIAvailableSlots(date) // Use new PDI slots API
-      console.log('✅ PDI time slots fetched:', response)
-      
-      const slots = response.slots || []
-      setTimeSlots(slots)
+      console.log('🕐 Fetching PDI time slots and inspector availability for date:', date)
+
+      const [slotsResponse, availabilityResponse] = await Promise.all([
+        getPDIAvailableSlots(date),
+        getInspectorAvailabilityByDate(date)
+      ])
+      console.log('✅ PDI time slots fetched:', slotsResponse)
+      console.log('✅ Inspector availability fetched:', availabilityResponse)
+
+      const slots = slotsResponse.slots || []
+
+      // Count free inspectors from the availability status API
+      const inspectorItems = availabilityResponse?.items || []
+      const freeInspectorCount = inspectorItems.filter(i => i.is_free === true).length
+      console.log('📊 Free inspectors for date:', freeInspectorCount)
+
+      // Enrich each slot with live inspector availability data.
+      // If there are free inspectors (no busy_request_ids), slots are bookable
+      // regardless of what the PDI slots API reports for is_available.
+      const enrichedSlots = slots.map(slot => ({
+        ...slot,
+        free_inspectors: freeInspectorCount,
+        is_available: slot.is_available || freeInspectorCount > 0,
+      }))
+
+      setTimeSlots(enrichedSlots)
       setSelectedTimeSlot('') // Reset selected time slot when date changes
-      console.log('📊 Time slots state updated:', slots.length, 'slots')
-      console.log('📋 First slot:', slots[0])
+      console.log('📊 Time slots state updated:', enrichedSlots.length, 'slots')
+      console.log('📋 First slot:', enrichedSlots[0])
     } catch (error) {
       console.error('❌ Failed to fetch PDI time slots:', error)
       console.error('❌ Error details:', error.response?.data || error.message)

@@ -6,10 +6,9 @@ import { listBrands, listModels, listVariants, listCategoryValues } from '../../
 import { listVehicleCategoryMappings } from '../../api/categorymapping'
 import { createPDIRequest, listPDIRequests, getPDIRequestById, assignInspector, confirmManualPayment, confirmManualRemainingPayment, createPaymentLink, getPaymentStatus, verifyPaymentLink, deletePdiRequest } from '../../api/inspection'
 import { listCustomers, deleteCustomer, getCustomerBookings } from '../../api/customer'
-import { getAvailabilities, getInspectorAvailabilityByDate } from '../../api/inspectoravailibility'
+import { getAvailabilities, getInspectorAvailabilityByDate, getAvailablePdiSlots } from '../../api/inspectoravailibility'
 import { listInspectors } from '../../api/inspectoronboard'
 import { getPDIReportByRequestId, downloadPDIReportPDF } from '../../api/inspectionreport'
-import { getPDIAvailableSlots } from '../../api/timeSlotConfigurations'
 import { listCities } from '../../api/city'
 import { Badge, Button, Card, Input, PaginatedTable, Select, cx } from '../ui/Ui'
 import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
@@ -511,9 +510,7 @@ export function NewInspectionPage() {
 
   // Function to fetch time slots for a selected date
   const fetchTimeSlots = async (date) => {
-    console.log('🎯 fetchTimeSlots called with date:', date)
     if (!date) {
-      console.log('⚠️ No date provided, clearing slots')
       setTimeSlots([])
       setSelectedTimeSlot('')
       return
@@ -521,43 +518,15 @@ export function NewInspectionPage() {
 
     try {
       setLoadingTimeSlots(true)
-      console.log('🕐 Fetching PDI time slots and inspector availability for date:', date)
-
-      const [slotsResponse, availabilityResponse] = await Promise.all([
-        getPDIAvailableSlots(date),
-        getInspectorAvailabilityByDate(date)
-      ])
-      console.log('✅ PDI time slots fetched:', slotsResponse)
-      console.log('✅ Inspector availability fetched:', availabilityResponse)
-
-      const slots = slotsResponse.slots || []
-
-      // Count free inspectors from the availability status API
-      const inspectorItems = availabilityResponse?.items || []
-      const freeInspectorCount = inspectorItems.filter(i => i.is_free === true).length
-      console.log('📊 Free inspectors for date:', freeInspectorCount)
-
-      // Enrich each slot with live inspector availability data.
-      // If there are free inspectors (no busy_request_ids), slots are bookable
-      // regardless of what the PDI slots API reports for is_available.
-      const enrichedSlots = slots.map(slot => ({
-        ...slot,
-        free_inspectors: freeInspectorCount,
-        is_available: slot.is_available || freeInspectorCount > 0,
-      }))
-
-      setTimeSlots(enrichedSlots)
-      setSelectedTimeSlot('') // Reset selected time slot when date changes
-      console.log('📊 Time slots state updated:', enrichedSlots.length, 'slots')
-      console.log('📋 First slot:', enrichedSlots[0])
+      const response = await getAvailablePdiSlots(date)
+      setTimeSlots(response.slots || [])
+      setSelectedTimeSlot('')
     } catch (error) {
       console.error('❌ Failed to fetch PDI time slots:', error)
-      console.error('❌ Error details:', error.response?.data || error.message)
       setTimeSlots([])
       setSelectedTimeSlot('')
     } finally {
       setLoadingTimeSlots(false)
-      console.log('🏁 fetchTimeSlots completed')
     }
   }
   const _generateDateSlots = (availabilityData = [], inspectorAvailabilityByDate = {}) => {
@@ -3381,10 +3350,9 @@ export function NewInspectionPage() {
                             return
                           }
                           
-                          // Fetch availability data before moving to step 2
-                          console.log('✅ Pricing validation passed, calling fetchAvailabilityData...')
-                          await fetchAvailabilityData()
-                          
+                          const dateToFetch = wizardForm.slotDate || new Date().toISOString().split('T')[0]
+                          await fetchTimeSlots(dateToFetch)
+
                           setDialog((s) => (s && s.type === 'raise' ? { ...s, step: 2 } : s))
                           return
                         }

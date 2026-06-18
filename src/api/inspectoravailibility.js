@@ -83,3 +83,15 @@ export const getInspectorAvailabilityByDate = async (date = null) => {
     throw error.response?.data || error.message
   }
 }
+
+
+
+export const getAvailablePdiSlots = async (date = null) => {
+  try {
+    const params = date ? { date } : {}
+    const response = await api.get('/api/pdi-slots/available-times/', { params })
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}

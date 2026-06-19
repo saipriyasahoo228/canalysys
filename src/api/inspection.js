@@ -158,3 +158,53 @@ export const deletePdiRequest = async (requestId) => {
     throw error.response?.data || error.message
   }
 }
+
+// Refund API
+export const refundPdiRequest = async (requestId, transactionId, amountPaise, reason) => {
+  try {
+    const response = await api.post(
+      `/api/pdi-requests/${requestId}/admin/refund/`,
+      {
+        transaction_id: transactionId,
+        amount_paise: amountPaise,
+        reason: reason
+      }
+    )
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}
+
+// Update booking status API
+export const updatePdiBookingStatus = async (requestId, status, reason) => {
+  try {
+    const response = await api.patch(
+      `/api/pdi-requests/${requestId}/admin/booking-status/`,
+      {
+        status: status,
+        reason: reason
+      }
+    )
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}
+
+// Update payment status API
+export const updatePdiPaymentStatus = async (requestId, transactionId, status, reason) => {
+  try {
+    const response = await api.patch(
+      `/api/pdi-requests/${requestId}/admin/payment-status/`,
+      {
+        transaction_id: transactionId,
+        status: status,
+        reason: reason
+      }
+    )
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}

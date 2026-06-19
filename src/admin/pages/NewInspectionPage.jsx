@@ -4,7 +4,7 @@ import { usePolling } from '../hooks/usePolling'
 import { listCategoryPricing } from '../../api/categorypricing'
 import { listBrands, listModels, listVariants, listCategoryValues } from '../../api/vehiclemaster'
 import { listVehicleCategoryMappings } from '../../api/categorymapping'
-import { createPDIRequest, listPDIRequests, getPDIRequestById, assignInspector, confirmManualPayment, confirmManualRemainingPayment, createPaymentLink, getPaymentStatus, verifyPaymentLink, deletePdiRequest } from '../../api/inspection'
+import { createPDIRequest, listPDIRequests, getPDIRequestById, assignInspector, confirmManualPayment, confirmManualRemainingPayment, createPaymentLink, getPaymentStatus, verifyPaymentLink, deletePdiRequest, refundPdiRequest, updatePdiBookingStatus, updatePdiPaymentStatus } from '../../api/inspection'
 import { listCustomers, deleteCustomer, getCustomerBookings } from '../../api/customer'
 import { getAvailabilities, getInspectorAvailabilityByDate, getAvailablePdiSlots } from '../../api/inspectoravailibility'
 import { listInspectors } from '../../api/inspectoronboard'
@@ -242,6 +242,30 @@ export function NewInspectionPage() {
   const [pdiReportPdfUrl, setPdiReportPdfUrl] = useState(null)
   const [pdiReportLoading, setPdiReportLoading] = useState(false)
   const [loadingReportRequestId, setLoadingReportRequestId] = useState(null)
+
+  // State for Refund modal
+  const [showRefundModal, setShowRefundModal] = useState(false)
+  const [refundRequestId, setRefundRequestId] = useState(null)
+  const [refundModalData, setRefundModalData] = useState(null)
+  const [refundModalFetchLoading, setRefundModalFetchLoading] = useState(false)
+  const [refundReason, setRefundReason] = useState('')
+  const [refundLoading, setRefundLoading] = useState(false)
+
+  // State for Update Booking Status modal
+  const [showUpdateBookingStatusModal, setShowUpdateBookingStatusModal] = useState(false)
+  const [updateBookingStatusRequestId, setUpdateBookingStatusRequestId] = useState(null)
+  const [updateBookingStatusValue, setUpdateBookingStatusValue] = useState('')
+  const [updateBookingStatusReason, setUpdateBookingStatusReason] = useState('')
+  const [updateBookingStatusLoading, setUpdateBookingStatusLoading] = useState(false)
+
+  // State for Update Payment Status modal
+  const [showUpdatePaymentStatusModal, setShowUpdatePaymentStatusModal] = useState(false)
+  const [updatePaymentStatusRequestId, setUpdatePaymentStatusRequestId] = useState(null)
+  const [updatePaymentModalData, setUpdatePaymentModalData] = useState(null)
+  const [updatePaymentModalFetchLoading, setUpdatePaymentModalFetchLoading] = useState(false)
+  const [updatePaymentStatusValue, setUpdatePaymentStatusValue] = useState('')
+  const [updatePaymentStatusReason, setUpdatePaymentStatusReason] = useState('')
+  const [updatePaymentStatusLoading, setUpdatePaymentStatusLoading] = useState(false)
 
   // State for advanced PDI filters
   const [selectedInspectorFilter, setSelectedInspectorFilter] = useState('')
@@ -1227,6 +1251,66 @@ export function NewInspectionPage() {
       // Show backend error message directly
       alert(error.response?.data?.detail || error.message || 'Manual remaining payment failed. Please try again.')
       setRemainingPaymentLoading(false)
+    }
+  }
+
+  // Handler for refund
+  const handleRefund = async () => {
+    const transactions = refundModalData?.transactions || []
+    const txn = transactions[0]
+    if (!txn) { alert('No transaction found for this request.'); return }
+    setRefundLoading(true)
+    try {
+      await refundPdiRequest(refundRequestId, txn.transaction_id || txn.id, txn.amount_paise || refundModalData?.amount_paid_paise, refundReason.trim())
+      alert('Refund initiated successfully!')
+      setShowRefundModal(false)
+      setRefundReason('')
+      setRefundModalData(null)
+      refreshPDIRequests()
+    } catch (error) {
+      alert(error?.detail || error?.message || 'Refund failed. Please try again.')
+    } finally {
+      setRefundLoading(false)
+    }
+  }
+
+  // Handler for update booking status
+  const handleUpdateBookingStatus = async () => {
+    if (!updateBookingStatusValue) { alert('Status is required.'); return }
+    setUpdateBookingStatusLoading(true)
+    try {
+      await updatePdiBookingStatus(updateBookingStatusRequestId, updateBookingStatusValue, updateBookingStatusReason.trim())
+      alert('Booking status updated successfully!')
+      setShowUpdateBookingStatusModal(false)
+      setUpdateBookingStatusValue('')
+      setUpdateBookingStatusReason('')
+      refreshPDIRequests()
+    } catch (error) {
+      alert(error?.detail || error?.message || 'Update failed. Please try again.')
+    } finally {
+      setUpdateBookingStatusLoading(false)
+    }
+  }
+
+  // Handler for update payment status
+  const handleUpdatePaymentStatus = async () => {
+    const transactions = updatePaymentModalData?.transactions || []
+    const txn = transactions[0]
+    if (!txn) { alert('No transaction found for this request.'); return }
+    if (!updatePaymentStatusValue) { alert('Status is required.'); return }
+    setUpdatePaymentStatusLoading(true)
+    try {
+      await updatePdiPaymentStatus(updatePaymentStatusRequestId, txn.transaction_id || txn.id, updatePaymentStatusValue, updatePaymentStatusReason.trim())
+      alert('Payment status updated successfully!')
+      setShowUpdatePaymentStatusModal(false)
+      setUpdatePaymentModalData(null)
+      setUpdatePaymentStatusValue('')
+      setUpdatePaymentStatusReason('')
+      refreshPDIRequests()
+    } catch (error) {
+      alert(error?.detail || error?.message || 'Update failed. Please try again.')
+    } finally {
+      setUpdatePaymentStatusLoading(false)
     }
   }
 
@@ -2540,6 +2624,66 @@ export function NewInspectionPage() {
                     </button>
                   )
                 })()}
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 text-amber-700"
+                  onClick={async () => {
+                    const reqId = actionsMenu.requestId
+                    setRefundRequestId(reqId)
+                    setRefundReason('')
+                    setRefundModalData(null)
+                    setRefundModalFetchLoading(true)
+                    setShowRefundModal(true)
+                    setActionsMenu(null)
+                    try {
+                      const data = await getPaymentStatus(reqId)
+                      setRefundModalData(data)
+                    } catch (e) {
+                      console.error('Failed to fetch payment status for refund:', e)
+                    } finally {
+                      setRefundModalFetchLoading(false)
+                    }
+                  }}
+                >
+                  Refund
+                </button>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  onClick={() => {
+                    setUpdateBookingStatusRequestId(actionsMenu.requestId)
+                    setUpdateBookingStatusValue('')
+                    setUpdateBookingStatusReason('')
+                    setShowUpdateBookingStatusModal(true)
+                    setActionsMenu(null)
+                  }}
+                >
+                  Update Booking Status
+                </button>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  onClick={async () => {
+                    const reqId = actionsMenu.requestId
+                    setUpdatePaymentStatusRequestId(reqId)
+                    setUpdatePaymentStatusValue('')
+                    setUpdatePaymentStatusReason('')
+                    setUpdatePaymentModalData(null)
+                    setUpdatePaymentModalFetchLoading(true)
+                    setShowUpdatePaymentStatusModal(true)
+                    setActionsMenu(null)
+                    try {
+                      const data = await getPaymentStatus(reqId)
+                      setUpdatePaymentModalData(data)
+                    } catch (e) {
+                      console.error('Failed to fetch payment status:', e)
+                    } finally {
+                      setUpdatePaymentModalFetchLoading(false)
+                    }
+                  }}
+                >
+                  Update Payment Status
+                </button>
                       <button
                         type="button"
                         className={`w-full px-3 py-2 text-left text-sm hover:bg-rose-50 text-rose-700 ${actionsMenu.showUpward ? 'rounded-t-xl' : 'rounded-b-xl'}`}
@@ -2612,6 +2756,151 @@ export function NewInspectionPage() {
           </div>
         </div>
       ) : null}
+
+      {/* Refund Modal */}
+      {showRefundModal && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowRefundModal(false)} />
+          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-lg">
+            <div className="relative border-b border-slate-200 px-4 py-3">
+              <h3 className="text-lg font-semibold text-slate-900">Refund Payment</h3>
+              <Button variant="icon" size="icon" className="absolute right-2 top-2" onClick={() => setShowRefundModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-4">
+              {refundModalFetchLoading ? (
+                <div className="text-sm text-slate-500 text-center py-4">Loading payment details...</div>
+              ) : refundModalData ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+                  {refundModalData.transactions?.length > 0 ? (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Transaction ID</span>
+                        <span className="font-medium text-slate-800">{refundModalData.transactions[0].transaction_id || refundModalData.transactions[0].id || '—'}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Amount</span>
+                        <span className="font-medium text-slate-800">₹{((refundModalData.transactions[0].amount_paise || refundModalData.amount_paid_paise || 0) / 100).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Payment Stage</span>
+                        <span className="font-medium text-slate-800">{refundModalData.payment_stage?.replace(/_/g, ' ') || '—'}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-rose-600">No transactions found for this request.</div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-rose-600 text-center py-2">Failed to load payment details.</div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
+                <Input value={refundReason} onChange={(e) => setRefundReason(e.target.value)} placeholder="Enter reason for refund" className="w-full" />
+              </div>
+              <div className="flex gap-3 justify-end pt-2">
+                <Button variant="secondary" onClick={() => setShowRefundModal(false)} disabled={refundLoading}>Cancel</Button>
+                <Button variant="primary" onClick={handleRefund} disabled={refundLoading || refundModalFetchLoading || !refundModalData?.transactions?.length}>
+                  {refundLoading ? 'Processing...' : 'Initiate Refund'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Booking Status Modal */}
+      {showUpdateBookingStatusModal && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowUpdateBookingStatusModal(false)} />
+          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-lg">
+            <div className="relative border-b border-slate-200 px-4 py-3">
+              <h3 className="text-lg font-semibold text-slate-900">Update Booking Status</h3>
+              <Button variant="icon" size="icon" className="absolute right-2 top-2" onClick={() => setShowUpdateBookingStatusModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Status <span className="text-red-500">*</span></label>
+                <Select value={updateBookingStatusValue} onChange={(e) => setUpdateBookingStatusValue(e.target.value)} className="w-full">
+                  <option value="">Select status</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="cancelled">Cancelled</option>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
+                <Input value={updateBookingStatusReason} onChange={(e) => setUpdateBookingStatusReason(e.target.value)} placeholder="Enter reason (optional)" className="w-full" />
+              </div>
+              <div className="flex gap-3 justify-end pt-2">
+                <Button variant="secondary" onClick={() => setShowUpdateBookingStatusModal(false)} disabled={updateBookingStatusLoading}>Cancel</Button>
+                <Button variant="primary" onClick={handleUpdateBookingStatus} disabled={updateBookingStatusLoading}>
+                  {updateBookingStatusLoading ? 'Updating...' : 'Update Status'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Payment Status Modal */}
+      {showUpdatePaymentStatusModal && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowUpdatePaymentStatusModal(false)} />
+          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-lg">
+            <div className="relative border-b border-slate-200 px-4 py-3">
+              <h3 className="text-lg font-semibold text-slate-900">Update Payment Status</h3>
+              <Button variant="icon" size="icon" className="absolute right-2 top-2" onClick={() => setShowUpdatePaymentStatusModal(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-4 space-y-4">
+              {updatePaymentModalFetchLoading ? (
+                <div className="text-sm text-slate-500 text-center py-4">Loading payment details...</div>
+              ) : updatePaymentModalData ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+                  {updatePaymentModalData.transactions?.length > 0 ? (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Transaction ID</span>
+                        <span className="font-medium text-slate-800">{updatePaymentModalData.transactions[0].transaction_id || updatePaymentModalData.transactions[0].id || '—'}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-500">Current Payment Stage</span>
+                        <span className="font-medium text-slate-800">{updatePaymentModalData.payment_stage?.replace(/_/g, ' ') || '—'}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-rose-600">No transactions found for this request.</div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-rose-600 text-center py-2">Failed to load payment details.</div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">New Status <span className="text-red-500">*</span></label>
+                <Select value={updatePaymentStatusValue} onChange={(e) => setUpdatePaymentStatusValue(e.target.value)} className="w-full">
+                  <option value="">Select status</option>
+                  <option value="refunded">Refunded</option>
+                  <option value="cancelled">Cancelled</option>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
+                <Input value={updatePaymentStatusReason} onChange={(e) => setUpdatePaymentStatusReason(e.target.value)} placeholder="Enter reason (optional)" className="w-full" />
+              </div>
+              <div className="flex gap-3 justify-end pt-2">
+                <Button variant="secondary" onClick={() => setShowUpdatePaymentStatusModal(false)} disabled={updatePaymentStatusLoading}>Cancel</Button>
+                <Button variant="primary" onClick={handleUpdatePaymentStatus} disabled={updatePaymentStatusLoading || updatePaymentModalFetchLoading || !updatePaymentModalData?.transactions?.length}>
+                  {updatePaymentStatusLoading ? 'Updating...' : 'Update Status'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {raiseOpen ? (
         <div className="fixed inset-0 z-50">

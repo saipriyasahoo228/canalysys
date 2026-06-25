@@ -2061,20 +2061,7 @@ export function NewInspectionPage() {
               className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
               onClick={(e) => {
                 e.stopPropagation()
-                const rect = e.currentTarget.getBoundingClientRect()
-                const viewportHeight = window.innerHeight
-                const spaceBelow = viewportHeight - rect.bottom
-                const dropdownHeight = 200 // Approximate height of dropdown
-                
-                // Show upward if in last 3 rows or not enough space below
-                const showUpward = spaceBelow < dropdownHeight + 50
-                
-                setActionsMenu({
-                  requestId: r.request_id,
-                  top: showUpward ? rect.top + window.scrollY - dropdownHeight - 4 : rect.bottom + window.scrollY + 4,
-                  left: rect.left + window.scrollX - 150, // Position to the left
-                  showUpward: showUpward
-                })
+                setActionsMenu({ requestId: r.request_id })
               }}
             >
               <MoreVertical className="h-4 w-4" />
@@ -2505,18 +2492,27 @@ export function NewInspectionPage() {
 
       {actionsMenu ? (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0" onClick={() => setActionsMenu(null)} />
+          <div className="absolute inset-0 bg-black/30" onClick={() => setActionsMenu(null)} />
           <div
             ref={actionsMenuRef}
-            className={`absolute w-[220px] rounded-xl border border-slate-200 bg-white shadow-lg ${actionsMenu.showUpward ? 'flex flex-col-reverse' : ''}`}
-            style={{ top: actionsMenu.top, left: actionsMenu.left }}
+            className="absolute left-1/2 top-1/2 w-[92vw] max-w-xs -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden"
           >
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
+              <span className="text-sm font-semibold text-slate-700">Actions</span>
+              <button
+                type="button"
+                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                onClick={() => setActionsMenu(null)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
             {/* PDI Request Actions */}
             {actionsMenu.requestId && (
               <>
                 <button
                   type="button"
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${actionsMenu.showUpward ? 'rounded-b-xl' : 'rounded-t-xl'}`}
+                  className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50"
                   onClick={() => {
                     fetchAndShowDetails(actionsMenu.requestId, 'customer')
                   }}
@@ -2525,7 +2521,7 @@ export function NewInspectionPage() {
                 </button>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50"
                   onClick={() => {
                     fetchAndShowDetails(actionsMenu.requestId, 'vehicle')
                   }}
@@ -2534,7 +2530,7 @@ export function NewInspectionPage() {
                 </button>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50"
                   onClick={() => {
                     fetchAndShowDetails(actionsMenu.requestId, 'booking')
                   }}
@@ -2550,9 +2546,9 @@ export function NewInspectionPage() {
                   return (
                     <button
                       type="button"
-                      className={`w-full px-3 py-2 text-left text-sm ${
-                        isDisabled 
-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                      className={`w-full px-4 py-3 text-left text-sm ${
+                        isDisabled
+                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                           : 'hover:bg-slate-50'
                       }`}
                       onClick={() => {
@@ -2574,9 +2570,9 @@ export function NewInspectionPage() {
                   return (
                     <button
                       type="button"
-                      className={`w-full px-3 py-2 text-left text-sm rounded-t-xl ${
-                        isRemainingDue 
-                          ? 'hover:bg-green-50 text-green-700 cursor-pointer' 
+                      className={`w-full px-4 py-3 text-left text-sm ${
+                        isRemainingDue
+                          ? 'hover:bg-green-50 text-green-700 cursor-pointer'
                           : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                       }`}
                       onClick={() => {
@@ -2598,9 +2594,9 @@ export function NewInspectionPage() {
                   return (
                     <button
                       type="button"
-                      className={`w-full px-3 py-2 text-left text-sm rounded-b-xl flex items-center gap-2 ${
-                        isFullyPaid 
-                          ? 'hover:bg-blue-50 text-blue-700 cursor-pointer' 
+                      className={`w-full px-4 py-3 text-left text-sm flex items-center gap-2 ${
+                        isFullyPaid
+                          ? 'hover:bg-blue-50 text-blue-700 cursor-pointer'
                           : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                       }`}
                       onClick={() => {
@@ -2624,32 +2620,40 @@ export function NewInspectionPage() {
                     </button>
                   )
                 })()}
+                {(() => {
+                  const pdiRequest = pdiRequests.find(p => p.request_id === actionsMenu.requestId)
+                  const isFullyPaid = pdiRequest?.payment_stage === 'fully_paid'
+                  return (
+                    <button
+                      type="button"
+                      disabled={isFullyPaid}
+                      className={`w-full px-4 py-3 text-left text-sm ${isFullyPaid ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'hover:bg-amber-50 text-amber-700'}`}
+                      onClick={async () => {
+                        if (isFullyPaid) return
+                        const reqId = actionsMenu.requestId
+                        setRefundRequestId(reqId)
+                        setRefundReason('')
+                        setRefundModalData(null)
+                        setRefundModalFetchLoading(true)
+                        setShowRefundModal(true)
+                        setActionsMenu(null)
+                        try {
+                          const data = await getPaymentStatus(reqId)
+                          setRefundModalData(data)
+                        } catch (e) {
+                          console.error('Failed to fetch payment status for refund:', e)
+                        } finally {
+                          setRefundModalFetchLoading(false)
+                        }
+                      }}
+                    >
+                      Refund
+                    </button>
+                  )
+                })()}
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-amber-50 text-amber-700"
-                  onClick={async () => {
-                    const reqId = actionsMenu.requestId
-                    setRefundRequestId(reqId)
-                    setRefundReason('')
-                    setRefundModalData(null)
-                    setRefundModalFetchLoading(true)
-                    setShowRefundModal(true)
-                    setActionsMenu(null)
-                    try {
-                      const data = await getPaymentStatus(reqId)
-                      setRefundModalData(data)
-                    } catch (e) {
-                      console.error('Failed to fetch payment status for refund:', e)
-                    } finally {
-                      setRefundModalFetchLoading(false)
-                    }
-                  }}
-                >
-                  Refund
-                </button>
-                <button
-                  type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50"
                   onClick={() => {
                     setUpdateBookingStatusRequestId(actionsMenu.requestId)
                     setUpdateBookingStatusValue('')
@@ -2662,7 +2666,7 @@ export function NewInspectionPage() {
                 </button>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50"
                   onClick={async () => {
                     const reqId = actionsMenu.requestId
                     setUpdatePaymentStatusRequestId(reqId)
@@ -2684,25 +2688,32 @@ export function NewInspectionPage() {
                 >
                   Update Payment Status
                 </button>
-                      <button
-                        type="button"
-                        className={`w-full px-3 py-2 text-left text-sm hover:bg-rose-50 text-rose-700 ${actionsMenu.showUpward ? 'rounded-t-xl' : 'rounded-b-xl'}`}
-                        onClick={async () => {
-                          const ok = window.confirm('Are you sure you want to delete this request? This action cannot be undone.')
-                          if (!ok) return
-                          try {
-                            await deletePdiRequest(actionsMenu.requestId)
-                            // refresh the list
-                            if (typeof refreshPDIRequests === 'function') refreshPDIRequests()
-                            setActionsMenu(null)
-                            window.alert('Request deleted')
-                          } catch (e) {
-                            window.alert(e?.message || e || 'Delete failed')
-                          }
-                        }}
-                      >
-                        Delete Request
-                      </button>
+                      {(() => {
+                        const pdiRequest = pdiRequests.find(p => p.request_id === actionsMenu.requestId)
+                        const isFullyPaid = pdiRequest?.payment_stage === 'fully_paid'
+                        return (
+                          <button
+                            type="button"
+                            disabled={isFullyPaid}
+                            className={`w-full px-4 py-3 text-left text-sm rounded-b-xl ${isFullyPaid ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'hover:bg-rose-50 text-rose-700'}`}
+                            onClick={async () => {
+                              if (isFullyPaid) return
+                              const ok = window.confirm('Are you sure you want to delete this request? This action cannot be undone.')
+                              if (!ok) return
+                              try {
+                                await deletePdiRequest(actionsMenu.requestId)
+                                if (typeof refreshPDIRequests === 'function') refreshPDIRequests()
+                                setActionsMenu(null)
+                                window.alert('Request deleted')
+                              } catch (e) {
+                                window.alert(e?.message || e || 'Delete failed')
+                              }
+                            }}
+                          >
+                            Delete Request
+                          </button>
+                        )
+                      })()}
               </>
             )}
             
@@ -2711,7 +2722,7 @@ export function NewInspectionPage() {
               <>
                 <button
                   type="button"
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${actionsMenu.showUpward ? 'rounded-b-xl' : 'rounded-t-xl'}`}
+                  className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50"
                   onClick={() => {
                     const c = actionsMenu.customer
                     setActionsMenu(null)
@@ -2722,7 +2733,7 @@ export function NewInspectionPage() {
                 </button>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50"
                   onClick={() => {
                     const c = actionsMenu.customer
                     setActionsMenu(null)
@@ -2734,7 +2745,7 @@ export function NewInspectionPage() {
 
                 <button
                   type="button"
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-rose-50 text-rose-700 ${actionsMenu.showUpward ? 'rounded-t-xl' : 'rounded-b-xl'}`}
+                  className="w-full px-4 py-3 text-left text-sm hover:bg-rose-50 text-rose-700 rounded-b-xl"
                   onClick={async () => {
                     const c = actionsMenu.customer
                     setActionsMenu(null)

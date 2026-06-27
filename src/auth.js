@@ -73,7 +73,11 @@ const logout = () => {
   removeToken(); // Remove access & refresh tokens
   localStorage.removeItem("userInfo"); // Remove user role & permissions
   localStorage.removeItem("userRole"); // Remove any other user-related data
-  
+  localStorage.removeItem("carnalysis_auth"); // Sync AuthContext state so the app knows the session ended
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+  localStorage.removeItem("user");
+
   // Dispatch event to update components
   window.dispatchEvent(new Event("userInfoUpdated"));
 
@@ -88,9 +92,7 @@ const getNewAccessToken = async () => {
   try {
     const { refreshToken } = getToken();
     if (!refreshToken) {
-      console.warn("No refresh token found. Logging out...");
-      logout();
-      return;
+      throw new Error('No refresh token found.');
     }
 
     // Don't check refresh token expiration here - let the server handle it

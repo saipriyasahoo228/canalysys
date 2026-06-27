@@ -1393,7 +1393,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendContactInfo, getInspectorsData, getInspectionProcessFeedback } from '../api/contactus';
-import { listDistricts } from '../api/city';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -1409,7 +1408,19 @@ const LandingPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inspectors, setInspectors] = useState([]);
   const [feedbackData, setFeedbackData] = useState([]);
-  const [districts, setDistricts] = useState([]);
+  const [districts, setDistricts] = useState([
+    { id: 1, name: 'Bhubaneswar', is_active: true },
+    { id: 2, name: 'Cuttack', is_active: true },
+    { id: 3, name: 'Puri', is_active: true },
+    { id: 4, name: 'Rourkela', is_active: true },
+    { id: 5, name: 'Berhampur', is_active: true },
+    { id: 6, name: 'Sambalpur', is_active: true },
+    { id: 7, name: 'Balasore', is_active: true },
+    { id: 8, name: 'Baripada', is_active: true },
+    { id: 9, name: 'Jharsuguda', is_active: true },
+    { id: 10, name: 'Paradip', is_active: true },
+    { id: 11, name: 'Kendujhar', is_active: true },
+  ]);
   const [showAppModal, setShowAppModal] = useState(false);
   const heroStatsRef = useRef(null);
   const teamScrollRef = useRef(null);
@@ -1461,33 +1472,8 @@ const LandingPage = () => {
       }
     };
 
-    // Fetch districts data
-    const fetchDistricts = async () => {
-      try {
-        const data = await listDistricts();
-        setDistricts(data.items || []);
-      } catch (error) {
-        console.error('Error fetching districts:', error);
-        // Fallback to default districts if API fails
-        setDistricts([
-          { id: 1, name: 'Bhubaneswar', is_active: true },
-          { id: 2, name: 'Cuttack', is_active: true },
-          { id: 3, name: 'Puri', is_active: true },
-          { id: 4, name: 'Rourkela', is_active: true },
-          { id: 5, name: 'Berhampur', is_active: true },
-          { id: 6, name: 'Sambalpur', is_active: true },
-          { id: 7, name: 'Balasore', is_active: true },
-          { id: 8, name: 'Baripada', is_active: true },
-          { id: 9, name: 'Jharsuguda', is_active: true },
-          { id: 10, name: 'Paradip', is_active: true },
-          { id: 11, name: 'Kendujhar', is_active: true },
-        ]);
-      }
-    };
-
     fetchInspectors();
     fetchFeedback();
-    fetchDistricts();
 
     const revealEls = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver((entries) => {

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 const AUTH_KEY = 'carnalysis_auth'
 
@@ -31,6 +31,15 @@ export function AuthProvider({ children }) {
     }
     setIsAuthenticated(false)
   }
+
+  useEffect(() => {
+    const sync = () => {
+      const stillHasFlag = window.localStorage.getItem(AUTH_KEY) === '1'
+      if (!stillHasFlag) setIsAuthenticated(false)
+    }
+    window.addEventListener('userInfoUpdated', sync)
+    return () => window.removeEventListener('userInfoUpdated', sync)
+  }, [])
 
   const value = useMemo(() => ({ isAuthenticated, login, logout }), [isAuthenticated])
 

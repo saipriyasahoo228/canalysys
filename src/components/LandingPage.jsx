@@ -2,6 +2,7 @@
 // import { useNavigate } from 'react-router-dom';
 // import { sendContactInfo, getInspectorsData, getInspectionProcessFeedback } from '../api/contactus';
 
+
 // const LandingPage = () => {
 //   const navigate = useNavigate();
 //   const [countersAnimated, setCountersAnimated] = useState(false);
@@ -16,6 +17,19 @@
 //   const [isSubmitting, setIsSubmitting] = useState(false);
 //   const [inspectors, setInspectors] = useState([]);
 //   const [feedbackData, setFeedbackData] = useState([]);
+//   const [districts, setDistricts] = useState([
+//     { id: 1, name: 'Bhubaneswar', is_active: true },
+//     { id: 2, name: 'Cuttack', is_active: true },
+//     { id: 3, name: 'Puri', is_active: true },
+//     { id: 4, name: 'Rourkela', is_active: true },
+//     { id: 5, name: 'Berhampur', is_active: true },
+//     { id: 6, name: 'Sambalpur', is_active: true },
+//     { id: 7, name: 'Balasore', is_active: true },
+//     { id: 8, name: 'Baripada', is_active: true },
+//     { id: 9, name: 'Jharsuguda', is_active: true },
+//     { id: 10, name: 'Paradip', is_active: true },
+//     { id: 11, name: 'Kendujhar', is_active: true },
+//   ]);
 //   const [showAppModal, setShowAppModal] = useState(false);
 //   const heroStatsRef = useRef(null);
 //   const teamScrollRef = useRef(null);
@@ -435,7 +449,7 @@
 //           margin-right: auto;
 //         }
 
-//         /* SERVICES - FIXED SINGLE ROW WITHOUT SCROLL */
+//         /* SERVICES */
 //         #services { background: var(--bg2); padding: 64px 48px; }
 //         .services-grid {
 //           display: flex;
@@ -552,20 +566,97 @@
 //         .check-text { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
 //         .check-text strong { color: var(--text); font-weight: 600; }
 
-//         /* COVERAGE */
-//         #coverage { background: var(--bg2); position: relative; overflow: hidden; }
-//         .coverage-bg-text { position: absolute; bottom: -40px; right: -20px; font-family: 'Bebas Neue', sans-serif; font-size: 220px; line-height: 1; color: rgba(123,53,32,0.04); pointer-events: none; white-space: nowrap; }
-//         .coverage-header { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 24px; }
-//         .cities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 52px; }
-//         .city-card { background: var(--white); border: 1px solid var(--border); padding: 20px 22px; border-radius: 3px; display: flex; align-items: center; gap: 14px; transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s; cursor: default; }
-//         .city-card:hover { border-color: var(--choc-pale); transform: translateY(-2px); box-shadow: var(--shadow); }
-//         .city-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--choc); flex-shrink: 0; box-shadow: 0 0 8px rgba(123,53,32,0.35); }
-//         .city-dot.new { background: var(--red); box-shadow: 0 0 8px rgba(184,48,40,0.35); }
-//         .city-name { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600; letter-spacing: 0.5px; color: var(--text); }
-//         .city-status { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; }
-//         .city-status.new-status { color: var(--red); }
-//         .coverage-note { margin-top: 36px; padding: 18px 24px; background: rgba(123,53,32,0.05); border-left: 3px solid var(--choc); font-size: 14px; color: var(--text-muted); line-height: 1.6; }
-//         .coverage-note strong { color: var(--choc); }
+//         /* COVERAGE - FLEXIBLE GRID */
+//         #coverage { background: var(--bg2); position: relative; overflow: hidden; padding: 64px 48px; }
+//         .coverage-bg-text { 
+//           position: absolute; 
+//           bottom: -40px; 
+//           right: -20px; 
+//           font-family: 'Bebas Neue', sans-serif; 
+//           font-size: 220px; 
+//           line-height: 1; 
+//           color: rgba(123,53,32,0.04); 
+//           pointer-events: none; 
+//           white-space: nowrap; 
+//         }
+//         .coverage-content {
+//           position: relative;
+//           z-index: 1;
+//         }
+//         .cities-grid {
+//           display: flex;
+//           flex-wrap: wrap;
+//           justify-content: center;
+//           gap: 12px;
+//           margin-top: 52px;
+//           max-width: 1200px;
+//           margin-left: auto;
+//           margin-right: auto;
+//         }
+//         .city-card {
+//           flex: 0 1 auto;
+//           min-width: 140px;
+//           max-width: 200px;
+//           background: var(--white);
+//           border: 1px solid var(--border);
+//           padding: 16px 24px;
+//           border-radius: 3px;
+//           display: flex;
+//           align-items: center;
+//           gap: 14px;
+//           transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+//           cursor: default;
+//         }
+//         .city-card:hover {
+//           border-color: var(--choc-pale);
+//           transform: translateY(-2px);
+//           box-shadow: var(--shadow);
+//         }
+//         .city-dot {
+//           width: 10px;
+//           height: 10px;
+//           border-radius: 50%;
+//           background: var(--choc);
+//           flex-shrink: 0;
+//           box-shadow: 0 0 8px rgba(123,53,32,0.35);
+//         }
+//         .city-dot.inactive {
+//           background: #ccc;
+//           box-shadow: none;
+//         }
+//         .city-name {
+//           font-family: 'Barlow Condensed', sans-serif;
+//           font-size: 15px;
+//           font-weight: 600;
+//           letter-spacing: 0.5px;
+//           color: var(--text);
+//           white-space: nowrap;
+//         }
+//         .city-status {
+//           font-size: 11px;
+//           color: var(--text-muted);
+//           letter-spacing: 0.5px;
+//           white-space: nowrap;
+//         }
+//         .city-status.inactive {
+//           color: #999;
+//         }
+//         .coverage-note {
+//           margin-top: 36px;
+//           padding: 18px 24px;
+//           background: rgba(123,53,32,0.05);
+//           border-left: 3px solid var(--choc);
+//           font-size: 14px;
+//           color: var(--text-muted);
+//           line-height: 1.6;
+//           text-align: center;
+//           max-width: 800px;
+//           margin-left: auto;
+//           margin-right: auto;
+//         }
+//         .coverage-note strong {
+//           color: var(--choc);
+//         }
 
 //         /* WHY US */
 //         #why { background: var(--bg); }
@@ -766,6 +857,10 @@
 //           .section-title .title-line {
 //             white-space: normal;
 //           }
+//           .city-card {
+//             min-width: 120px;
+//             padding: 12px 16px;
+//           }
 //         }
 
 //         @media (max-width: 600px) {
@@ -777,6 +872,17 @@
 //           .service-tag { font-size: 7px; padding: 1px 4px; }
 //           .section-title { font-size: clamp(28px,6vw,38px); }
 //           .section-label::before, .section-label::after { width: 16px; }
+//           .city-card {
+//             min-width: 100px;
+//             padding: 10px 14px;
+//             flex: 0 1 calc(50% - 8px);
+//           }
+//           .city-name {
+//             font-size: 13px;
+//           }
+//           .city-status {
+//             font-size: 10px;
+//           }
 //         }
 
 //         .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
@@ -1007,34 +1113,41 @@
 
 //       <section id="coverage">
 //         <div className="coverage-bg-text">ODISHA</div>
-//         <div className="coverage-header">
-//           <div>
+//         <div className="coverage-content">
+//           <div className="section-header">
 //             <div className="section-label">Service Network</div>
 //             <h2 className="section-title reveal">
 //               <span className="title-line">WE COVER</span>
 //               <span className="title-line">ODISHA</span>
 //             </h2>
-//             <p className="section-subtitle reveal">Our inspector network spans 15+ cities across Odisha — from the capital to emerging towns.</p>
+//             <p className="section-subtitle reveal">
+//               Our inspector network spans <strong>{districts.length}</strong>+ cities across Odisha — from the capital to emerging towns.
+//             </p>
+//           </div>
+//           <div className="cities-grid reveal">
+//             {districts.length > 0 ? (
+//               districts.map((district) => (
+//                 <div className="city-card" key={district.id}>
+//                   <div className={`city-dot ${!district.is_active ? 'inactive' : ''}`}></div>
+//                   <div>
+//                     <div className="city-name">{district.name}</div>
+//                     <div className={`city-status ${!district.is_active ? 'inactive' : ''}`}>
+//                       {district.is_active ? 'Active' : 'Coming Soon'}
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))
+//             ) : (
+//               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+//                 Loading districts...
+//               </div>
+//             )}
+//           </div>
+//           <div className="coverage-note reveal">
+//             <strong>Don't see your city?</strong> We're rapidly expanding our inspector network across Odisha. 
+//             Contact us to request coverage in your area — we may be closer than you think.
 //           </div>
 //         </div>
-//         <div className="cities-grid reveal">
-//           <div className="city-card"><div className="city-dot"></div><div><div className="city-name">Bhubaneswar</div><div className="city-status">Active · 4 Inspectors</div></div></div>
-//           <div className="city-card"><div className="city-dot"></div><div><div className="city-name">Cuttack</div><div className="city-status">Active · 3 Inspectors</div></div></div>
-//           <div className="city-card"><div className="city-dot"></div><div><div className="city-name">Puri</div><div className="city-status">Active · 2 Inspectors</div></div></div>
-//           <div className="city-card"><div className="city-dot"></div><div><div className="city-name">Rourkela</div><div className="city-status">Active · 3 Inspectors</div></div></div>
-//           <div className="city-card"><div className="city-dot"></div><div><div className="city-name">Berhampur</div><div className="city-status">Active · 2 Inspectors</div></div></div>
-//           <div className="city-card"><div className="city-dot"></div><div><div className="city-name">Sambalpur</div><div className="city-status">Active · 2 Inspectors</div></div></div>
-//           <div className="city-card"><div className="city-dot"></div><div><div className="city-name">Balasore</div><div className="city-status">Active · 1 Inspector</div></div></div>
-//           <div className="city-card"><div className="city-dot"></div><div><div className="city-name">Baripada</div><div className="city-status">Active · 1 Inspector</div></div></div>
-//           <div className="city-card"><div className="city-dot new"></div><div><div className="city-name">Koraput</div><div className="city-status new-status">Coming Soon</div></div></div>
-//           <div className="city-card"><div className="city-dot new"></div><div><div className="city-name">Rayagada</div><div className="city-status new-status">Coming Soon</div></div></div>
-//           <div className="city-card"><div className="city-dot"></div><div><div className="city-name">Jharsuguda</div><div className="city-status">Active · 1 Inspector</div></div></div>
-//           <div className="city-card"><div className="city-dot"></div><div><div className="city-name">Paradip</div><div className="city-status">Active · 1 Inspector</div></div></div>
-//           <div className="city-card"><div className="city-dot new"></div><div><div className="city-name">Jeypore</div><div className="city-status new-status">Coming Soon</div></div></div>
-//           <div className="city-card"><div className="city-dot"></div><div><div className="city-name">Kendujhar</div><div className="city-status">Active · 1 Inspector</div></div></div>
-//           <div className="city-card"><div className="city-dot new"></div><div><div className="city-name">Phulbani</div><div className="city-status new-status">Coming Soon</div></div></div>
-//         </div>
-//         <div className="coverage-note reveal"><strong>Don't see your city?</strong> We're rapidly expanding our inspector network across Odisha. Contact us to request coverage in your area — we may be closer than you think.</div>
 //       </section>
 
 //       <section id="why">
@@ -1300,8 +1413,8 @@
 //             <ul className="footer-links">
 //               <li><a href="#">Bhubaneswar</a></li>
 //               <li><a href="#">Cuttack</a></li>
+//               <li><a href="#">Puri</a></li>
 //               <li><a href="#">Rourkela</a></li>
-//               <li><a href="#">Berhampur</a></li>
 //               <li><a href="#coverage">All Cities →</a></li>
 //             </ul>
 //           </div>
@@ -1390,9 +1503,15 @@
 
 
 
+
+
+
+
+
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendContactInfo, getInspectorsData, getInspectionProcessFeedback } from '../api/contactus';
+import { listDistricts } from '../api/city'; // Import from city.js
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -1408,19 +1527,8 @@ const LandingPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inspectors, setInspectors] = useState([]);
   const [feedbackData, setFeedbackData] = useState([]);
-  const [districts, setDistricts] = useState([
-    { id: 1, name: 'Bhubaneswar', is_active: true },
-    { id: 2, name: 'Cuttack', is_active: true },
-    { id: 3, name: 'Puri', is_active: true },
-    { id: 4, name: 'Rourkela', is_active: true },
-    { id: 5, name: 'Berhampur', is_active: true },
-    { id: 6, name: 'Sambalpur', is_active: true },
-    { id: 7, name: 'Balasore', is_active: true },
-    { id: 8, name: 'Baripada', is_active: true },
-    { id: 9, name: 'Jharsuguda', is_active: true },
-    { id: 10, name: 'Paradip', is_active: true },
-    { id: 11, name: 'Kendujhar', is_active: true },
-  ]);
+  const [districts, setDistricts] = useState([]);
+  const [loadingDistricts, setLoadingDistricts] = useState(true);
   const [showAppModal, setShowAppModal] = useState(false);
   const heroStatsRef = useRef(null);
   const teamScrollRef = useRef(null);
@@ -1472,8 +1580,24 @@ const LandingPage = () => {
       }
     };
 
+    // Fetch districts data
+    const fetchDistricts = async () => {
+      try {
+        setLoadingDistricts(true);
+        const data = await listDistricts();
+        console.log('Districts data:', data);
+        setDistricts(data.items || []);
+      } catch (error) {
+        console.error('Error fetching districts:', error);
+        setDistricts([]);
+      } finally {
+        setLoadingDistricts(false);
+      }
+    };
+
     fetchInspectors();
     fetchFeedback();
+    fetchDistricts();
 
     const revealEls = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver((entries) => {
@@ -2516,7 +2640,11 @@ const LandingPage = () => {
             </p>
           </div>
           <div className="cities-grid reveal">
-            {districts.length > 0 ? (
+            {loadingDistricts ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                Loading districts...
+              </div>
+            ) : districts.length > 0 ? (
               districts.map((district) => (
                 <div className="city-card" key={district.id}>
                   <div className={`city-dot ${!district.is_active ? 'inactive' : ''}`}></div>
@@ -2530,7 +2658,7 @@ const LandingPage = () => {
               ))
             ) : (
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                Loading districts...
+                No districts available
               </div>
             )}
           </div>

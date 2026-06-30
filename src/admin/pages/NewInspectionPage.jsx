@@ -449,52 +449,126 @@ export function NewInspectionPage() {
   }
 
   // Function to assign inspector
+  // const handleAssignInspector = async () => {
+  //   console.log('🔍 Debug - assignRequestId:', assignRequestId, typeof assignRequestId)
+  //   console.log('🔍 Debug - selectedInspector:', selectedInspector, typeof selectedInspector)
+  //   console.log('🔍 Debug - assignmentReason:', assignmentReason, typeof assignmentReason)
+    
+  //   // Ensure we have proper string values
+  //   const requestIdStr = String(assignRequestId || '').trim()
+  //   const inspectorIdStr = selectedInspector ? String(selectedInspector).trim() : ''
+    
+  //   try {
+  //     setAssignmentLoading(true)
+      
+  //     // Construct payload in UI - only include inspector_id if selected
+  //     const payload = {
+  //       force: true
+  //     }
+      
+  //     // Only add inspector_id if one is selected (using the ID value)
+  //     if (selectedInspector && selectedInspector.trim() !== '') {
+  //       payload.inspector_id = inspectorIdStr
+  //     }
+      
+  //     // Add reason only if provided
+  //     if (assignmentReason && assignmentReason.trim() !== '') {
+  //       payload.reason = assignmentReason.trim()
+  //     }
+      
+  //     console.log('🔍 Debug - Final API payload:', payload)
+      
+  //     const result = await assignInspector(requestIdStr, payload)
+  //     console.log('✅ Inspector assigned:', result)
+  //     alert('Inspector assigned successfully!')
+  //     setShowAssignInspector(false)
+  //     setSelectedInspector('')
+  //     setAssignmentReason('')
+  //     setAssignRequestId(null)
+      
+  //     // Refresh PDI requests to show updated assignment
+  //     refreshPDIRequests()
+  //   } catch (error) {
+  //     console.error('❌ Failed to assign inspector:', error)
+  //     alert(error.message || 'Failed to assign inspector. Please try again.')
+  //   } finally {
+  //     setAssignmentLoading(false)
+  //   }
+  // }
+
+
+
   const handleAssignInspector = async () => {
-    console.log('🔍 Debug - assignRequestId:', assignRequestId, typeof assignRequestId)
-    console.log('🔍 Debug - selectedInspector:', selectedInspector, typeof selectedInspector)
-    console.log('🔍 Debug - assignmentReason:', assignmentReason, typeof assignmentReason)
+  console.log('🔍 Debug - assignRequestId:', assignRequestId, typeof assignRequestId)
+  console.log('🔍 Debug - selectedInspector:', selectedInspector, typeof selectedInspector)
+  console.log('🔍 Debug - assignmentReason:', assignmentReason, typeof assignmentReason)
+  
+  // Ensure we have proper string values
+  const requestIdStr = String(assignRequestId || '').trim()
+  const inspectorIdStr = selectedInspector ? String(selectedInspector).trim() : ''
+  
+  try {
+    setAssignmentLoading(true)
     
-    // Ensure we have proper string values
-    const requestIdStr = String(assignRequestId || '').trim()
-    const inspectorIdStr = selectedInspector ? String(selectedInspector).trim() : ''
-    
-    try {
-      setAssignmentLoading(true)
-      
-      // Construct payload in UI - only include inspector_id if selected
-      const payload = {
-        force: true
-      }
-      
-      // Only add inspector_id if one is selected (using the ID value)
-      if (selectedInspector && selectedInspector.trim() !== '') {
-        payload.inspector_id = inspectorIdStr
-      }
-      
-      // Add reason only if provided
-      if (assignmentReason && assignmentReason.trim() !== '') {
-        payload.reason = assignmentReason.trim()
-      }
-      
-      console.log('🔍 Debug - Final API payload:', payload)
-      
-      const result = await assignInspector(requestIdStr, payload)
-      console.log('✅ Inspector assigned:', result)
-      alert('Inspector assigned successfully!')
-      setShowAssignInspector(false)
-      setSelectedInspector('')
-      setAssignmentReason('')
-      setAssignRequestId(null)
-      
-      // Refresh PDI requests to show updated assignment
-      refreshPDIRequests()
-    } catch (error) {
-      console.error('❌ Failed to assign inspector:', error)
-      alert(error.message || 'Failed to assign inspector. Please try again.')
-    } finally {
-      setAssignmentLoading(false)
+    // Construct payload in UI - only include inspector_id if selected
+    const payload = {
+      force: true
     }
+    
+    // Only add inspector_id if one is selected (using the ID value)
+    if (selectedInspector && selectedInspector.trim() !== '') {
+      payload.inspector_id = inspectorIdStr
+    }
+    
+    // Add reason only if provided
+    if (assignmentReason && assignmentReason.trim() !== '') {
+      payload.reason = assignmentReason.trim()
+    }
+    
+    console.log('🔍 Debug - Final API payload:', payload)
+    
+    const result = await assignInspector(requestIdStr, payload)
+    console.log('✅ Inspector assigned:', result)
+    alert('Inspector assigned successfully!')
+    setShowAssignInspector(false)
+    setSelectedInspector('')
+    setAssignmentReason('')
+    setAssignRequestId(null)
+    
+    // Refresh PDI requests to show updated assignment
+    refreshPDIRequests()
+  } catch (error) {
+    console.error('❌ Failed to assign inspector:', error)
+    
+    // Since API now throws full error, we can access error.response
+    let errorMessage = 'Failed to assign inspector. Please try again.'
+    
+    // Check for error in different locations
+    if (error.response?.data) {
+      const data = error.response.data
+      
+      // Handle your specific error structure
+      if (data.detail) {
+        errorMessage = data.detail
+      } else if (data.message) {
+        errorMessage = data.message
+      } else if (data.error) {
+        errorMessage = data.error
+      } else if (typeof data === 'string') {
+        errorMessage = data
+      }
+    } else if (error.message) {
+      errorMessage = error.message
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    }
+    
+    console.log('📢 Final error message:', errorMessage)
+    alert(errorMessage)
+  } finally {
+    setAssignmentLoading(false)
   }
+}
 
   const { data: customers, error: customersError, refresh: refreshCustomers } = usePolling(
     'customers',

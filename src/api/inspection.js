@@ -27,12 +27,25 @@ export const getPDIRequestById = async (requestId) => {
   }
 }
 
+// export const assignInspector = async (requestId, payload) => {
+//   try {
+//     const response = await api.post(`/api/pdi-requests/${requestId}/assign/`, payload)
+//     return response.data
+//   } catch (error) {
+//     throw error.response?.data || error.message
+//   }
+// }
+
 export const assignInspector = async (requestId, payload) => {
   try {
     const response = await api.post(`/api/pdi-requests/${requestId}/assign/`, payload)
     return response.data
   } catch (error) {
-    throw error.response?.data || error.message
+    // Keep the original error but add the data for easier access
+    if (error.response?.data) {
+      error.responseData = error.response.data
+    }
+    throw error
   }
 }
 

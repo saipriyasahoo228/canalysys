@@ -59,3 +59,15 @@ export const createQuestion = async (sectionId, questionData) => {
   const response = await api.post(`/api/inspection/templates/sections/${sectionId}/questions/`, questionData);
   return response.data;
 };
+
+// Delete section (DELETE)
+export const deleteSection = async (sectionId) => {
+  const response = await api.delete(`/api/inspection/templates/sections/${sectionId}/`);
+  return response.data;
+};
+
+// Delete question (DELETE)
+export const deleteQuestion = async (questionId) => {
+  const response = await api.delete(`/api/inspection/templates/questions/${questionId}/`);
+  return response.data;
+};

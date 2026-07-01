@@ -4,7 +4,7 @@ import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, PaginatedTable } from '../ui/Ui'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { Snackbar } from '../ui/Snackbar'
-import { listTemplates, createTemplate, updateTemplate, deleteTemplate, getTemplate, patchTemplate, patchSection, patchQuestion, createSection, createQuestion } from '../../api/template'
+import { listTemplates, createTemplate, updateTemplate, deleteTemplate, getTemplate, patchTemplate, patchSection, patchQuestion, createSection, createQuestion, deleteSection, deleteQuestion } from '../../api/template'
 import { listVariants } from '../../api/vehiclemaster'
 
 const CONDITION_TABS = [
@@ -301,6 +301,19 @@ export function ChecklistBuilderPage() {
               <Pencil className="h-4 w-4 text-slate-700" />
             </Button>
             <Button
+              variant="icon"
+              size="icon"
+              title="Delete section"
+              onClick={() => setConfirmDialog({
+                type: 'deleteSection',
+                sectionId: Number(r.id),
+                message: `Delete section "${r.title}" and its questions?`
+              })}
+              disabled={!canEdit}
+            >
+              <Trash2 className="h-4 w-4 text-rose-600" />
+            </Button>
+            <Button
               title="Add question"
               onClick={() => {
                 setSelectedSectionId(r.id)
@@ -375,6 +388,19 @@ export function ChecklistBuilderPage() {
               disabled={!canEdit}
             >
               <Pencil className="h-4 w-4 text-slate-700" />
+            </Button>
+            <Button
+              variant="icon"
+              size="icon"
+              title="Delete question"
+              onClick={() => setConfirmDialog({
+                type: 'deleteQuestion',
+                questionId: Number(r.id),
+                message: `Delete question "${r.title}"?`
+              })}
+              disabled={!canEdit}
+            >
+              <Trash2 className="h-4 w-4 text-rose-600" />
             </Button>
           </div>
         ),
@@ -823,17 +849,12 @@ export function ChecklistBuilderPage() {
                       if (selectedTemplateId === confirmDialog.templateId) setSelectedTemplateId('')
                       await refresh()
                     } else if (confirmDialog.type === 'deleteSection') {
-                      const updatedSections = selectedTemplate.sections.filter(s => s.id !== confirmDialog.sectionId)
-                      await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
+                      await deleteSection(Number(confirmDialog.sectionId))
                       setConfirmDialog(null)
                       if (selectedSectionId === confirmDialog.sectionId) setSelectedSectionId('')
                       await refresh()
                     } else if (confirmDialog.type === 'deleteQuestion') {
-                      const updatedQuestions = selectedSection.questions.filter(q => q.id !== confirmDialog.questionId)
-                      const updatedSections = selectedTemplate.sections.map(s => 
-                        s.id === confirmDialog.sectionId ? { ...s, questions: updatedQuestions } : s
-                      )
-                      await updateTemplate(selectedTemplate.id, { ...selectedTemplate, sections: updatedSections })
+                      await deleteQuestion(Number(confirmDialog.questionId))
                       setConfirmDialog(null)
                       await refresh()
                     }

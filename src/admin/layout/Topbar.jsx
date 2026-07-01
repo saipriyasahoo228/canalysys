@@ -132,7 +132,7 @@ export function Topbar({ onOpenMenu, collapsed, setCollapsed }) {
     setNotifOpen(false)
     setUserOpen(false)
     logout()
-    navigate('/', { replace: true })
+    window.location.replace('/login')
   }
 
   const handleNotificationClick = async (notification) => {

@@ -2484,7 +2484,6 @@ const LandingPage = () => {
           <li><a href="#why" onClick={() => setMobileMenuOpen(false)}>Why Us</a></li>
           <li><a href="#team" onClick={() => setMobileMenuOpen(false)}>Inspectors</a></li>
           <li><a href="#booking" className="nav-cta" onClick={() => setMobileMenuOpen(false)}>Contact Us</a></li>
-          <li><a href="#" onClick={(e) => { e.preventDefault(); navigate('/login'); setMobileMenuOpen(false); }} className="nav-cta">Admin Login</a></li>
         </ul>
       </nav>
 

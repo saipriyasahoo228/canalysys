@@ -83,7 +83,7 @@ const logout = () => {
 
   console.log("All user data cleared. Logging out...");
 
-  window.location = "/"; // Redirect to login or home page
+  window.location = "/login"; // Redirect to login page
 };
 
 

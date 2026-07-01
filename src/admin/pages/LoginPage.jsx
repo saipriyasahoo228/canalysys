@@ -240,7 +240,7 @@
 
 
 
-import { CarFront, Eye, EyeOff, Home, Lock, Phone } from 'lucide-react'
+import { CarFront, Eye, EyeOff, Lock, Phone } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Card, cx, Input } from '../ui/Ui'
@@ -317,16 +317,6 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Home Icon Button - positioned at top left */}
-      <button
-        onClick={() => navigate('/')}
-        className="fixed top-4 left-4 z-50 inline-flex items-center justify-center rounded-full bg-white p-2.5 shadow-md border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200 group"
-        aria-label="Go to home page"
-        title="Go to home page"
-      >
-        <Home className="h-5 w-5 group-hover:scale-105 transition-transform" />
-      </button>
-
       <div className="relative isolate">
         <div
           className="absolute inset-0 -z-20 bg-cover bg-center opacity-[0.08] grayscale pointer-events-none"

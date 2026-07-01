@@ -51,7 +51,8 @@
 //   const [reportFilters, setReportFilters] = useState({
 //     from: '',
 //     to: '',
-//     inspector_id: ''
+//     inspector_id: '',
+//     category: ''
 //   })
 //   const [reportData, setReportData] = useState(null)
 //   const [reportLoading, setReportLoading] = useState(false)
@@ -106,8 +107,8 @@
 //     setReportError(null)
 //     try {
 //       const data = actor?.role === 'inspector' 
-//         ? await getMyCommissionReport(reportFilters.from, reportFilters.to)
-//         : await getCommissionReport(reportFilters.from, reportFilters.to, reportFilters.inspector_id || null)
+//         ? await getMyCommissionReport(reportFilters.from, reportFilters.to, reportFilters.category)
+//         : await getCommissionReport(reportFilters.from, reportFilters.to, reportFilters.inspector_id || null, reportFilters.category)
 //       setReportData(data)
 //     } catch (error) {
 //       setReportError(error)
@@ -619,7 +620,7 @@
 //                   Report Filters
 //                 </h3>
 //               </div>
-//               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+//               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 //                 <div>
 //                   <label className="mb-2 block text-xs font-medium text-slate-700">From Date *</label>
 //                   <CustomDatePicker
@@ -637,6 +638,18 @@
 //                     placeholder="dd/mm/yyyy"
 //                     className="w-full"
 //                   />
+//                 </div>
+//                 <div>
+//                   <label className="mb-2 block text-xs font-medium text-slate-700">Category</label>
+//                   <select
+//                     value={reportFilters.category || ''}
+//                     onChange={(e) => setReportFilters(prev => ({ ...prev, category: e.target.value || undefined }))}
+//                     className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+//                   >
+//                     <option value="">All Categories</option>
+//                     <option value="full_time">Full-time</option>
+//                     <option value="freelancer">Freelancer</option>
+//                   </select>
 //                 </div>
 //                 {actor?.role !== 'inspector' && (
 //                   <div>
@@ -1072,8 +1085,26 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import { useMemo, useState } from 'react'
-import { CheckCircle2, Eye, IndianRupee, ReceiptText, Search, Settings2, Wallet, Plus, Percent, Calendar, XCircle, Edit2, Globe, User } from 'lucide-react'
+import { CheckCircle2, Eye, IndianRupee, ReceiptText, Search, Settings2, Wallet, Plus, Percent, Calendar, XCircle, Edit2, Globe, User, Briefcase } from 'lucide-react'
 import { usePolling } from '../hooks/usePolling'
 import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, Input, PaginatedTable, Select } from '../ui/Ui'
@@ -1083,6 +1114,18 @@ import { ViewDetailsDialog } from '../ui/ViewDetailsDialog'
 import { formatDate, formatDateTime, formatInr } from '../utils/format'
 import { listCommissionRules, createGlobalCommissionRule, createInspectorCommissionRule, updateInspectorCommissionRule, getCommissionReport, getMyCommissionReport } from '../../api/commission'
 import { listInspectors } from '../../api/inspectoronboard'
+
+// Helper function to format employment type
+const formatEmploymentType = (type) => {
+  if (!type) return 'N/A'
+  const types = {
+    'full_time': 'Full Time',
+    'freelancer': 'Freelancer',
+    'fulltime': 'Full Time',
+    'freelance': 'Freelancer'
+  }
+  return types[type.toLowerCase()] || type
+}
 
 export function FinancePage() {
   const { locationId, permissions, actor } = useRbac()
@@ -1273,7 +1316,7 @@ export function FinancePage() {
     []
   )
 
-  // Inspector rules columns (includes inspector name)
+  // Inspector rules columns (includes inspector name and category)
   const inspectorRulesColumns = useMemo(
     () => [
       {
@@ -1290,6 +1333,24 @@ export function FinancePage() {
               <div className="text-xs text-slate-500">{r.inspector_id}</div>
             </div>
           </div>
+        ),
+      },
+      {
+        key: 'inspector_category',
+        header: 'Category',
+        exportValue: (r) => formatEmploymentType(r.inspector_category),
+        cell: (r) => (
+          <Badge tone={r.inspector_category === 'full_time' ? 'emerald' : 'blue'}>
+            {formatEmploymentType(r.inspector_category)}
+          </Badge>
+        ),
+      },
+      {
+        key: 'monthly_threshold',
+        header: 'Monthly Threshold',
+        exportValue: (r) => r.monthly_threshold || '—',
+        cell: (r) => (
+          <div className="text-sm text-slate-700">{r.monthly_threshold || '—'}</div>
         ),
       },
       {
@@ -1404,6 +1465,8 @@ export function FinancePage() {
     return [
       { key: 'id', label: 'Rule ID', value: it?.id || '—' },
       { key: 'scope', label: 'Scope', value: it?.scope === 'global' ? 'Global' : `Inspector: ${it?.inspector_name}` },
+      { key: 'inspector_category', label: 'Inspector Category', value: formatEmploymentType(it?.inspector_category) },
+      { key: 'monthly_threshold', label: 'Monthly Threshold', value: it?.monthly_threshold || '—' },
       { key: 'commission_type', label: 'Commission Type', value: it?.commission_type ? it.commission_type.charAt(0).toUpperCase() + it.commission_type.slice(1).toLowerCase() : '—' },
       { key: 'amount', label: 'Commission Amount', value: it?.commission_type === 'percent' ? `${it?.percent}%` : formatInr(it?.fixed_amount || it?.fixed_amount_paise) },
       { key: 'effective_from', label: 'Effective From', value: formatDateTime(it?.effective_from) },
@@ -1874,7 +1937,7 @@ export function FinancePage() {
         }}
       />
 
-      {/* Inspector Commission Rule Dialog */}
+      {/* Inspector Commission Rule Dialog - Updated with new fields */}
       <ReasonDialog
         open={inspectorRuleOpen}
         title="Create Inspector Commission Rule"
@@ -1889,13 +1952,32 @@ export function FinancePage() {
             label: 'Inspector *',
             type: 'select',
             defaultValue: '',
-            options: inspectors.map(i => ({ value: i.user_id, label: `${i.name} (${i.user_id})` })),
+            options: inspectors.map(i => ({ 
+              value: i.user_id, 
+              label: `${i.name} (${i.user_id}) - ${formatEmploymentType(i.employment_type)}` 
+            })),
+            onChange: (value, next) => {
+              const selectedInspector = inspectors.find((i) => i.user_id === value)
+              if (!selectedInspector) return next
+              return {
+                ...next,
+                inspector_category: formatEmploymentType(selectedInspector.employment_type),
+              }
+            },
+          },
+          {
+            name: 'inspector_category',
+            label: 'Inspector Category',
+            type: 'text',
+            defaultValue: '',
+            disabled: true,
+            helpText: 'Auto-populated from selected inspector',
           },
           {
             name: 'commission_type',
             label: 'Commission Type *',
             type: 'select',
-            defaultValue: 'percent',
+            defaultValue: 'fixed',
             options: [
               { value: 'percent', label: 'Percentage' },
               { value: 'fixed', label: 'Fixed Amount' },
@@ -1917,10 +1999,20 @@ export function FinancePage() {
             label: 'Fixed Amount (Rs) *',
             type: 'number',
             defaultValue: '',
-            placeholder: 'e.g. 500',
+            placeholder: 'e.g. 5000',
             step: '0.01',
             min: '0',
             condition: (form) => form.commission_type === 'fixed',
+          },
+          {
+            name: 'monthly_threshold',
+            label: 'Monthly Threshold *',
+            type: 'number',
+            defaultValue: '',
+            placeholder: 'e.g. 15',
+            min: '0',
+            step: '1',
+            helpText: 'Number of inspections per month before commission applies',
           },
           {
             name: 'effective_from',
@@ -1955,8 +2047,22 @@ export function FinancePage() {
               return
             }
             
+            // Find the selected inspector to get employment_type
+            const selectedInspector = inspectors.find(i => i.user_id === form.inspector_id)
+            if (!selectedInspector) {
+              showSnack({ tone: 'danger', title: 'Error', message: 'Selected inspector not found' })
+              return
+            }
+            
+            if (!form.monthly_threshold || parseFloat(form.monthly_threshold) < 0) {
+              showSnack({ tone: 'danger', title: 'Error', message: 'Monthly threshold must be greater than or equal to 0' })
+              return
+            }
+            
             const payload = {
               commission_type: form.commission_type,
+              inspector_category: selectedInspector.employment_type || 'full_time',
+              monthly_threshold: parseFloat(form.monthly_threshold),
               is_active: form.is_active,
             }
             
@@ -1990,9 +2096,24 @@ export function FinancePage() {
             showSnack({ tone: 'danger', title: 'Error', message: responseToMessage(e) || 'Failed to create inspector commission rule' })
           }
         }}
+        // Add watch function to auto-populate inspector_category
+        onFormChange={(form, setForm) => {
+          if (form.inspector_id) {
+            const selectedInspector = inspectors.find(i => i.user_id === form.inspector_id)
+            if (selectedInspector) {
+              const formattedCategory = formatEmploymentType(selectedInspector.employment_type)
+              if (form.inspector_category !== formattedCategory) {
+                setForm(prev => ({
+                  ...prev,
+                  inspector_category: formattedCategory
+                }))
+              }
+            }
+          }
+        }}
       />
 
-      {/* Edit Inspector Commission Rule Dialog */}
+      {/* Edit Inspector Commission Rule Dialog - Updated with inspector field */}
       <ReasonDialog
         open={editRuleOpen}
         title="Edit Inspector Commission Rule"
@@ -2003,10 +2124,24 @@ export function FinancePage() {
         requireReason={false}
         fields={[
           {
+            name: 'inspector_name',
+            label: 'Inspector',
+            type: 'text',
+            defaultValue: dialog?.item?.inspector_name || '',
+            disabled: true,
+          },
+          {
+            name: 'inspector_category',
+            label: 'Inspector Category',
+            type: 'text',
+            defaultValue: formatEmploymentType(dialog?.item?.inspector_category) || '',
+            disabled: true,
+          },
+          {
             name: 'commission_type',
             label: 'Commission Type *',
             type: 'select',
-            defaultValue: dialog?.item?.commission_type || 'percent',
+            defaultValue: dialog?.item?.commission_type || 'fixed',
             options: [
               { value: 'percent', label: 'Percentage' },
               { value: 'fixed', label: 'Fixed Amount' },
@@ -2028,10 +2163,20 @@ export function FinancePage() {
             label: 'Fixed Amount (Rs) *',
             type: 'number',
             defaultValue: dialog?.item?.fixed_amount || '',
-            placeholder: 'e.g. 500',
+            placeholder: 'e.g. 5000',
             step: '0.01',
             min: '0',
             condition: (form) => form.commission_type === 'fixed',
+          },
+          {
+            name: 'monthly_threshold',
+            label: 'Monthly Threshold',
+            type: 'number',
+            defaultValue: dialog?.item?.monthly_threshold || '',
+            placeholder: 'e.g. 15',
+            min: '0',
+            step: '1',
+            helpText: 'Number of inspections per month before commission applies',
           },
           {
             name: 'effective_from',
@@ -2078,6 +2223,10 @@ export function FinancePage() {
               }
               payload.fixed_amount_paise = Math.round(parseFloat(form.fixed_amount_paise) * 100)
               payload.percent = null
+            }
+            
+            if (form.monthly_threshold !== undefined && form.monthly_threshold !== '') {
+              payload.monthly_threshold = parseFloat(form.monthly_threshold)
             }
             
             if (form.effective_from) {

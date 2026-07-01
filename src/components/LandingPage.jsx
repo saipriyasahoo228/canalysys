@@ -1,7 +1,7 @@
 // import React, { useEffect, useRef, useState } from 'react';
 // import { useNavigate } from 'react-router-dom';
 // import { sendContactInfo, getInspectorsData, getInspectionProcessFeedback } from '../api/contactus';
-
+// import { listDistricts } from '../api/city'; // Import from city.js
 
 // const LandingPage = () => {
 //   const navigate = useNavigate();
@@ -17,19 +17,8 @@
 //   const [isSubmitting, setIsSubmitting] = useState(false);
 //   const [inspectors, setInspectors] = useState([]);
 //   const [feedbackData, setFeedbackData] = useState([]);
-//   const [districts, setDistricts] = useState([
-//     { id: 1, name: 'Bhubaneswar', is_active: true },
-//     { id: 2, name: 'Cuttack', is_active: true },
-//     { id: 3, name: 'Puri', is_active: true },
-//     { id: 4, name: 'Rourkela', is_active: true },
-//     { id: 5, name: 'Berhampur', is_active: true },
-//     { id: 6, name: 'Sambalpur', is_active: true },
-//     { id: 7, name: 'Balasore', is_active: true },
-//     { id: 8, name: 'Baripada', is_active: true },
-//     { id: 9, name: 'Jharsuguda', is_active: true },
-//     { id: 10, name: 'Paradip', is_active: true },
-//     { id: 11, name: 'Kendujhar', is_active: true },
-//   ]);
+//   const [districts, setDistricts] = useState([]);
+//   const [loadingDistricts, setLoadingDistricts] = useState(true);
 //   const [showAppModal, setShowAppModal] = useState(false);
 //   const heroStatsRef = useRef(null);
 //   const teamScrollRef = useRef(null);
@@ -81,8 +70,24 @@
 //       }
 //     };
 
+//     // Fetch districts data
+//     const fetchDistricts = async () => {
+//       try {
+//         setLoadingDistricts(true);
+//         const data = await listDistricts();
+//         console.log('Districts data:', data);
+//         setDistricts(data.items || []);
+//       } catch (error) {
+//         console.error('Error fetching districts:', error);
+//         setDistricts([]);
+//       } finally {
+//         setLoadingDistricts(false);
+//       }
+//     };
+
 //     fetchInspectors();
 //     fetchFeedback();
+//     fetchDistricts();
 
 //     const revealEls = document.querySelectorAll('.reveal');
 //     const observer = new IntersectionObserver((entries) => {
@@ -1125,7 +1130,11 @@
 //             </p>
 //           </div>
 //           <div className="cities-grid reveal">
-//             {districts.length > 0 ? (
+//             {loadingDistricts ? (
+//               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+//                 Loading districts...
+//               </div>
+//             ) : districts.length > 0 ? (
 //               districts.map((district) => (
 //                 <div className="city-card" key={district.id}>
 //                   <div className={`city-dot ${!district.is_active ? 'inactive' : ''}`}></div>
@@ -1139,7 +1148,7 @@
 //               ))
 //             ) : (
 //               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-//                 Loading districts...
+//                 No districts available
 //               </div>
 //             )}
 //           </div>
@@ -1500,18 +1509,10 @@
 
 
 
-
-
-
-
-
-
-
-
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendContactInfo, getInspectorsData, getInspectionProcessFeedback } from '../api/contactus';
-import { listDistricts } from '../api/city'; // Import from city.js
+import { listCities } from '../api/city';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -1527,12 +1528,31 @@ const LandingPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inspectors, setInspectors] = useState([]);
   const [feedbackData, setFeedbackData] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [loadingDistricts, setLoadingDistricts] = useState(true);
+  const [cities, setCities] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(true);
   const [showAppModal, setShowAppModal] = useState(false);
   const heroStatsRef = useRef(null);
   const teamScrollRef = useRef(null);
   const testimonialsScrollRef = useRef(null);
+
+  // Use useMemo to compute grouped cities only when cities changes
+  const groupedCities = useMemo(() => {
+    if (!cities || cities.length === 0) return {};
+    
+    const grouped = {};
+    cities.forEach(city => {
+      const districtName = city.district_name || 'Other';
+      if (!grouped[districtName]) {
+        grouped[districtName] = [];
+      }
+      grouped[districtName].push(city);
+    });
+    return grouped;
+  }, [cities]);
+
+  const districtNames = useMemo(() => {
+    return Object.keys(groupedCities);
+  }, [groupedCities]);
 
   const scrollContainer = (ref, direction) => {
     if (ref.current) {
@@ -1580,24 +1600,34 @@ const LandingPage = () => {
       }
     };
 
-    // Fetch districts data
-    const fetchDistricts = async () => {
+    // Fetch cities data
+    const fetchCities = async () => {
       try {
-        setLoadingDistricts(true);
-        const data = await listDistricts();
-        console.log('Districts data:', data);
-        setDistricts(data.items || []);
+        setLoadingCities(true);
+        const data = await listCities();
+        console.log('Raw API response:', data);
+        
+        if (data && data.items) {
+          console.log('Cities items:', data.items);
+          setCities(data.items);
+        } else if (data && Array.isArray(data)) {
+          console.log('Cities array:', data);
+          setCities(data);
+        } else {
+          console.warn('Unexpected API response format:', data);
+          setCities([]);
+        }
       } catch (error) {
-        console.error('Error fetching districts:', error);
-        setDistricts([]);
+        console.error('Error fetching cities:', error);
+        setCities([]);
       } finally {
-        setLoadingDistricts(false);
+        setLoadingCities(false);
       }
     };
 
     fetchInspectors();
     fetchFeedback();
-    fetchDistricts();
+    fetchCities();
 
     const revealEls = document.querySelectorAll('.reveal');
     const observer = new IntersectionObserver((entries) => {
@@ -1636,7 +1666,7 @@ const LandingPage = () => {
     };
 
     window.addEventListener('scroll', handleCounterAnimation);
-    handleCounterAnimation(); // Check on mount
+    handleCounterAnimation();
 
     // Active nav link highlighting
     const handleScroll = () => {
@@ -1660,14 +1690,12 @@ const LandingPage = () => {
   const validateForm = () => {
     const errors = {};
     
-    // Full name validation - only alphabets, uppercase, lowercase, and space
     if (!formData.full_name.trim()) {
       errors.full_name = 'Full name is required';
     } else if (!/^[A-Za-z\s]+$/.test(formData.full_name)) {
       errors.full_name = 'Full name can only contain letters and spaces';
     }
     
-    // Mobile number validation - only numbers, exactly 10 digits
     if (!formData.mobile_number.trim()) {
       errors.mobile_number = 'Mobile number is required';
     } else if (!/^[0-9]+$/.test(formData.mobile_number)) {
@@ -1676,14 +1704,12 @@ const LandingPage = () => {
       errors.mobile_number = 'Mobile number must be exactly 10 digits';
     }
     
-    // Email validation
     if (!formData.email_address.trim()) {
       errors.email_address = 'Email address is required';
     } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email_address)) {
       errors.email_address = 'Please enter a valid email address';
     }
     
-    // Description validation
     if (!formData.description.trim()) {
       errors.description = 'Description is required';
     } else if (formData.description.trim().length < 10) {
@@ -1697,20 +1723,16 @@ const LandingPage = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
-    // Apply input restrictions
     if (name === 'full_name') {
-      // Only allow alphabets and spaces
       const filteredValue = value.replace(/[^A-Za-z\s]/g, '');
       setFormData(prev => ({ ...prev, [name]: filteredValue }));
     } else if (name === 'mobile_number') {
-      // Only allow numbers and restrict to 10 digits
       const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 10);
       setFormData(prev => ({ ...prev, [name]: filteredValue }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
     
-    // Clear error for this field when user starts typing
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -1735,7 +1757,6 @@ const LandingPage = () => {
       
       if (result) {
         alert('Thank you for contacting us! We will get back to you within 24 hours.');
-        // Reset form
         setFormData({
           full_name: '',
           mobile_number: '',
@@ -1751,6 +1772,12 @@ const LandingPage = () => {
       setIsSubmitting(false);
     }
   };
+
+  // Debug logs
+  console.log('Cities state:', cities);
+  console.log('Cities length:', cities.length);
+  console.log('Grouped cities:', groupedCities);
+  console.log('District names:', districtNames);
 
   return (
     <>
@@ -2081,7 +2108,7 @@ const LandingPage = () => {
         .check-text { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
         .check-text strong { color: var(--text); font-weight: 600; }
 
-        /* COVERAGE - FLEXIBLE GRID */
+        /* COVERAGE - GROUPED BY DISTRICT */
         #coverage { background: var(--bg2); position: relative; overflow: hidden; padding: 64px 48px; }
         .coverage-bg-text { 
           position: absolute; 
@@ -2098,15 +2125,41 @@ const LandingPage = () => {
           position: relative;
           z-index: 1;
         }
-        .cities-grid {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: center;
-          gap: 12px;
+        .district-group {
           margin-top: 52px;
           max-width: 1200px;
           margin-left: auto;
           margin-right: auto;
+        }
+        .district-group:first-of-type {
+          margin-top: 52px;
+        }
+        .district-group:not(:first-of-type) {
+          margin-top: 48px;
+        }
+        .district-group-title {
+          font-family: 'Barlow Condensed', sans-serif;
+          font-size: 22px;
+          font-weight: 700;
+          letter-spacing: 2px;
+          color: var(--choc);
+          margin-bottom: 16px;
+          padding-bottom: 8px;
+          border-bottom: 2px solid var(--border-med);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .district-group-title .city-count {
+          font-size: 13px;
+          font-weight: 400;
+          color: var(--text-muted);
+          letter-spacing: 0.5px;
+        }
+        .cities-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
         }
         .city-card {
           flex: 0 1 auto;
@@ -2157,7 +2210,7 @@ const LandingPage = () => {
           color: #999;
         }
         .coverage-note {
-          margin-top: 36px;
+          margin-top: 48px;
           padding: 18px 24px;
           background: rgba(123,53,32,0.05);
           border-left: 3px solid var(--choc);
@@ -2376,6 +2429,9 @@ const LandingPage = () => {
             min-width: 120px;
             padding: 12px 16px;
           }
+          .district-group-title {
+            font-size: 18px;
+          }
         }
 
         @media (max-width: 600px) {
@@ -2397,6 +2453,9 @@ const LandingPage = () => {
           }
           .city-status {
             font-size: 10px;
+          }
+          .district-group-title {
+            font-size: 16px;
           }
         }
 
@@ -2626,48 +2685,152 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <section id="coverage">
-        <div className="coverage-bg-text">ODISHA</div>
-        <div className="coverage-content">
-          <div className="section-header">
-            <div className="section-label">Service Network</div>
-            <h2 className="section-title reveal">
-              <span className="title-line">WE COVER</span>
-              <span className="title-line">ODISHA</span>
-            </h2>
-            <p className="section-subtitle reveal">
-              Our inspector network spans <strong>{districts.length}</strong>+ cities across Odisha — from the capital to emerging towns.
-            </p>
-          </div>
-          <div className="cities-grid reveal">
-            {loadingDistricts ? (
-              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                Loading districts...
-              </div>
-            ) : districts.length > 0 ? (
-              districts.map((district) => (
-                <div className="city-card" key={district.id}>
-                  <div className={`city-dot ${!district.is_active ? 'inactive' : ''}`}></div>
-                  <div>
-                    <div className="city-name">{district.name}</div>
-                    <div className={`city-status ${!district.is_active ? 'inactive' : ''}`}>
-                      {district.is_active ? 'Active' : 'Coming Soon'}
-                    </div>
-                  </div>
+
+
+
+      {/* COVERAGE SECTION - FITS TO CONTENT */}
+<section id="coverage" style={{ padding: '64px 48px' }}>
+  <div className="coverage-bg-text">ODISHA</div>
+  <div className="coverage-content">
+    <div className="section-header">
+      <div className="section-label">Service Network</div>
+      <h2 className="section-title reveal">
+        <span className="title-line">WE COVER</span>
+        <span className="title-line">ODISHA</span>
+      </h2>
+      <p className="section-subtitle reveal">
+        Our inspector network spans <strong>{cities.length}</strong> cities across Odisha — from the capital to emerging towns.
+      </p>
+    </div>
+    
+    {loadingCities ? (
+      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+        Loading cities...
+      </div>
+    ) : cities.length > 0 ? (
+      <div style={{ 
+        display: 'flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: '24px',
+        maxWidth: '1200px',
+        margin: '52px auto 0'
+      }}>
+        {districtNames.map((districtName) => (
+          <div key={districtName} style={{
+            flex: '0 1 auto',
+            minWidth: '240px',
+            maxWidth: '320px',
+            background: 'var(--white)',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            padding: '20px 24px 24px',
+            boxShadow: '0 2px 12px rgba(123,53,32,0.06)',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-4px)';
+            e.currentTarget.style.boxShadow = '0 8px 28px rgba(123,53,32,0.12)';
+            e.currentTarget.style.borderColor = 'var(--choc-pale)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'none';
+            e.currentTarget.style.boxShadow = '0 2px 12px rgba(123,53,32,0.06)';
+            e.currentTarget.style.borderColor = 'var(--border)';
+          }}>
+            {/* District Name */}
+            <div style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: '22px',
+              fontWeight: 700,
+              letterSpacing: '1px',
+              color: 'var(--choc)',
+              textAlign: 'center',
+              paddingBottom: '8px',
+              borderBottom: '2px solid var(--border-med)',
+              marginBottom: '12px'
+            }}>
+              {districtName}
+            </div>
+            
+            {/* City Count */}
+            <div style={{
+              textAlign: 'center',
+              fontSize: '13px',
+              color: 'var(--text-muted)',
+              marginBottom: '14px',
+              fontWeight: 500
+            }}>
+              {groupedCities[districtName].length} city{groupedCities[districtName].length > 1 ? 's' : ''}
+            </div>
+            
+            {/* City Names */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              {groupedCities[districtName].map((city) => (
+                <div key={city.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'var(--bg)',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--bg2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--bg)';
+                }}>
+                  <div style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: city.is_active ? '#48A870' : '#ccc',
+                    flexShrink: 0,
+                    boxShadow: city.is_active ? '0 0 6px rgba(72,168,112,0.4)' : 'none'
+                  }}></div>
+                  <span style={{
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontSize: '15px',
+                    fontWeight: 500,
+                    color: 'var(--text)',
+                    letterSpacing: '0.3px'
+                  }}>
+                    {city.name}
+                  </span>
+                  <span style={{
+                    fontSize: '10px',
+                    color: city.is_active ? 'var(--choc)' : '#999',
+                    fontWeight: 600,
+                    letterSpacing: '0.5px',
+                    textTransform: 'uppercase'
+                  }}>
+                    {city.is_active ? 'Active' : 'Soon'}
+                  </span>
                 </div>
-              ))
-            ) : (
-              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                No districts available
-              </div>
-            )}
+              ))}
+            </div>
           </div>
-          <div className="coverage-note reveal">
-            <strong>Don't see your city?</strong> We're rapidly expanding our inspector network across Odisha. 
-            Contact us to request coverage in your area — we may be closer than you think.
-          </div>
-        </div>
-      </section>
+        ))}
+      </div>
+    ) : (
+      <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+        No cities available
+      </div>
+    )}
+    
+    <div className="coverage-note reveal">
+      <strong>Don't see your city?</strong> We're rapidly expanding our inspector network across Odisha. 
+      Contact us to request coverage in your area — we may be closer than you think.
+    </div>
+  </div>
+</section>
 
       <section id="why">
         <div className="section-header">

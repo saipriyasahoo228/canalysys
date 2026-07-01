@@ -26,16 +26,7 @@ export const listCommissionRules = async (filters = {}) => {
   return response.data;
 };
 
-// Get commission report (admin)
-// export const getCommissionReport = async (fromDate, toDate, inspectorId = null) => {
-//   const params = new URLSearchParams();
-//   params.append('from', fromDate);
-//   params.append('to', toDate);
-//   if (inspectorId) params.append('inspector_id', inspectorId);
-  
-//   const response = await api.get(`/api/staff/commissions/report/?${params.toString()}`);
-//   return response.data;
-// };
+
 
 // In your API service file
 export const getCommissionReport = async (from, to, inspectorId = null, category = null) => {

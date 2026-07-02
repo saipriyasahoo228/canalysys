@@ -138,6 +138,21 @@ export function ChecklistBuilderPage() {
     setSnackbar({ open: true, tone, title, message })
   }
 
+  const getBackendMessage = (payload) => {
+    if (typeof payload === 'string') return payload
+    if (payload && typeof payload === 'object') {
+      const candidates = [payload.message, payload.detail, payload.msg, payload.error, payload.title]
+      for (const candidate of candidates) {
+        if (typeof candidate === 'string' && candidate.trim()) return candidate
+      }
+
+      if (Array.isArray(payload.non_field_errors) && payload.non_field_errors.length > 0) {
+        return payload.non_field_errors.join(', ')
+      }
+    }
+    return null
+  }
+
   // Function to fetch template data for viewing
   const fetchViewTemplate = async (templateId) => {
     try {
@@ -589,20 +604,24 @@ export function ChecklistBuilderPage() {
               is_active: form.is_active
             }
 
+            let responseData
             if (dialog?.type === 'createTemplate') {
-              await createTemplate(templateData)
+              responseData = await createTemplate(templateData)
             } else {
               // Use PATCH for metadata-only updates
-              await patchTemplate(dialog.templateId, templateData)
+              responseData = await patchTemplate(dialog.templateId, templateData)
             }
 
+            const responseMessage = getBackendMessage(responseData)
+            showSnackbar('success', 'Success', responseMessage || 'Template saved successfully')
             setDialog(null)
             setEditingTemplate(null)
             await refresh()
           } catch (error) {
             if (error.response?.data) {
+              const responseMessage = getBackendMessage(error.response.data)
               setBackendErrors(error.response.data)
-              showSnackbar('error', 'Validation Error', formatBackendErrors(error.response.data))
+              showSnackbar('error', responseMessage ? 'Error' : 'Validation Error', responseMessage || formatBackendErrors(error.response.data))
             } else {
               setBackendErrors({ detail: error.message })
               showSnackbar('error', 'Error', error.message)
@@ -661,20 +680,24 @@ export function ChecklistBuilderPage() {
               order: Number(form.order || 1)
             }
 
+            let responseData
             if (dialog?.type === 'createSection') {
               // Use the new POST API to create section under template
-              await createSection(dialog.templateId, sectionData)
+              responseData = await createSection(dialog.templateId, sectionData)
             } else {
               // Use PATCH for editing existing sections
-              await patchSection(dialog.sectionId, sectionData)
+              responseData = await patchSection(dialog.sectionId, sectionData)
             }
 
+            const responseMessage = getBackendMessage(responseData)
+            showSnackbar('success', 'Success', responseMessage || 'Section saved successfully')
             setDialog(null)
             await refresh()
           } catch (error) {
             if (error.response?.data) {
+              const responseMessage = getBackendMessage(error.response.data)
               setBackendErrors(error.response.data)
-              showSnackbar('error', 'Validation Error', formatBackendErrors(error.response.data))
+              showSnackbar('error', responseMessage ? 'Error' : 'Validation Error', responseMessage || formatBackendErrors(error.response.data))
             } else {
               setBackendErrors({ detail: error.message })
               showSnackbar('error', 'Error', error.message)
@@ -797,20 +820,24 @@ export function ChecklistBuilderPage() {
               }
             }
 
+            let responseData
             if (dialog?.type === 'createQuestion') {
               // Use the new POST API to create question under section
-              await createQuestion(dialog.sectionId, questionData)
+              responseData = await createQuestion(dialog.sectionId, questionData)
             } else {
               // Use PATCH for editing existing questions
-              await patchQuestion(dialog.questionId, questionData)
+              responseData = await patchQuestion(dialog.questionId, questionData)
             }
 
+            const responseMessage = getBackendMessage(responseData)
+            showSnackbar('success', 'Success', responseMessage || 'Question saved successfully')
             setDialog(null)
             await refresh()
           } catch (error) {
             if (error.response?.data) {
+              const responseMessage = getBackendMessage(error.response.data)
               setBackendErrors(error.response.data)
-              showSnackbar('error', 'Validation Error', formatBackendErrors(error.response.data))
+              showSnackbar('error', responseMessage ? 'Error' : 'Validation Error', responseMessage || formatBackendErrors(error.response.data))
             } else {
               setBackendErrors({ detail: error.message })
               showSnackbar('error', 'Error', error.message)
@@ -843,22 +870,28 @@ export function ChecklistBuilderPage() {
                   try {
                     if (!canEdit) throw new Error('Insufficient permission')
 
+                    let responseData
                     if (confirmDialog.type === 'deleteTemplate') {
-                      await deleteTemplate(confirmDialog.templateId)
+                      responseData = await deleteTemplate(confirmDialog.templateId)
                       setConfirmDialog(null)
                       if (selectedTemplateId === confirmDialog.templateId) setSelectedTemplateId('')
                       await refresh()
                     } else if (confirmDialog.type === 'deleteSection') {
-                      await deleteSection(Number(confirmDialog.sectionId))
+                      responseData = await deleteSection(Number(confirmDialog.sectionId))
                       setConfirmDialog(null)
                       if (selectedSectionId === confirmDialog.sectionId) setSelectedSectionId('')
                       await refresh()
                     } else if (confirmDialog.type === 'deleteQuestion') {
-                      await deleteQuestion(Number(confirmDialog.questionId))
+                      responseData = await deleteQuestion(Number(confirmDialog.questionId))
                       setConfirmDialog(null)
                       await refresh()
                     }
+
+                    const responseMessage = getBackendMessage(responseData)
+                    showSnackbar('success', 'Success', responseMessage || 'Item deleted successfully')
                   } catch (error) {
+                    const responseMessage = getBackendMessage(error.response?.data)
+                    showSnackbar('error', responseMessage ? 'Error' : 'Delete Failed', responseMessage || error.message || 'Delete failed')
                     console.error('Delete failed:', error)
                   }
                 }}

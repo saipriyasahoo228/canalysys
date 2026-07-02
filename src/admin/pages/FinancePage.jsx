@@ -245,14 +245,17 @@ export function FinancePage() {
         ),
       },
       {
-        key: 'inspector_category',
-        header: 'Category',
-        exportValue: (r) => formatEmploymentType(r.inspector_category),
-        cell: (r) => (
-          <Badge tone={r.inspector_category === 'full_time' ? 'emerald' : 'blue'}>
-            {formatEmploymentType(r.inspector_category)}
-          </Badge>
-        ),
+        key: 'employment_type',
+        header: 'Employment Type',
+        exportValue: (r) => formatEmploymentType(r.employment_type ?? r.inspector_category),
+        cell: (r) => {
+          const value = formatEmploymentType(r.employment_type ?? r.inspector_category)
+          return (
+            <Badge tone={value === 'Full Time' ? 'emerald' : 'blue'}>
+              {value}
+            </Badge>
+          )
+        },
       },
       {
         key: 'monthly_threshold',
@@ -374,7 +377,7 @@ export function FinancePage() {
     return [
       { key: 'id', label: 'Rule ID', value: it?.id || '—' },
       { key: 'scope', label: 'Scope', value: it?.scope === 'global' ? 'Global' : `Inspector: ${it?.inspector_name}` },
-      { key: 'inspector_category', label: 'Inspector Category', value: formatEmploymentType(it?.inspector_category) },
+      { key: 'employment_type', label: 'Employment Type', value: formatEmploymentType(it?.employment_type ?? it?.inspector_category) },
       { key: 'monthly_threshold', label: 'Monthly Threshold', value: it?.monthly_threshold || '—' },
       { key: 'commission_type', label: 'Commission Type', value: it?.commission_type ? it.commission_type.charAt(0).toUpperCase() + it.commission_type.slice(1).toLowerCase() : '—' },
       { key: 'amount', label: 'Commission Amount', value: it?.commission_type === 'percent' ? `${it?.percent}%` : formatInr(it?.fixed_amount || it?.fixed_amount_paise) },
@@ -876,7 +879,7 @@ export function FinancePage() {
           },
           {
             name: 'inspector_category',
-            label: 'Inspector Category',
+            label: 'Employment Type',
             type: 'text',
             defaultValue: '',
             disabled: true,
@@ -1045,9 +1048,9 @@ export function FinancePage() {
           },
           {
             name: 'inspector_category',
-            label: 'Inspector Category',
+            label: 'Employment Type',
             type: 'text',
-            defaultValue: formatEmploymentType(dialog?.item?.inspector_category) || '',
+            defaultValue: formatEmploymentType(dialog?.item?.employment_type ?? dialog?.item?.inspector_category) || '',
             disabled: true,
           },
           {

@@ -87,7 +87,7 @@ export function QueueControlPage() {
   const { locationId } = useRbac()
 
   useEffect(() => {
-    document.title = 'Inspector Report · PDI Admin'
+    document.title = 'Inspector Report · CARNALYSYS'
   }, [])
 
   // State for API data

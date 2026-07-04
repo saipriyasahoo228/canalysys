@@ -1554,6 +1554,11 @@ const LandingPage = () => {
     return Object.keys(groupedCities);
   }, [groupedCities]);
 
+  const featuredCities = useMemo(() => {
+    if (!cities || cities.length === 0) return [];
+    return cities.filter((city) => city?.name).slice(0, 5);
+  }, [cities]);
+
   const scrollContainer = (ref, direction) => {
     if (ref.current) {
       const scrollAmount = direction === 'left' ? -260 : 260;
@@ -3092,11 +3097,18 @@ const LandingPage = () => {
           <div>
             <div className="footer-col-title">Coverage</div>
             <ul className="footer-links">
-              <li><a href="#">Bhubaneswar</a></li>
-              <li><a href="#">Cuttack</a></li>
-              <li><a href="#">Puri</a></li>
-              <li><a href="#">Rourkela</a></li>
-              <li><a href="#coverage">All Cities →</a></li>
+              {featuredCities.length > 0 ? (
+                featuredCities.map((city) => (
+                  <li key={city.id || city.name}>
+                    <a href="#coverage">{city.name}</a>
+                  </li>
+                ))
+              ) : (
+                <li><a href="#coverage">Loading cities...</a></li>
+              )}
+              {cities.length > featuredCities.length && (
+                <li><a href="#coverage">All Cities →</a></li>
+              )}
             </ul>
           </div>
           <div>

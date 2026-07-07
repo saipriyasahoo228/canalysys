@@ -353,6 +353,12 @@ export function ChecklistBuilderPage() {
   const questionColumns = useMemo(
     () => [
       {
+        key: 'order',
+        header: '#',
+        exportValue: (r) => r.order,
+        cell: (r) => <div className="text-xs font-semibold text-slate-700">{r.order ?? '—'}</div>,
+      },
+      {
         key: 'title',
         header: 'Question',
         exportValue: (r) => r.title,

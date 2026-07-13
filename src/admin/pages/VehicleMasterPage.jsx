@@ -102,7 +102,6 @@ export function VehicleMasterPage() {
   const [pricingFilters, setPricingFilters] = useState({
     category: '',
     vehicle_type: '',
-    is_active: ''
   })
 
   // Category Types state
@@ -249,9 +248,8 @@ export function VehicleMasterPage() {
     if (!Array.isArray(items)) return []
     
     return items.filter(item => {
-      if (pricingFilters.category && item.category !== pricingFilters.category) return false
+      if (pricingFilters.category && String(item.category) !== String(pricingFilters.category)) return false
       if (pricingFilters.vehicle_type && item.vehicle_type !== pricingFilters.vehicle_type) return false
-      if (pricingFilters.is_active !== '' && item.is_active !== (pricingFilters.is_active === 'true')) return false
       return true
     })
   }, [categoryPricingData, pricingFilters])
@@ -1116,23 +1114,13 @@ export function VehicleMasterPage() {
                 >
                   <option value="">All Vehicle Types</option>
                   <option value="owned">Owned</option>
-                  <option value="partner">Partner</option>
-                </select>
-                
-                <select
-                  className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 shadow-sm focus:border-cyan-500/80 focus:ring-2 focus:ring-cyan-200/70"
-                  value={pricingFilters.is_active}
-                  onChange={(e) => setPricingFilters(prev => ({ ...prev, is_active: e.target.value }))}
-                >
-                  <option value="">All Status</option>
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
+                  <option value="new">New</option>
                 </select>
                 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPricingFilters({ category: '', vehicle_type: '', is_active: '' })}
+                  onClick={() => setPricingFilters({ category: '', vehicle_type: '' })}
                 >
                   Clear Filters
                 </Button>

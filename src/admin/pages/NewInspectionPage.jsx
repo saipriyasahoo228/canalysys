@@ -272,6 +272,8 @@ export function NewInspectionPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedPaymentStageFilter, setSelectedPaymentStageFilter] = useState('')
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('')
   const [inspectorsList, setInspectorsList] = useState([])
   const [, setLoadingInspectorsList] = useState(false)
 
@@ -1946,6 +1948,24 @@ export function NewInspectionPage() {
 
   const _customerRows = Array.isArray(customers) ? customers : (customers?.results || [])
 
+  // Payment stage / status options derived from the currently loaded requests,
+  // so the filter dropdowns always reflect real values instead of a hardcoded list
+  const { paymentStageFilterOptions, statusFilterOptions } = useMemo(() => {
+    const items = pdiRequestsData?.items
+    if (!Array.isArray(items)) return { paymentStageFilterOptions: [], statusFilterOptions: [] }
+    const formatLabel = (value) =>
+      String(value)
+        .split('_')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+    const paymentStages = [...new Set(items.map((i) => i.payment_stage).filter(Boolean))].sort()
+    const statuses = [...new Set(items.map((i) => i.status).filter(Boolean))].sort()
+    return {
+      paymentStageFilterOptions: paymentStages.map((value) => ({ value, label: formatLabel(value) })),
+      statusFilterOptions: statuses.map((value) => ({ value, label: formatLabel(value) })),
+    }
+  }, [pdiRequestsData])
+
   // Process PDI requests data
   const pdiRequests = useMemo(() => {
     const items = pdiRequestsData?.items
@@ -2006,14 +2026,14 @@ export function NewInspectionPage() {
       // Date range filter
       if (startDate || endDate) {
         const pdiDate = new Date(pdi.created_at)
-        
+
         if (startDate) {
           // Parse dd/mm/yyyy format
           const [day, month, year] = startDate.split('/')
           const start = new Date(`${year}-${month}-${day}`)
           if (pdiDate < start) return false
         }
-        
+
         if (endDate) {
           // Parse dd/mm/yyyy format
           const [day, month, year] = endDate.split('/')
@@ -2023,9 +2043,19 @@ export function NewInspectionPage() {
         }
       }
 
+      // Payment stage filter
+      if (selectedPaymentStageFilter && pdi.payment_stage !== selectedPaymentStageFilter) {
+        return false
+      }
+
+      // Status filter
+      if (selectedStatusFilter && pdi.status !== selectedStatusFilter) {
+        return false
+      }
+
       return true
     })
-  }, [pdiRequestsData, searchTerm, selectedInspectorFilter, startDate, endDate])
+  }, [pdiRequestsData, searchTerm, selectedInspectorFilter, startDate, endDate, selectedPaymentStageFilter, selectedStatusFilter])
 
   // PDI requests table columns
   const pdiRequestsColumns = useMemo(
@@ -2213,7 +2243,7 @@ export function NewInspectionPage() {
       ) : null}
 
       <Card
-        title="New inspection"
+        title="Inspection Details"
         subtitle="Select a walk-in customer and raise a PDI request"
         accent="violet"
         right={
@@ -2259,7 +2289,7 @@ export function NewInspectionPage() {
 
       {/* PDI Requests Table */}
       <Card
-        title="PDI Requests"
+        title="Inspection Details"
         subtitle="All PDI requests with details and status"
         accent="cyan"
         // right={
@@ -2274,10 +2304,10 @@ export function NewInspectionPage() {
           </div>
         ) : (
           <>
-            {/* Search, Filters and Clear Button in one row */}
-            <div className="flex flex-col sm:flex-row gap-3 items-end mb-4">
+            {/* Search, Filters and Clear Button */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 items-end mb-4">
               {/* Search Bar */}
-              <div className="flex-1 min-w-0">
+              <div className="w-full sm:w-56">
                 <label className="block text-xs font-medium text-slate-600 mb-1">Search</label>
                 <Input
                   type="text"
@@ -2336,6 +2366,40 @@ export function NewInspectionPage() {
                 />
               </div>
 
+              {/* Payment Stage Filter */}
+              <div className="w-full sm:w-40">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Payment Stage</label>
+                <Select
+                  value={selectedPaymentStageFilter}
+                  onChange={(e) => setSelectedPaymentStageFilter(e.target.value)}
+                  className="w-full"
+                >
+                  <option value="">All Payment Stages</option>
+                  {paymentStageFilterOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              {/* Status Filter */}
+              <div className="w-full sm:w-40">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
+                <Select
+                  value={selectedStatusFilter}
+                  onChange={(e) => setSelectedStatusFilter(e.target.value)}
+                  className="w-full"
+                >
+                  <option value="">All Statuses</option>
+                  {statusFilterOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
               {/* Clear Filters Button */}
               <button
                 onClick={() => {
@@ -2343,6 +2407,8 @@ export function NewInspectionPage() {
                   setSelectedInspectorFilter('')
                   setStartDate('')
                   setEndDate('')
+                  setSelectedPaymentStageFilter('')
+                  setSelectedStatusFilter('')
                 }}
                 className="w-full sm:w-auto px-4 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors whitespace-nowrap"
               >

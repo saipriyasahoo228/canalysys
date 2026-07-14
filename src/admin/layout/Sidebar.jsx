@@ -115,7 +115,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               <NavItem
                 to="/new-inspection"
                 icon={FilePlus2}
-                label="New Inspection"
+                label="Inspection Details"
                 collapsed={collapsed}
                 iconClassName="text-violet-600"
               />
@@ -187,7 +187,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               <NavItem
                 to="/requests"
                 icon={MessageCircle }
-                label="Customer Request"
+                label="Customer Details"
                 collapsed={collapsed}
                 iconClassName="text-pink-600"
               />
@@ -227,7 +227,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
               <NavItem
                 to="/new-inspection"
                 icon={FilePlus2}
-                label="New Inspection"
+                label="Inspection Detailes"
                 collapsed={false}
                 iconClassName="text-violet-600"
               />

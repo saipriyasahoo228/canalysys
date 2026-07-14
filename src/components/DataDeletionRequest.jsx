@@ -245,7 +245,7 @@ const DataDeletionRequest = () => {
             <p className="text">
               To request deletion of your account and associated data, send an email to:
               {' '}
-              <a className="email" href="mailto:intulet.dev@gmail.com">intulet.dev@gmail.com</a>
+              <a className="email" href="mailto:support@intulet.com">support@intulet.com</a>
             </p>
             <p className="text">
               In your email, include the details listed below so we can locate and verify your account.
@@ -255,7 +255,7 @@ const DataDeletionRequest = () => {
               <div className="callout-row">
                 <div>
                   <div className="label">Email Address</div>
-                  <div className="value"><a className="email" href="mailto:intulet.dev@gmail.com">intulet.dev@gmail.com</a></div>
+                  <div className="value"><a className="email" href="mailto:support@intulet.com">support@intulet.com</a></div>
                 </div>
                 <div>
                   <div className="label">Required Message</div>

@@ -274,6 +274,7 @@ export function NewInspectionPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPaymentStageFilter, setSelectedPaymentStageFilter] = useState('')
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('')
+  const [selectedBookingTypeFilter, setSelectedBookingTypeFilter] = useState('')
   const [inspectorsList, setInspectorsList] = useState([])
   const [, setLoadingInspectorsList] = useState(false)
 
@@ -1976,6 +1977,7 @@ export function NewInspectionPage() {
     const processedItems = items.map((pdi) => ({
       id: pdi.id,
       request_id: pdi.request_id,
+      is_walkin: !!pdi.is_walkin,
       created_by_name: pdi.created_by_name,
       mobile_number: pdi.mobile_number,
       name: pdi.name,
@@ -2053,9 +2055,17 @@ export function NewInspectionPage() {
         return false
       }
 
+      // Booking type filter (walk-in vs registered)
+      if (selectedBookingTypeFilter === 'walkin' && !pdi.is_walkin) {
+        return false
+      }
+      if (selectedBookingTypeFilter === 'registered' && pdi.is_walkin) {
+        return false
+      }
+
       return true
     })
-  }, [pdiRequestsData, searchTerm, selectedInspectorFilter, startDate, endDate, selectedPaymentStageFilter, selectedStatusFilter])
+  }, [pdiRequestsData, searchTerm, selectedInspectorFilter, startDate, endDate, selectedPaymentStageFilter, selectedStatusFilter, selectedBookingTypeFilter])
 
   // PDI requests table columns
   const pdiRequestsColumns = useMemo(
@@ -2063,8 +2073,13 @@ export function NewInspectionPage() {
       {
         key: 'request_id',
         header: 'Request ID',
-        exportValue: (r) => r.request_id || '—',
-        cell: (r) => <div className="text-sm font-medium text-slate-900">{r.request_id || '—'}</div>,
+        exportValue: (r) => `${r.request_id || '—'}${r.is_walkin ? ' (Walk In)' : ''}`,
+        cell: (r) => (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-900">{r.request_id || '—'}</span>
+            {r.is_walkin ? <Badge tone="amber">Walk In</Badge> : null}
+          </div>
+        ),
       },
       {
         key: 'name',
@@ -2400,6 +2415,20 @@ export function NewInspectionPage() {
                 </Select>
               </div>
 
+              {/* Booking Type Filter */}
+              <div className="w-full sm:w-40">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Booking Type</label>
+                <Select
+                  value={selectedBookingTypeFilter}
+                  onChange={(e) => setSelectedBookingTypeFilter(e.target.value)}
+                  className="w-full"
+                >
+                  <option value="">All Bookings</option>
+                  <option value="walkin">Walk In</option>
+                  <option value="registered">Registered</option>
+                </Select>
+              </div>
+
               {/* Clear Filters Button */}
               <button
                 onClick={() => {
@@ -2409,6 +2438,7 @@ export function NewInspectionPage() {
                   setEndDate('')
                   setSelectedPaymentStageFilter('')
                   setSelectedStatusFilter('')
+                  setSelectedBookingTypeFilter('')
                 }}
                 className="w-full sm:w-auto px-4 py-2 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors whitespace-nowrap"
               >

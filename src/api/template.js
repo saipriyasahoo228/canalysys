@@ -60,6 +60,18 @@ export const createQuestion = async (sectionId, questionData) => {
   return response.data;
 };
 
+// Create sub-section under a section (section must not itself be a sub-section)
+export const createSubSection = async (sectionId, sectionData) => {
+  const response = await api.post(`/api/inspection/templates/sections/${sectionId}/sub-sections/`, sectionData);
+  return response.data;
+};
+
+// Create sub-question under a question (question must not itself be a sub-question)
+export const createSubQuestion = async (questionId, questionData) => {
+  const response = await api.post(`/api/inspection/templates/questions/${questionId}/sub-questions/`, questionData);
+  return response.data;
+};
+
 // Delete section (DELETE)
 export const deleteSection = async (sectionId) => {
   const response = await api.delete(`/api/inspection/templates/sections/${sectionId}/`);

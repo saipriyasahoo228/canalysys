@@ -18,7 +18,7 @@ import {
   YAxis,
 } from 'recharts'
 import { AlertTriangle, ClipboardCheck, ClipboardList, Clock, Gauge, Layers, UserX, IndianRupeeIcon } from 'lucide-react'
-import { Card, Badge, cx } from '../ui/Ui'
+import { Card, Badge, Button, cx } from '../ui/Ui'
 import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { usePolling } from '../hooks/usePolling'
 import { mockApi } from '../mock/mockApi'
@@ -37,6 +37,26 @@ function kpiTone(label, value) {
   return 'default'
 }
 
+// listPDIRequests() only returns a single page of items. The trend/city/customer
+// charts below need every request in the selected date range (not just page 1),
+// so page through the endpoint until all items matching `count` are collected.
+async function fetchAllPdiRequests(params) {
+  const items = []
+  let page = 1
+  let total = Infinity
+
+  while (items.length < total) {
+    const res = await listPDIRequests({ ...params, page, page_size: 200 })
+    const pageItems = Array.isArray(res?.items) ? res.items : []
+    total = typeof res?.count === 'number' ? res.count : pageItems.length
+    items.push(...pageItems)
+    if (pageItems.length === 0 || page > 200) break
+    page += 1
+  }
+
+  return { count: total, items }
+}
+
 export function DashboardPage() {
   const { locationId } = useRbac()
 
@@ -48,9 +68,21 @@ export function DashboardPage() {
 
   const [dateFilter, setDateFilter] = useState({ from: '', to: '' })
 
-  const { data: pdiData, loading: pdiLoading } = usePolling(
+  // /api/pdi-requests/ doesn't support date filtering at all — confirmed it returns the
+  // same all-time set regardless of start_date/end_date/from_date/to_date. It's only used
+  // below to build the trend/city/customer-assignment charts, which filter the (complete,
+  // unfiltered) item list client-side by slot_date. The "Total PDI Requests" KPI itself is
+  // sourced from /api/dashboard/payment-stages/ instead, since that endpoint does filter.
+  const pdiDateParams = {
+    start_date: dateFilter.from || undefined,
+    end_date: dateFilter.to || undefined,
+    from_date: dateFilter.from || undefined,
+    to_date: dateFilter.to || undefined,
+  }
+
+  const { data: pdiData } = usePolling(
     ['pdi-requests-dashboard', dateFilter.from, dateFilter.to].join(':'),
-    () => listPDIRequests({ start_date: dateFilter.from || undefined, end_date: dateFilter.to || undefined }),
+    () => fetchAllPdiRequests(pdiDateParams),
     { intervalMs: 20_000 }
   )
   const cardValueClass = 'mt-1 text-lg font-semibold tracking-tight text-slate-900'
@@ -118,17 +150,17 @@ export function DashboardPage() {
 
   const closeDrilldown = () => setDrilldown((prev) => ({ ...prev, open: false }))
 
-  // Total PDI Requests comes from the pdi-requests list endpoint's own `count`
-  // (the authoritative total for the current date filter), not from summing the
-  // payment-stages breakdown — that endpoint's buckets don't necessarily cover
-  // every payment_stage value a request can have (e.g. remaining_due), which was
-  // silently undercounting the total.
-  const totalCount = pdiData?.count ?? filteredPdiItems.length
-
   // Payment stage counts from the payment-stages drill-down API
   const paymentStageCounts = paymentStagesResp?.payment_stage_counts ?? { advance_paid: 0, fully_paid: 0, unpaid: 0 }
   const fullyPaidCount = paymentStageCounts.fully_paid
   const advancePaidCount = paymentStageCounts.advance_paid
+
+  // Total PDI Requests comes from /api/dashboard/payment-stages/'s own `count` field —
+  // the authoritative total for the current date filter (per applied_filters in its
+  // response). It's higher than summing payment_stage_counts' three buckets, since those
+  // don't cover every payment_stage value (e.g. remaining_due) — so don't derive it from
+  // the buckets, use `count` directly.
+  const totalCount = paymentStagesResp?.count ?? 0
 
   const paymentStagesData = [
     { name: 'Unpaid', value: paymentStageCounts.unpaid, color: '#ef4444', stage: 'unpaid' },
@@ -226,6 +258,13 @@ export function DashboardPage() {
               />
             </div>
           </div>
+          <Button
+            variant="ghost"
+            onClick={() => setDateFilter({ from: '', to: '' })}
+            disabled={!dateFilter.from && !dateFilter.to}
+          >
+            Clear Filter
+          </Button>
         </div>
       </div>
 
@@ -236,24 +275,18 @@ export function DashboardPage() {
             role="button"
             tabIndex={0}
             onClick={() =>
-              openDrilldown('Total PDI Requests', 'All payment stages', listPDIRequests, {
-                start_date: dateFilter.from || undefined,
-                end_date: dateFilter.to || undefined,
-              })
+              openDrilldown('Total PDI Requests', 'All payment stages', getPaymentStages, dateParams)
             }
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ')
-                openDrilldown('Total PDI Requests', 'All payment stages', listPDIRequests, {
-                  start_date: dateFilter.from || undefined,
-                  end_date: dateFilter.to || undefined,
-                })
+                openDrilldown('Total PDI Requests', 'All payment stages', getPaymentStages, dateParams)
             }}
           >
             <div className="mb-1 flex items-center gap-2">
               <ClipboardCheck className="h-4 w-4 text-cyan-700" />
               <div className="text-xs text-slate-600">Total PDI Requests</div>
             </div>
-            <div className={cardValueClass}>{pdiLoading ? '—' : totalCount}</div>
+            <div className={cardValueClass}>{paymentStagesLoading ? '—' : totalCount}</div>
             <div className={cardHintClass}>All requests</div>
           </div>
         </Card>

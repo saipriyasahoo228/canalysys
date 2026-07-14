@@ -4,7 +4,7 @@ import { useRbac } from '../rbac/RbacContext'
 import { Badge, Button, Card, PaginatedTable } from '../ui/Ui'
 import { ReasonDialog } from '../ui/ReasonDialog'
 import { Snackbar } from '../ui/Snackbar'
-import { listTemplates, createTemplate, updateTemplate, deleteTemplate, getTemplate, patchTemplate, patchSection, patchQuestion, createSection, createQuestion, deleteSection, deleteQuestion } from '../../api/template'
+import { listTemplates, createTemplate, updateTemplate, deleteTemplate, getTemplate, patchTemplate, patchSection, patchQuestion, createSection, createQuestion, createSubSection, createSubQuestion, deleteSection, deleteQuestion } from '../../api/template'
 import { listVariants } from '../../api/vehiclemaster'
 
 const CONDITION_TABS = [
@@ -21,6 +21,8 @@ function inputTypeLabel(t) {
   if (t === 'alphanumeric') return 'Alphanumeric'
   if (t === 'number') return 'Number'
   if (t === 'date') return 'Date'
+  if (t === 'image') return 'Image'
+  if (t === 'video') return 'Video'
   return t || '—'
 }
 
@@ -33,7 +35,162 @@ function inputTypeTone(t) {
   if (t === 'alphanumeric') return 'indigo'
   if (t === 'number') return 'amber'
   if (t === 'date') return 'rose'
+  if (t === 'image') return 'cyan'
+  if (t === 'video') return 'amber'
   return 'slate'
+}
+
+const ANSWER_TYPE_OPTIONS = [
+  { value: 'yes_no', label: 'Yes/No' },
+  { value: 'short_text', label: 'Short Text' },
+  { value: 'long_text', label: 'Long Text' },
+  { value: 'alphanumeric', label: 'Alphanumeric' },
+  { value: 'number', label: 'Number' },
+  { value: 'date', label: 'Date' },
+  { value: 'single_choice', label: 'Single Choice' },
+  { value: 'multi_choice', label: 'Multi Choice' },
+  { value: 'image', label: 'Image' },
+  { value: 'video', label: 'Video' },
+]
+
+function AnswerPreviewInput({ question }) {
+  if (question.answer_type === 'yes_no') {
+    return (
+      <div className="flex gap-3 p-2 bg-white rounded border border-slate-200">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name={`view-question-${question.id}`} value="yes" className="w-4 h-4 text-emerald-600" disabled />
+          <span className="text-xs text-slate-700 font-medium">Yes</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name={`view-question-${question.id}`} value="no" className="w-4 h-4 text-rose-600" disabled />
+          <span className="text-xs text-slate-700 font-medium">No</span>
+        </label>
+      </div>
+    )
+  }
+  if (question.answer_type === 'single_choice' || question.answer_type === 'multi_choice') {
+    return (
+      <div className="p-2 bg-white rounded border border-slate-200 space-y-1">
+        {question.options?.map((option) => (
+          <label key={option.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-slate-50">
+            <input
+              type={question.answer_type === 'single_choice' ? 'radio' : 'checkbox'}
+              name={question.answer_type === 'single_choice' ? `view-question-${question.id}` : `view-question-${question.id}-${option.id}`}
+              value={option.value}
+              className="w-4 h-4 text-cyan-600"
+              disabled
+            />
+            <span className="text-xs text-slate-700 font-medium">{option.label}</span>
+          </label>
+        ))}
+      </div>
+    )
+  }
+  if (question.answer_type === 'short_text') {
+    return <input type="text" placeholder="Enter short answer..." className="w-full px-2 py-1 border border-slate-300 rounded text-xs bg-white" disabled />
+  }
+  if (question.answer_type === 'long_text') {
+    return <textarea placeholder="Enter detailed answer..." rows={2} className="w-full px-2 py-1 border border-slate-300 rounded text-xs resize-none bg-white" disabled />
+  }
+  if (question.answer_type === 'alphanumeric') {
+    return <input type="text" placeholder="Enter alphanumeric value..." className="w-full px-2 py-1 border border-slate-300 rounded text-xs bg-white" disabled />
+  }
+  if (question.answer_type === 'number') {
+    return <input type="number" placeholder="Enter number..." className="w-full px-2 py-1 border border-slate-300 rounded text-xs bg-white" disabled />
+  }
+  if (question.answer_type === 'date') {
+    return <input type="date" className="w-full px-2 py-1 border border-slate-300 rounded text-xs bg-white" disabled />
+  }
+  if (question.answer_type === 'image') {
+    return (
+      <div className="flex items-center gap-2 p-2 bg-white rounded border border-dashed border-slate-300 text-xs text-slate-500">
+        <Image className="h-4 w-4 text-slate-400" />
+        <span>Inspector uploads photo(s)</span>
+      </div>
+    )
+  }
+  if (question.answer_type === 'video') {
+    return (
+      <div className="flex items-center gap-2 p-2 bg-white rounded border border-dashed border-slate-300 text-xs text-slate-500">
+        <span>Inspector uploads a video</span>
+      </div>
+    )
+  }
+  return null
+}
+
+function QuestionPreview({ question, index, nested = false }) {
+  const sortedSubQuestions = (question.sub_questions || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+  return (
+    <div className={(nested ? 'ml-6 ' : '') + 'border border-slate-200 rounded-lg p-3 bg-slate-50 hover:bg-slate-100 transition-colors'}>
+      <div className="flex items-start gap-2">
+        <div className="flex items-center justify-center w-5 h-5 bg-slate-300 text-slate-700 rounded-full text-xs font-bold mt-1">
+          {index}
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <h4 className="font-semibold text-sm text-slate-900">{question.title}</h4>
+            {question.is_required && <Badge tone="rose" className="text-xs">Required</Badge>}
+            <Badge tone={inputTypeTone(question.answer_type)} className="text-xs">{inputTypeLabel(question.answer_type)}</Badge>
+          </div>
+          {question.description && <p className="text-xs text-slate-600 mb-2">{question.description}</p>}
+          <div className="mt-2">
+            <AnswerPreviewInput question={question} />
+          </div>
+          {(question.expected_images_min > 0 || question.expected_images_max > 0) && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-slate-600 bg-amber-50 p-1 rounded">
+              <Image className="h-3 w-3 text-amber-600" />
+              <span className="font-medium">
+                {question.expected_images_min || 0} - {question.expected_images_max || 0} images required
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+      {sortedSubQuestions.length ? (
+        <div className="mt-3 space-y-2">
+          {sortedSubQuestions.map((sq, i) => (
+            <QuestionPreview key={sq.id} question={sq} index={`${index}.${i + 1}`} nested />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function SectionPreview({ section, index, nested = false }) {
+  const sortedQuestions = (section.questions || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+  const sortedSubSections = (section.sub_sections || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+  return (
+    <div className={(nested ? 'ml-6 ' : '') + 'border border-slate-200 rounded-lg overflow-hidden'}>
+      <div className="bg-gradient-to-r from-violet-50 to-purple-50 border-b border-slate-200 p-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-7 h-7 bg-violet-600 text-white rounded-full font-bold text-sm">
+            {index}
+          </div>
+          <div className="flex-1">
+            <h3 className="text-base font-bold text-slate-900">{section.title}</h3>
+            {section.description && <p className="text-xs text-slate-600 mt-1">{section.description}</p>}
+          </div>
+          <Badge tone="violet" className="text-xs">
+            {sortedQuestions.length} questions
+          </Badge>
+        </div>
+      </div>
+      <div className="p-3 space-y-3 bg-white">
+        {sortedQuestions.map((question, questionIndex) => (
+          <QuestionPreview key={question.id} question={question} index={questionIndex + 1} />
+        ))}
+        {sortedSubSections.length ? (
+          <div className="space-y-3 pt-1">
+            {sortedSubSections.map((sub, subIndex) => (
+              <SectionPreview key={sub.id} section={sub} index={`${index}.${subIndex + 1}`} nested />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
 }
 
 export function ChecklistBuilderPage() {
@@ -82,15 +239,43 @@ export function ChecklistBuilderPage() {
     return templates.find(t => t.id === selectedTemplateId) || null
   }, [selectedTemplateId, templates])
 
-  const sections = (selectedTemplate?.sections || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+  // Flat maps covering both top-level and nested (sub-section / sub-question) items,
+  // since sections/questions are edited/looked-up through the same endpoints regardless of nesting.
+  const { allSectionsById, allQuestionsById } = useMemo(() => {
+    const secMap = new Map()
+    const qMap = new Map()
+    const walkQuestion = (q) => {
+      qMap.set(q.id, q)
+      ;(q.sub_questions || []).forEach(walkQuestion)
+    }
+    const walkSection = (s) => {
+      secMap.set(s.id, s)
+      ;(s.questions || []).forEach(walkQuestion)
+      ;(s.sub_sections || []).forEach(walkSection)
+    }
+    ;(selectedTemplate?.sections || []).forEach(walkSection)
+    return { allSectionsById: secMap, allQuestionsById: qMap }
+  }, [selectedTemplate])
 
-  const sectionById = useMemo(() => new Map(sections.map((s) => [s.id, s])), [sections])
+  // Flattened, display-ordered list: each top-level section immediately followed by its sub-sections.
+  const sections = useMemo(() => {
+    const top = (selectedTemplate?.sections || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+    const flat = []
+    for (const s of top) {
+      flat.push({ ...s, isSubSection: false })
+      const subs = (s.sub_sections || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+      for (const sub of subs) {
+        flat.push({ ...sub, isSubSection: true, parentSectionId: s.id, parentSectionTitle: s.title })
+      }
+    }
+    return flat
+  }, [selectedTemplate])
 
   const selectedSection = useMemo(() => {
     const id = dialog?.sectionId || selectedSectionId
     if (!id) return null
-    return sectionById.get(id) || null
-  }, [dialog?.sectionId, sectionById, selectedSectionId])
+    return allSectionsById.get(id) || null
+  }, [dialog?.sectionId, allSectionsById, selectedSectionId])
 
   // Helper function to format backend errors
   const formatBackendErrors = (errors) => {
@@ -273,13 +458,19 @@ export function ChecklistBuilderPage() {
         key: 'order',
         header: '#',
         exportValue: (r) => r.order,
-        cell: (r) => <div className="text-xs font-semibold text-slate-700">{r.order ?? '—'}</div>,
+        cell: (r) => <div className="text-xs font-semibold text-slate-700">{r.isSubSection ? '' : r.order ?? '—'}</div>,
       },
       {
         key: 'title',
         header: 'Section',
         exportValue: (r) => r.title,
-        cell: (r) => <div className="text-sm font-semibold text-slate-900">{r.title}</div>,
+        cell: (r) => (
+          <div className={r.isSubSection ? 'pl-5 flex items-center gap-2' : 'flex items-center gap-2'}>
+            {r.isSubSection ? <span className="text-slate-400 text-xs font-semibold">{r.order ?? '—'}</span> : null}
+            <span className="text-sm font-semibold text-slate-900">{r.title}</span>
+            {r.isSubSection ? <Badge tone="slate">Sub-section</Badge> : null}
+          </div>
+        ),
       },
       {
         key: 'questions',
@@ -328,6 +519,18 @@ export function ChecklistBuilderPage() {
             >
               <Trash2 className="h-4 w-4 text-rose-600" />
             </Button>
+            {!r.isSubSection ? (
+              <Button
+                variant="ghost"
+                className="h-8"
+                title="Add sub-section"
+                onClick={() => setDialog({ type: 'createSubSection', sectionId: r.id })}
+                disabled={!canEdit}
+              >
+                <Plus className="h-4 w-4" />
+                Sub-section
+              </Button>
+            ) : null}
             <Button
               title="Add question"
               onClick={() => {
@@ -348,7 +551,20 @@ export function ChecklistBuilderPage() {
     [canEdit]
   )
 
-  const questionRows = selectedSection?.questions || []
+  // Flattened, display-ordered question rows for the selected section: each top-level question
+  // immediately followed by its sub-questions.
+  const questionRows = useMemo(() => {
+    const top = (selectedSection?.questions || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+    const flat = []
+    for (const q of top) {
+      flat.push({ ...q, isSubQuestion: false })
+      const subs = (q.sub_questions || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0))
+      for (const sub of subs) {
+        flat.push({ ...sub, isSubQuestion: true, parentQuestionId: q.id, parentQuestionTitle: q.title })
+      }
+    }
+    return flat
+  }, [selectedSection])
 
   const questionColumns = useMemo(
     () => [
@@ -356,13 +572,19 @@ export function ChecklistBuilderPage() {
         key: 'order',
         header: '#',
         exportValue: (r) => r.order,
-        cell: (r) => <div className="text-xs font-semibold text-slate-700">{r.order ?? '—'}</div>,
+        cell: (r) => <div className="text-xs font-semibold text-slate-700">{r.isSubQuestion ? '' : r.order ?? '—'}</div>,
       },
       {
         key: 'title',
         header: 'Question',
         exportValue: (r) => r.title,
-        cell: (r) => <div className="text-sm font-semibold text-slate-900">{r.title}</div>,
+        cell: (r) => (
+          <div className={r.isSubQuestion ? 'pl-5 flex items-center gap-2' : 'flex items-center gap-2'}>
+            {r.isSubQuestion ? <span className="text-slate-400 text-xs font-semibold">{r.order ?? '—'}</span> : null}
+            <span className="text-sm font-semibold text-slate-900">{r.title}</span>
+            {r.isSubQuestion ? <Badge tone="slate">Sub-question</Badge> : null}
+          </div>
+        ),
       },
       {
         key: 'answer_type',
@@ -423,6 +645,18 @@ export function ChecklistBuilderPage() {
             >
               <Trash2 className="h-4 w-4 text-rose-600" />
             </Button>
+            {!r.isSubQuestion ? (
+              <Button
+                variant="ghost"
+                className="h-8"
+                title="Add sub-question"
+                onClick={() => setDialog({ type: 'createSubQuestion', sectionId: selectedSection?.id, questionId: r.id })}
+                disabled={!canEdit}
+              >
+                <Plus className="h-4 w-4" />
+                Sub-Q
+              </Button>
+            ) : null}
           </div>
         ),
         className: 'text-right',
@@ -433,8 +667,14 @@ export function ChecklistBuilderPage() {
   )
 
   const templateDialogOpen = dialog?.type === 'createTemplate' || dialog?.type === 'editTemplate'
-  const sectionDialogOpen = dialog?.type === 'createSection' || dialog?.type === 'editSection'
-  const questionDialogOpen = dialog?.type === 'createQuestion' || dialog?.type === 'editQuestion'
+  const sectionDialogOpen = dialog?.type === 'createSection' || dialog?.type === 'editSection' || dialog?.type === 'createSubSection'
+  const questionDialogOpen = dialog?.type === 'createQuestion' || dialog?.type === 'editQuestion' || dialog?.type === 'createSubQuestion'
+
+  // Parent section (for creating a sub-section) / parent question (for creating a sub-question)
+  const dialogParentSection = dialog?.type === 'createSubSection' ? allSectionsById.get(dialog.sectionId) : null
+  const dialogParentQuestion = dialog?.type === 'createSubQuestion' ? allQuestionsById.get(dialog.questionId) : null
+  // The question being edited (may be a top-level question or a sub-question)
+  const dialogEditingQuestion = dialog?.type === 'editQuestion' ? allQuestionsById.get(dialog.questionId) : null
 
   return (
     <div className="space-y-6">
@@ -643,7 +883,9 @@ export function ChecklistBuilderPage() {
         title={
           dialog?.type === 'createSection'
             ? 'Add Section'
-            : 'Edit Section'
+            : dialog?.type === 'createSubSection'
+              ? `Add Sub-section${dialogParentSection ? ` under "${dialogParentSection.title}"` : ''}`
+              : 'Edit Section'
         }
         description="Sections group related questions in the inspection template."
         submitLabel="Save"
@@ -671,7 +913,12 @@ export function ChecklistBuilderPage() {
             name: 'order',
             label: 'Order',
             type: 'number',
-            defaultValue: dialog?.type === 'editSection' ? selectedSection?.order || 1 : sections.length + 1,
+            defaultValue:
+              dialog?.type === 'editSection'
+                ? selectedSection?.order || 1
+                : dialog?.type === 'createSubSection'
+                  ? (dialogParentSection?.sub_sections?.length || 0) + 1
+                  : sections.filter((s) => !s.isSubSection).length + 1,
           },
         ]}
         onSubmit={async (form) => {
@@ -690,6 +937,9 @@ export function ChecklistBuilderPage() {
             if (dialog?.type === 'createSection') {
               // Use the new POST API to create section under template
               responseData = await createSection(dialog.templateId, sectionData)
+            } else if (dialog?.type === 'createSubSection') {
+              // Use the new POST API to create a sub-section under a section
+              responseData = await createSubSection(dialog.sectionId, sectionData)
             } else {
               // Use PATCH for editing existing sections
               responseData = await patchSection(dialog.sectionId, sectionData)
@@ -719,7 +969,9 @@ export function ChecklistBuilderPage() {
         title={
           dialog?.type === 'createQuestion'
             ? 'Add Question'
-            : 'Edit Question'
+            : dialog?.type === 'createSubQuestion'
+              ? `Add Sub-question${dialogParentQuestion ? ` under "${dialogParentQuestion.title}"` : ''}`
+              : 'Edit Question'
         }
         description="Questions define what the inspector must fill during inspection."
         submitLabel="Save"
@@ -734,36 +986,27 @@ export function ChecklistBuilderPage() {
             name: 'title',
             label: 'Question Title',
             type: 'text',
-            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.title || '' : '',
+            defaultValue: dialog?.type === 'editQuestion' ? dialogEditingQuestion?.title || '' : '',
           },
           {
             name: 'description',
             label: 'Description',
             type: 'textarea',
             rows: 2,
-            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.description || '' : '',
+            defaultValue: dialog?.type === 'editQuestion' ? dialogEditingQuestion?.description || '' : '',
           },
           {
             name: 'answer_type',
             label: 'Answer Type',
             type: 'select',
-            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.answer_type || 'single_choice' : 'single_choice',
-            options: [
-              { value: 'yes_no', label: 'Yes/No' },
-              { value: 'short_text', label: 'Short Text' },
-              { value: 'long_text', label: 'Long Text' },
-              { value: 'alphanumeric', label: 'Alphanumeric' },
-              { value: 'number', label: 'Number' },
-              { value: 'date', label: 'Date' },
-              { value: 'single_choice', label: 'Single Choice' },
-              { value: 'multi_choice', label: 'Multi Choice' },
-            ],
+            defaultValue: dialog?.type === 'editQuestion' ? dialogEditingQuestion?.answer_type || 'single_choice' : 'single_choice',
+            options: ANSWER_TYPE_OPTIONS,
           },
           {
             name: 'options',
             label: 'Options (comma " , " separated)',
             type: 'text',
-            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.options?.map(o => o.label).join(', ') || '' : '',
+            defaultValue: dialog?.type === 'editQuestion' ? dialogEditingQuestion?.options?.map(o => o.label).join(', ') || '' : '',
             placeholder: 'e.g. Excellent, Good, Average, Poor',
             condition: (form) => form.answer_type === 'single_choice' || form.answer_type === 'multi_choice',
           },
@@ -771,28 +1014,35 @@ export function ChecklistBuilderPage() {
             name: 'is_required',
             label: 'Required',
             type: 'checkbox',
-            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.is_required || false : true,
+            defaultValue: dialog?.type === 'editQuestion' ? dialogEditingQuestion?.is_required || false : true,
             checkboxLabel: 'This question must be answered',
           },
           {
             name: 'expected_images_min',
             label: 'Min Images',
             type: 'number',
-            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.expected_images_min || 0 : 0,
+            defaultValue: dialog?.type === 'editQuestion' ? dialogEditingQuestion?.expected_images_min || 0 : 0,
             placeholder: '0',
+            condition: (form) => form.answer_type !== 'video',
           },
           {
             name: 'expected_images_max',
             label: 'Max Images',
             type: 'number',
-            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.expected_images_max || 5 : 5,
+            defaultValue: dialog?.type === 'editQuestion' ? dialogEditingQuestion?.expected_images_max || 5 : 5,
             placeholder: '5',
+            condition: (form) => form.answer_type !== 'video',
           },
           {
             name: 'order',
             label: 'Order',
             type: 'number',
-            defaultValue: dialog?.type === 'editQuestion' ? selectedSection?.questions?.find(q => q.id === dialog.questionId)?.order || 1 : (selectedSection?.questions?.length || 0) + 1,
+            defaultValue:
+              dialog?.type === 'editQuestion'
+                ? dialogEditingQuestion?.order || 1
+                : dialog?.type === 'createSubQuestion'
+                  ? (dialogParentQuestion?.sub_questions?.length || 0) + 1
+                  : (selectedSection?.questions?.length || 0) + 1,
           },
         ]}
         onSubmit={async (form) => {
@@ -806,10 +1056,13 @@ export function ChecklistBuilderPage() {
               description: form.description,
               answer_type: form.answer_type,
               is_required: form.is_required,
-              expected_images_min: Number(form.expected_images_min || 0),
-              expected_images_max: Number(form.expected_images_max || 5),
               order: Number(form.order || 1),
               options: []
+            }
+
+            if (form.answer_type !== 'video') {
+              questionData.expected_images_min = Number(form.expected_images_min || 0)
+              questionData.expected_images_max = Number(form.expected_images_max || 5)
             }
 
             // Parse options for choice questions
@@ -830,6 +1083,9 @@ export function ChecklistBuilderPage() {
             if (dialog?.type === 'createQuestion') {
               // Use the new POST API to create question under section
               responseData = await createQuestion(dialog.sectionId, questionData)
+            } else if (dialog?.type === 'createSubQuestion') {
+              // Use the new POST API to create a sub-question under a question
+              responseData = await createSubQuestion(dialog.questionId, questionData)
             } else {
               // Use PATCH for editing existing questions
               responseData = await patchQuestion(dialog.questionId, questionData)
@@ -975,149 +1231,9 @@ export function ChecklistBuilderPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {(viewTemplateData?.sections || []).sort((a, b) => (a.order || 0) - (b.order || 0)).map((section, sectionIndex) => {
-                    const sortedQuestions = (section.questions || []).sort((a, b) => (a.order || 0) - (b.order || 0))
-                    
-                    return (
-                      <div key={section.id} className="border border-slate-200 rounded-lg overflow-hidden">
-                        {/* Section Header */}
-                        <div className="bg-gradient-to-r from-violet-50 to-purple-50 border-b border-slate-200 p-3">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-7 h-7 bg-violet-600 text-white rounded-full font-bold text-sm">
-                              {sectionIndex + 1}
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="text-base font-bold text-slate-900">{section.title}</h3>
-                              {section.description && (
-                                <p className="text-xs text-slate-600 mt-1">{section.description}</p>
-                              )}
-                            </div>
-                            <Badge tone="violet" className="text-xs">
-                              {sortedQuestions.length} questions
-                            </Badge>
-                          </div>
-                        </div>
-
-                        {/* Questions */}
-                        <div className="p-3 space-y-3 bg-white">
-                          {sortedQuestions.map((question, questionIndex) => (
-                            <div key={question.id} className="border border-slate-200 rounded-lg p-3 bg-slate-50 hover:bg-slate-100 transition-colors">
-                              <div className="flex items-start gap-2">
-                                <div className="flex items-center justify-center w-5 h-5 bg-slate-300 text-slate-700 rounded-full text-xs font-bold mt-1">
-                                  {questionIndex + 1}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <h4 className="font-semibold text-sm text-slate-900">{question.title}</h4>
-                                    {question.is_required && (
-                                      <Badge tone="rose" className="text-xs">Required</Badge>
-                                    )}
-                                    <Badge tone={inputTypeTone(question.answer_type)} className="text-xs">
-                                      {inputTypeLabel(question.answer_type)}
-                                    </Badge>
-                                  </div>
-                                  
-                                  {question.description && (
-                                    <p className="text-xs text-slate-600 mb-2">{question.description}</p>
-                                  )}
-
-                                  {/* Render input field based on answer type */}
-                                  <div className="mt-2">
-                                    {question.answer_type === 'yes_no' && (
-                                      <div className="flex gap-3 p-2 bg-white rounded border border-slate-200">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                          <input
-                                            type="radio"
-                                            name={`view-question-${question.id}`}
-                                            value="yes"
-                                            className="w-4 h-4 text-emerald-600"
-                                            disabled
-                                          />
-                                          <span className="text-xs text-slate-700 font-medium">Yes</span>
-                                        </label>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                          <input
-                                            type="radio"
-                                            name={`view-question-${question.id}`}
-                                            value="no"
-                                            className="w-4 h-4 text-rose-600"
-                                            disabled
-                                          />
-                                          <span className="text-xs text-slate-700 font-medium">No</span>
-                                        </label>
-                                      </div>
-                                    )}
-
-                                    {(question.answer_type === 'single_choice' || question.answer_type === 'multi_choice') && (
-                                      <div className="p-2 bg-white rounded border border-slate-200 space-y-1">
-                                        {question.options?.map((option) => (
-                                          <label key={option.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-slate-50">
-                                            <input
-                                              type={question.answer_type === 'single_choice' ? 'radio' : 'checkbox'}
-                                              name={question.answer_type === 'single_choice' ? `view-question-${question.id}` : `view-question-${question.id}-${option.id}`}
-                                              value={option.value}
-                                              className="w-4 h-4 text-cyan-600"
-                                              disabled
-                                            />
-                                            <span className="text-xs text-slate-700 font-medium">{option.label}</span>
-                                          </label>
-                                        ))}
-                                      </div>
-                                    )}
-
-                                    {question.answer_type === 'short_text' && (
-                                      <input
-                                        type="text"
-                                        placeholder="Enter short answer..."
-                                        className="w-full px-2 py-1 border border-slate-300 rounded text-xs bg-white"
-                                        disabled
-                                      />
-                                    )}
-
-                                    {question.answer_type === 'long_text' && (
-                                      <textarea
-                                        placeholder="Enter detailed answer..."
-                                        rows={2}
-                                        className="w-full px-2 py-1 border border-slate-300 rounded text-xs resize-none bg-white"
-                                        disabled
-                                      />
-                                    )}
-
-                                    {question.answer_type === 'number' && (
-                                      <input
-                                        type="number"
-                                        placeholder="Enter number..."
-                                        className="w-full px-2 py-1 border border-slate-300 rounded text-xs bg-white"
-                                        disabled
-                                      />
-                                    )}
-
-                                    {question.answer_type === 'date' && (
-                                      <input
-                                        type="date"
-                                        className="w-full px-2 py-1 border border-slate-300 rounded text-xs bg-white"
-                                        disabled
-                                      />
-                                    )}
-                                  </div>
-
-                                  {/* Image requirements */}
-                                  {(question.expected_images_min > 0 || question.expected_images_max > 0) && (
-                                    <div className="mt-2 flex items-center gap-2 text-xs text-slate-600 bg-amber-50 p-1 rounded">
-                                      <Image className="h-3 w-3 text-amber-600" />
-                                      <span className="font-medium">
-                                        {question.expected_images_min || 0} - {question.expected_images_max || 0} images required
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
+                  {(viewTemplateData?.sections || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0)).map((section, sectionIndex) => (
+                    <SectionPreview key={section.id} section={section} index={sectionIndex + 1} />
+                  ))}
                 </div>
               )}
             </div>

@@ -238,33 +238,35 @@ export function DashboardPage() {
             <h2 className="text-sm font-semibold text-slate-900">Date filter</h2>
             <p className="text-xs text-slate-500">Filter dashboard data by slot date.</p>
           </div>
-          <div className="grid w-full gap-3 sm:grid-cols-2 sm:w-auto">
-            <div>
-              <label className="mb-2 block text-xs font-medium text-slate-700">From date</label>
-              <CustomDatePicker
-                value={dateFilter.from}
-                onChange={(value) => setDateFilter(prev => ({ ...prev, from: value }))}
-                placeholder="dd/mm/yyyy"
-                className="w-full"
-              />
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
+            <div className="grid w-full gap-3 sm:grid-cols-2 sm:w-auto">
+              <div>
+                <label className="mb-2 block text-xs font-medium text-slate-700">From date</label>
+                <CustomDatePicker
+                  value={dateFilter.from}
+                  onChange={(value) => setDateFilter(prev => ({ ...prev, from: value }))}
+                  placeholder="dd/mm/yyyy"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-medium text-slate-700">To date</label>
+                <CustomDatePicker
+                  value={dateFilter.to}
+                  onChange={(value) => setDateFilter(prev => ({ ...prev, to: value }))}
+                  placeholder="dd/mm/yyyy"
+                  className="w-full"
+                />
+              </div>
             </div>
-            <div>
-              <label className="mb-2 block text-xs font-medium text-slate-700">To date</label>
-              <CustomDatePicker
-                value={dateFilter.to}
-                onChange={(value) => setDateFilter(prev => ({ ...prev, to: value }))}
-                placeholder="dd/mm/yyyy"
-                className="w-full"
-              />
-            </div>
+            <Button
+              variant="ghost"
+              onClick={() => setDateFilter({ from: '', to: '' })}
+              disabled={!dateFilter.from && !dateFilter.to}
+            >
+              Clear Filter
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            onClick={() => setDateFilter({ from: '', to: '' })}
-            disabled={!dateFilter.from && !dateFilter.to}
-          >
-            Clear Filter
-          </Button>
         </div>
       </div>
 

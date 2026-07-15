@@ -186,7 +186,7 @@ export function Sidebar({ mobileOpen, setMobileOpen, collapsed, setCollapsed }) 
              <div className={collapsed ? 'mx-auto w-fit' : ''}>
               <NavItem
                 to="/requests"
-                icon={MessageCircle }
+                icon={Users }
                 label="Customer Details"
                 collapsed={collapsed}
                 iconClassName="text-pink-600"

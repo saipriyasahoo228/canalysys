@@ -263,6 +263,17 @@ export function LoginPage() {
     )
   }, [mobileNumber, password, submitting])
 
+  const handleMobileAutofill = (e) => {
+    if (e.animationName !== 'onAutoFillStart') return
+    const onlyDigits = String(e.target.value || '').replace(/\D/g, '').slice(0, 10)
+    setMobileNumber(onlyDigits)
+  }
+
+  const handlePasswordAutofill = (e) => {
+    if (e.animationName !== 'onAutoFillStart') return
+    setPassword(e.target.value)
+  }
+
   const getErrorMessage = (err) => {
     const fallback = 'Login failed. Please try again.'
     const data = err?.response?.data
@@ -317,6 +328,10 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <style>{`
+        @keyframes onAutoFillStart { from {} to {} }
+        input.autofill-detect:-webkit-autofill { animation-name: onAutoFillStart; }
+      `}</style>
       <div className="relative isolate">
         <div
           className="absolute inset-0 -z-20 bg-cover bg-center opacity-[0.08] grayscale pointer-events-none"
@@ -396,7 +411,8 @@ export function LoginPage() {
                             maxLength={10}
                             pattern="[0-9]{10}"
                             placeholder="Enter your mobile number"
-                            className="pl-9 border-slate-200 focus:border-cyan-500/70 focus:ring-cyan-100/70"
+                            className="pl-9 border-slate-200 focus:border-cyan-500/70 focus:ring-cyan-100/70 autofill-detect"
+                            onAnimationStart={handleMobileAutofill}
                           />
                         </div>
                       </label>
@@ -411,7 +427,8 @@ export function LoginPage() {
                             onChange={(e) => setPassword(e.target.value)}
                             autoComplete="current-password"
                             placeholder="Enter your password"
-                            className="pl-9 pr-10 border-slate-200 focus:border-cyan-500/70 focus:ring-cyan-100/70"
+                            className="pl-9 pr-10 border-slate-200 focus:border-cyan-500/70 focus:ring-cyan-100/70 autofill-detect"
+                            onAnimationStart={handlePasswordAutofill}
                           />
                           <button
                             type="button"

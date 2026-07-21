@@ -2258,8 +2258,8 @@ export function NewInspectionPage() {
       ) : null}
 
       <Card
-        title="Inspection Details"
-        subtitle="Select a walk-in customer and raise a PDI request"
+        title="Create Walk-in Inspection"
+        subtitle="Raise a new PDI request for a walk-in customer"
         accent="violet"
         right={
           <div className="flex items-center gap-2">

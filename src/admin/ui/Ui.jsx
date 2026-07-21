@@ -27,7 +27,13 @@ export function PaginatedTable({
 
   const normalizedRpp = rpp === 'all' ? 'all' : Number(rpp)
 
-  const normalizedQuery = String(query || '').trim().toLowerCase()
+  const normalizeSearch = (s) =>
+    String(s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+
+  const normalizedQuery = normalizeSearch(query)
 
   const filteredRows = useMemo(() => {
     if (!enableSearch || !normalizedQuery) return rows
@@ -42,7 +48,7 @@ export function PaginatedTable({
             }
           }
 
-    return rows.filter((r) => String(fn(r) || '').toLowerCase().includes(normalizedQuery))
+    return rows.filter((r) => normalizeSearch(fn(r)).includes(normalizedQuery))
   }, [enableSearch, getSearchText, normalizedQuery, rows])
 
   const total = filteredRows.length

@@ -246,13 +246,24 @@ export function VehicleMasterPage() {
   const categoryPricingItems = useMemo(() => {
     const items = categoryPricingData?.items
     if (!Array.isArray(items)) return []
-    
+
+    const nameById = new Map(categories.map((c) => [c.id, c.name]))
+
     return items.filter(item => {
-      if (pricingFilters.category && String(item.category) !== String(pricingFilters.category)) return false
+      if (pricingFilters.category) {
+        const itemCategoryName = item.category_name || nameById.get(item.category) || ''
+        if (itemCategoryName !== pricingFilters.category) return false
+      }
       if (pricingFilters.vehicle_type && item.vehicle_type !== pricingFilters.vehicle_type) return false
       return true
     })
-  }, [categoryPricingData, pricingFilters])
+  }, [categoryPricingData, pricingFilters, categories])
+
+  // Category names for the pricing filter, deduped since the same category
+  // name (e.g. "SUV/MUV") can exist once per Transmission Type.
+  const categoryNameOptions = useMemo(() => {
+    return Array.from(new Set(categories.map((c) => c.name).filter(Boolean))).sort()
+  }, [categories])
 
   const mappings = useMemo(() => {
     const items = mappingsData?.items
@@ -1050,7 +1061,6 @@ export function VehicleMasterPage() {
 
             <Card title="Current mappings" subtitle="Search/export supported" accent="cyan">
               <PaginatedTable
-                key={`mappings-${tableNonce}`}
                 columns={mappingColumns}
                 rows={mappingRows}
                 rowKey={(r) => r.id}
@@ -1100,9 +1110,9 @@ export function VehicleMasterPage() {
                   onChange={(e) => setPricingFilters(prev => ({ ...prev, category: e.target.value }))}
                 >
                   <option value="">All Categories</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
+                  {categoryNameOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
                     </option>
                   ))}
                 </select>

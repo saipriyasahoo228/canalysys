@@ -1023,7 +1023,6 @@ export function ChecklistBuilderPage() {
             type: 'number',
             defaultValue: dialog?.type === 'editQuestion' ? dialogEditingQuestion?.expected_images_min || 0 : 0,
             placeholder: '0',
-            condition: (form) => form.answer_type !== 'video',
           },
           {
             name: 'expected_images_max',
@@ -1031,7 +1030,6 @@ export function ChecklistBuilderPage() {
             type: 'number',
             defaultValue: dialog?.type === 'editQuestion' ? dialogEditingQuestion?.expected_images_max || 5 : 5,
             placeholder: '5',
-            condition: (form) => form.answer_type !== 'video',
           },
           {
             name: 'order',
@@ -1060,10 +1058,8 @@ export function ChecklistBuilderPage() {
               options: []
             }
 
-            if (form.answer_type !== 'video') {
-              questionData.expected_images_min = Number(form.expected_images_min || 0)
-              questionData.expected_images_max = Number(form.expected_images_max || 5)
-            }
+            questionData.expected_images_min = Number(form.expected_images_min || 0)
+            questionData.expected_images_max = Number(form.expected_images_max || 5)
 
             // Parse options for choice questions
             if (form.answer_type === 'single_choice' || form.answer_type === 'multi_choice') {

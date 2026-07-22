@@ -12,6 +12,28 @@ const CONDITION_TABS = [
   { key: 'new', label: 'New' },
 ]
 
+const DESCRIPTION_TRUNCATE_LENGTH = 60
+
+function truncateText(text, maxLength = DESCRIPTION_TRUNCATE_LENGTH) {
+  if (!text) return text
+  return text.length > maxLength ? `${text.slice(0, maxLength).trimEnd()}…` : text
+}
+
+function TruncatedDescription({ text, className }) {
+  if (!text) return <div className={className}>—</div>
+  const isTruncated = text.length > DESCRIPTION_TRUNCATE_LENGTH
+  return (
+    <div className={`group relative inline-block ${className || ''}`}>
+      {truncateText(text)}
+      {isTruncated ? (
+        <div className="pointer-events-none absolute left-0 bottom-full z-20 mb-1 hidden w-64 whitespace-normal break-words rounded-md border border-slate-200 bg-white p-2 text-xs font-normal text-slate-700 shadow-lg group-hover:block">
+          {text}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function inputTypeLabel(t) {
   if (t === 'single_choice') return 'Single Choice'
   if (t === 'multi_choice') return 'Multi Choice'
@@ -394,7 +416,7 @@ export function ChecklistBuilderPage() {
         key: 'description',
         header: 'Description',
         exportValue: (r) => r.description,
-        cell: (r) => <div className="text-sm text-slate-700">{r.description || '—'}</div>,
+        cell: (r) => <TruncatedDescription text={r.description} className="text-sm text-slate-700" />,
       },
       {
         key: 'sections',
@@ -482,7 +504,7 @@ export function ChecklistBuilderPage() {
         key: 'description',
         header: 'Description',
         exportValue: (r) => r.description,
-        cell: (r) => <div className="text-xs text-slate-700">{r.description || '—'}</div>,
+        cell: (r) => <TruncatedDescription text={r.description} className="text-xs text-slate-700" />,
       },
       {
         key: 'actions',
@@ -585,6 +607,12 @@ export function ChecklistBuilderPage() {
             {r.isSubQuestion ? <Badge tone="slate">Sub-question</Badge> : null}
           </div>
         ),
+      },
+      {
+        key: 'description',
+        header: 'Description',
+        exportValue: (r) => r.description,
+        cell: (r) => <TruncatedDescription text={r.description} className="text-xs text-slate-700" />,
       },
       {
         key: 'answer_type',
@@ -1028,8 +1056,8 @@ export function ChecklistBuilderPage() {
             name: 'expected_images_max',
             label: 'Max Images',
             type: 'number',
-            defaultValue: dialog?.type === 'editQuestion' ? dialogEditingQuestion?.expected_images_max || 5 : 5,
-            placeholder: '5',
+            defaultValue: dialog?.type === 'editQuestion' ? dialogEditingQuestion?.expected_images_max || 0 : 0,
+            placeholder: '0',
           },
           {
             name: 'order',
@@ -1059,7 +1087,7 @@ export function ChecklistBuilderPage() {
             }
 
             questionData.expected_images_min = Number(form.expected_images_min || 0)
-            questionData.expected_images_max = Number(form.expected_images_max || 5)
+            questionData.expected_images_max = Number(form.expected_images_max || 0)
 
             // Parse options for choice questions
             if (form.answer_type === 'single_choice' || form.answer_type === 'multi_choice') {

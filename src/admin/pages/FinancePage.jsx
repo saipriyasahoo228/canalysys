@@ -555,6 +555,13 @@ export function FinancePage() {
                     rowsPerPageOptions={[10, 20, 50, 'all']}
                     enableSearch
                     searchPlaceholder="Search global rules…"
+                    getSearchText={(r) => [
+                      r.commission_type,
+                      r.commission_type === 'percent' ? `${r.percent}%` : formatInr(r.fixed_amount),
+                      formatDateTime(r.effective_from),
+                      r.effective_to ? formatDateTime(r.effective_to) : 'Ongoing',
+                      r.is_active ? 'Active' : 'Inactive',
+                    ].join(' ')}
                     enableExport
                     exportFilename="global-commission-rules.csv"
                     className="border-0 min-w-[600px]"
@@ -621,6 +628,17 @@ export function FinancePage() {
                     rowsPerPageOptions={[10, 20, 50, 'all']}
                     enableSearch
                     searchPlaceholder="Search inspector rules…"
+                    getSearchText={(r) => [
+                      r.inspector_name,
+                      r.inspector_id,
+                      formatEmploymentType(r.employment_type ?? r.inspector_category),
+                      r.monthly_threshold,
+                      r.commission_type,
+                      r.commission_type === 'percent' ? `${r.percent}%` : formatInr(r.fixed_amount),
+                      formatDateTime(r.effective_from),
+                      r.effective_to ? formatDateTime(r.effective_to) : 'Ongoing',
+                      r.is_active ? 'Active' : 'Inactive',
+                    ].join(' ')}
                     enableExport
                     exportFilename="inspector-commission-rules.csv"
                     className="border-0 min-w-[600px]"
@@ -729,6 +747,13 @@ export function FinancePage() {
                     rowsPerPageOptions={[10, 20, 50, 'all']}
                     enableSearch
                     searchPlaceholder="Search report…"
+                    getSearchText={(r) => [
+                      r.inspector_name,
+                      r.inspector_id,
+                      r.completed_count,
+                      formatInr(r.total_amount),
+                      formatInr(r.total_commission),
+                    ].join(' ')}
                     enableExport
                     exportFilename="commission-report.csv"
                     className="border-0 min-w-[600px]"

@@ -712,9 +712,6 @@ export function ChecklistBuilderPage() {
         accent="cyan"
         right={
           <div className="flex items-center gap-2">
-            <Button onClick={() => refresh()} variant="ghost">
-              Refresh
-            </Button>
             <Button onClick={() => setDialog({ type: 'createTemplate' })} disabled={!canEdit}>
               <Plus className="h-4 w-4" />
               Template

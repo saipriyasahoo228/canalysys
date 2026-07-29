@@ -135,7 +135,16 @@ const statusTone = {
 }
 
 const columns = [
-  { key: 'request_id', header: 'Request ID', cell: (r) => r.request_id || '—' },
+  {
+    key: 'request_id',
+    header: 'Request ID',
+    cell: (r) => (
+      <div className="flex items-center gap-2">
+        <span>{r.request_id || '—'}</span>
+        {r.is_walkin ? <Badge tone="amber">Walk In</Badge> : null}
+      </div>
+    ),
+  },
   { key: 'name', header: 'Customer', cell: (r) => r.name || '—' },
   { key: 'mobile_number', header: 'Mobile', cell: (r) => r.mobile_number || '—' },
   {

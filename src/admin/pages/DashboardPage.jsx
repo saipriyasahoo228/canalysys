@@ -235,7 +235,7 @@ export function DashboardPage() {
       <div className="rounded-lg border border-slate-200 bg-white p-4">
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">Date filter</h2>
+            <h2 className="text-sm font-semibold text-slate-900">Date Filter</h2>
             <p className="text-xs text-slate-500">Filter dashboard data by slot date.</p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">

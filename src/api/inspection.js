@@ -221,3 +221,18 @@ export const updatePdiPaymentStatus = async (requestId, transactionId, status, r
     throw error.response?.data || error.message
   }
 }
+
+// Override remaining payment API
+export const overrideRemainingPayment = async (requestId, remainingAmountPaise, reason) => {
+  try {
+    const payload = { remaining_amount_paise: remainingAmountPaise }
+    if (reason) payload.reason = reason
+    const response = await api.patch(
+      `/api/pdi-requests/${requestId}/admin/override-remaining-payment/`,
+      payload
+    )
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}

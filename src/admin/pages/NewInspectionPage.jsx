@@ -969,8 +969,8 @@ export function NewInspectionPage() {
         slot_start_time: wizardForm.slotStart,
         slot_end_time: wizardForm.slotEnd,
         amount_paise: priceInr * 100, // Send full amount
-        advance_amount_paise: 50000, // But specify advance is 500
-        remaining_amount_paise: (priceInr - 500) * 100 // Calculate remaining
+        advance_amount_paise: advancePaise, // Advance from category pricing
+        remaining_amount_paise: priceInr * 100 - advancePaise // Calculate remaining
       }
       
       console.log('💰 PDI Amount being sent:', priceInr, 'paise:', priceInr * 100)
@@ -1100,8 +1100,8 @@ export function NewInspectionPage() {
         slot_start_time: wizardForm.slotStart,
         slot_end_time: wizardForm.slotEnd,
         amount_paise: priceInr * 100,
-        advance_amount_paise: 50000,
-        remaining_amount_paise: (priceInr - 500) * 100
+        advance_amount_paise: advancePaise,
+        remaining_amount_paise: priceInr * 100 - advancePaise
       }
       
       console.log('💰 PDI Amount being sent:', priceInr, 'paise:', priceInr * 100)
@@ -1127,7 +1127,7 @@ export function NewInspectionPage() {
         requestId: clientRequestId,
         url: paymentLinkUrl,
         linkId: paymentLinkId,
-        amount: '₹500',
+        amount: `₹${(advancePaise / 100).toFixed(2)}`,
         type: 'advance',
         status: 'unpaid',
         amountPaid: 0
@@ -1867,6 +1867,21 @@ export function NewInspectionPage() {
     console.log('No pricing data found, returning 0')
     return 0
   }, [raiseOpen, locationExtraInr, selectedCategoryId, wizardForm?.vehicleType, categoryPricing])
+
+  // Advance amount comes from category pricing (advance_amount_paise), capped at the total price
+  const advancePaise = useMemo(() => {
+    if (!raiseOpen) return 0
+    const pricingArray = Array.isArray(categoryPricing) ? categoryPricing : []
+    const currentVehicleType = wizardForm?.vehicleType === 'pre_owned' ? 'owned' : 'new'
+    const categoryPrice = pricingArray.find(p =>
+      p.category === Number(selectedCategoryId) &&
+      p.vehicle_type === currentVehicleType
+    )
+    const paise = Number(categoryPrice?.advance_amount_paise) || 0
+    return Math.min(paise, priceInr * 100)
+  }, [raiseOpen, selectedCategoryId, wizardForm?.vehicleType, categoryPricing, priceInr])
+
+  const advanceInr = advancePaise / 100
 
   const viewItems = useMemo(() => {
     if (!dialog || dialog.type !== 'viewCustomer') return []
@@ -3775,14 +3790,14 @@ export function NewInspectionPage() {
 
                       <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm">
                         <div className="font-semibold text-amber-950">Advance payment (mandatory)</div>
-                        <div className="mt-1 text-amber-900">Pay ₹500 now to confirm booking. Remaining amount can be paid later.</div>
+                        <div className="mt-1 text-amber-900">Pay ₹{advanceInr} now to confirm booking. Remaining amount can be paid later.</div>
                         <div className="mt-2 flex items-center justify-between">
                           <div className="text-amber-900">Pay now</div>
-                          <div className="font-extrabold text-amber-950">₹500</div>
+                          <div className="font-extrabold text-amber-950">₹{advanceInr}</div>
                         </div>
                         <div className="mt-2 flex items-center justify-between">
                           <div className="text-amber-900">Pay later</div>
-                          <div className="font-semibold text-amber-950">₹{Math.max(0, priceInr - 500)}</div>
+                          <div className="font-semibold text-amber-950">₹{Math.max(0, priceInr - advanceInr)}</div>
                         </div>
                       </div>
                     </div>
@@ -3854,6 +3869,14 @@ export function NewInspectionPage() {
                           <div className="flex justify-between">
                             <span className="font-semibold text-slate-900">Total amount</span>
                             <span className="font-extrabold text-lg text-slate-900">₹{priceInr}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Advance (pay now)</span>
+                            <span className="font-semibold text-amber-700">₹{advanceInr}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-slate-600">Remaining (pay later)</span>
+                            <span className="font-medium text-slate-900">₹{Math.max(0, priceInr - advanceInr)}</span>
                           </div>
                         </div>
                       </div>

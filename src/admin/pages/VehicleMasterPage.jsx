@@ -568,6 +568,7 @@ export function VehicleMasterPage() {
         { key: 'category', label: 'Category', value: it?.category_name || it?.category || '—' },
         { key: 'vehicle_type', label: 'Vehicle Type', value: capitalizeFirst(it?.vehicle_type) || '—' },
         { key: 'price', label: 'Price', value: it?.price || '—' },
+        { key: 'advance_amount', label: 'Advance Payment', value: it?.advance_amount_paise != null ? (Number(it.advance_amount_paise) / 100).toFixed(2) : '—' },
         { key: 'effective_from', label: 'Effective From', value: formatDate(it?.effective_from) || '—' },
         { key: 'effective_to', label: 'Effective To', value: formatDate(it?.effective_to) || '—' },
         { key: 'is_active', label: 'Status', value: it?.is_active ? 'Active' : 'Inactive' },
@@ -714,6 +715,18 @@ export function VehicleMasterPage() {
         header: 'Price',
         exportValue: (r) => String(r.price || ''),
         cell: (r) => <div className="text-sm text-slate-700 text-center">{r.price || '—'}</div>,
+        className: 'text-center',
+        tdClassName: 'text-center',
+      },
+      {
+        key: 'advance_amount_paise',
+        header: 'Advance payment',
+        exportValue: (r) => (r.advance_amount_paise != null ? (Number(r.advance_amount_paise) / 100).toFixed(2) : ''),
+        cell: (r) => (
+          <div className="text-sm text-slate-700 text-center">
+            {r.advance_amount_paise != null ? (Number(r.advance_amount_paise) / 100).toFixed(2) : '—'}
+          </div>
+        ),
         className: 'text-center',
         tdClassName: 'text-center',
       },
@@ -1551,6 +1564,22 @@ export function VehicleMasterPage() {
                 },
               },
               {
+                name: 'advance_amount',
+                label: 'Advance payment (₹)',
+                type: 'number',
+                defaultValue: '',
+                placeholder: 'e.g. 500',
+                min: 0,
+                onChange: (value, form) => {
+                  if (value < 0) {
+                    setFieldErrors(prev => ({ ...prev, advance_amount: 'Advance cannot be negative' }))
+                    return { ...form, advance_amount: '' }
+                  }
+                  setFieldErrors(prev => ({ ...prev, advance_amount: undefined }))
+                  return { ...form, advance_amount: value }
+                },
+              },
+              {
                 name: 'effective_from',
                 label: 'Effective from *',
                 type: 'date',
@@ -1581,8 +1610,8 @@ export function VehicleMasterPage() {
                 type: 'select',
                 defaultValue: it?.vehicle_type || 'owned',
                 options: [
+                  { value: 'new', label: 'New' },
                   { value: 'owned', label: 'Owned' },
-                  { value: 'partner', label: 'Partner' },
                 ],
               },
               {
@@ -1600,6 +1629,22 @@ export function VehicleMasterPage() {
                     setFieldErrors(prev => ({ ...prev, price: undefined }))
                     return { ...form, price: value }
                   }
+                },
+              },
+              {
+                name: 'advance_amount',
+                label: 'Advance payment (₹)',
+                type: 'number',
+                defaultValue: it?.advance_amount_paise != null ? String(Number(it.advance_amount_paise) / 100) : '',
+                placeholder: 'e.g. 500',
+                min: 0,
+                onChange: (value, form) => {
+                  if (value < 0) {
+                    setFieldErrors(prev => ({ ...prev, advance_amount: 'Advance cannot be negative' }))
+                    return { ...form, advance_amount: '' }
+                  }
+                  setFieldErrors(prev => ({ ...prev, advance_amount: undefined }))
+                  return { ...form, advance_amount: value }
                 },
               },
               {
@@ -2026,8 +2071,11 @@ export function VehicleMasterPage() {
                 category: Number(form.category),
                 vehicle_type: String(form.vehicle_type || '').trim(),
                 price: String(form.price || '').trim(),
+                advance_amount_paise: Math.round(Number(form.advance_amount || 0) * 100),
+                currency: 'INR',
                 effective_from: String(form.effective_from || '').trim(),
                 effective_to: String(form.effective_to || '').trim() || null,
+                is_active: true,
               }
               const res = await createCategoryPricing(payload)
               showSnack({ tone: 'success', title: 'Success', message: responseToMessage(res) })
@@ -2040,6 +2088,7 @@ export function VehicleMasterPage() {
                 category: Number(form.category),
                 vehicle_type: String(form.vehicle_type || '').trim(),
                 price: String(form.price || '').trim(),
+                advance_amount_paise: Math.round(Number(form.advance_amount || 0) * 100),
                 effective_from: String(form.effective_from || '').trim(),
                 effective_to: String(form.effective_to || '').trim() || null,
               }

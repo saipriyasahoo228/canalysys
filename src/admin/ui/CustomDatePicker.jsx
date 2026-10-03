@@ -40,7 +40,7 @@ export function CustomDatePicker({ value, onChange, disabled, placeholder = 'dd/
       <Input
         value={text}
         disabled={disabled}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => setText(e.target.value.replace(/[^\d/]/g, '').slice(0, 10))}
         onBlur={() => {
           const iso = dmyToIso(text)
           if (iso) {

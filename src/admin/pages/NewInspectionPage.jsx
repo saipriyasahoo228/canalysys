@@ -598,16 +598,14 @@ export function NewInspectionPage() {
         console.log('🔍 Adding inspector filter:', selectedInspectorFilter)
       }
       
-      // Add date range filters to API call (convert dd/mm/yyyy to yyyy-mm-dd)
+      // Add date range filters to API call (CustomDatePicker already emits yyyy-mm-dd)
       if (startDate) {
-        const [day, month, year] = startDate.split('/')
-        params.start_date = `${year}-${month}-${day}`
+        params.start_date = startDate
         console.log('🔍 Adding start_date filter:', params.start_date)
       }
-      
+
       if (endDate) {
-        const [day, month, year] = endDate.split('/')
-        params.end_date = `${year}-${month}-${day}`
+        params.end_date = endDate
         console.log('🔍 Adding end_date filter:', params.end_date)
       }
       
@@ -2075,24 +2073,12 @@ export function NewInspectionPage() {
         }
       }
 
-      // Date range filter
+      // Date range filter (by slot date; all values are yyyy-mm-dd so string compare is safe)
       if (startDate || endDate) {
-        const pdiDate = new Date(pdi.created_at)
-
-        if (startDate) {
-          // Parse dd/mm/yyyy format
-          const [day, month, year] = startDate.split('/')
-          const start = new Date(`${year}-${month}-${day}`)
-          if (pdiDate < start) return false
-        }
-
-        if (endDate) {
-          // Parse dd/mm/yyyy format
-          const [day, month, year] = endDate.split('/')
-          const end = new Date(`${year}-${month}-${day}`)
-          end.setHours(23, 59, 59, 999) // Include entire end day
-          if (pdiDate > end) return false
-        }
+        const slotDate = String(pdi.slot_date || '').slice(0, 10)
+        if (!slotDate) return false
+        if (startDate && slotDate < startDate) return false
+        if (endDate && slotDate > endDate) return false
       }
 
       // Payment stage filter

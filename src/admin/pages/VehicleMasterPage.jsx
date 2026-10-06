@@ -115,7 +115,7 @@ export function VehicleMasterPage() {
   const [categoryValuesError, setCategoryValuesError] = useState(null)
 
   const { data, loading, error, refresh } = usePolling('vehicle-master', () => Promise.resolve({ items: [] }), {
-    intervalMs: 15_000,
+    intervalMs: 0,
   })
 
   const {
@@ -123,7 +123,7 @@ export function VehicleMasterPage() {
     loading: brandsLoading,
     error: brandsError,
     refresh: refreshBrands,
-  } = usePolling('brands', () => listBrands(1), { intervalMs: 15_000 })
+  } = usePolling('brands', () => listBrands(1), { intervalMs: 0 })
 
   const {
     data: modelsData,
@@ -132,7 +132,7 @@ export function VehicleMasterPage() {
   } = usePolling(
     `models-${modelsBrandId || 'all'}`,
     () => listModels({ page: 1, brand_id: modelsBrandId || undefined }),
-    { intervalMs: 15_000 }
+    { intervalMs: 0 }
   )
 
   const {
@@ -142,26 +142,26 @@ export function VehicleMasterPage() {
   } = usePolling(
     `variants-${variantsModelId || 'all'}`,
     () => listVariants({ page: 1, model_id: variantsModelId || undefined }),
-    { intervalMs: 15_000 }
+    { intervalMs: 0 }
   )
 
   const {
     data: categoriesData,
     error: categoriesError,
     refresh: refreshCategories,
-  } = usePolling('categories', () => listCategoryValues(1), { intervalMs: 15_000 })
+  } = usePolling('categories', () => listCategoryValues(1), { intervalMs: 0 })
 
   const {
     data: mappingsData,
     error: mappingsError,
     refresh: refreshMappings,
-  } = usePolling('mappings', () => listVehicleCategoryMappings(1), { intervalMs: 15_000 })
+  } = usePolling('mappings', () => listVehicleCategoryMappings(1), { intervalMs: 0 })
 
   const {
     data: categoryPricingData,
     error: categoryPricingError,
     refresh: refreshCategoryPricing,
-  } = usePolling('category-pricing', () => listCategoryPricing({ page: 1 }), { intervalMs: 15_000 })
+  } = usePolling('category-pricing', () => listCategoryPricing({ page: 1 }), { intervalMs: 0 })
 
   const vm = data || {
     makes: [],

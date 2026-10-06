@@ -40,13 +40,14 @@ export function usePolling(queryKey, queryFn, { intervalMs = 10_000, enabled = t
         if (!alive) return
         setError(e)
       } finally {
-        if (!alive) return
-        setLoading(false)
+        if (alive) setLoading(false)
       }
     }
 
     run()
-    timer = setInterval(run, intervalMs)
+    if (intervalMs > 0) {
+      timer = setInterval(run, intervalMs)
+    }
 
     return () => {
       alive = false

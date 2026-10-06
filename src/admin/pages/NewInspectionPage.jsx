@@ -186,6 +186,17 @@ function isSlotInPast(slot, selectedDate) {
   return now >= slotStartTime
 }
 
+function getRequestIdSortParts(requestId) {
+  const match = String(requestId || '').match(/^PDI(\d{2})(\d{2})(\d{2})(\d+)$/i)
+  if (!match) return { dateKey: 0, sequence: 0 }
+
+  const [, day, month, year, sequence] = match
+  return {
+    dateKey: Number(`20${year}${month}${day}`),
+    sequence: Number(sequence) || 0,
+  }
+}
+
 export function NewInspectionPage() {
   console.log('🔍 Debug - NewInspectionPage component rendering')
   
@@ -2047,8 +2058,8 @@ export function NewInspectionPage() {
       assigned_inspector_mobile_number: pdi.assigned_inspector_mobile_number, // Add assigned inspector mobile
     }))
 
-    // Apply advanced filters
-    return processedItems.filter((pdi) => {
+    // Apply advanced filters. Keep the default API order unless a date range is selected.
+    const filteredItems = processedItems.filter((pdi) => {
       // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase()
@@ -2100,6 +2111,25 @@ export function NewInspectionPage() {
       }
 
       return true
+    })
+
+    if (!startDate && !endDate) return filteredItems
+
+    return filteredItems.sort((a, b) => {
+      const aSlotDate = String(a.slot_date || '').slice(0, 10)
+      const bSlotDate = String(b.slot_date || '').slice(0, 10)
+      const slotDateCompare = aSlotDate.localeCompare(bSlotDate)
+      if (slotDateCompare !== 0) return slotDateCompare
+
+      const aRequest = getRequestIdSortParts(a.request_id)
+      const bRequest = getRequestIdSortParts(b.request_id)
+
+      if (aRequest.sequence !== bRequest.sequence) return bRequest.sequence - aRequest.sequence
+
+      return String(b.request_id || '').localeCompare(String(a.request_id || ''), undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      })
     })
   }, [pdiRequestsData, searchTerm, selectedInspectorFilter, startDate, endDate, selectedPaymentStageFilter, selectedStatusFilter, selectedBookingTypeFilter])
 

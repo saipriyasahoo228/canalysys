@@ -2,11 +2,8 @@ import { useState } from 'react'
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
   Cell,
-  ComposedChart,
   Legend,
   Line,
   LineChart,
@@ -17,25 +14,14 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { AlertTriangle, ClipboardCheck, ClipboardList, Clock, Gauge, Layers, UserX, IndianRupeeIcon } from 'lucide-react'
-import { Card, Badge, Button, cx } from '../ui/Ui'
+import { ClipboardCheck, Clock, IndianRupeeIcon } from 'lucide-react'
+import { Card, Button } from '../ui/Ui'
 import { CustomDatePicker } from '../ui/CustomDatePicker'
 import { usePolling } from '../hooks/usePolling'
-import { mockApi } from '../mock/mockApi'
-import { useRbac } from '../rbac/RbacContext'
-import { formatMinutes, formatDate } from '../utils/format'
+import { formatDate } from '../utils/format'
 import { listPDIRequests } from '../../api/inspection'
 import { getPaymentStages, getVehicleTypes, getVehicleBrands } from '../../api/dashboard'
 import { DrilldownDialog } from '../ui/DrilldownDialog'
-
-function kpiTone(label, value) {
-  if (label === 'SLA met') {
-    if (value >= 92) return 'good'
-    if (value >= 85) return 'warn'
-    return 'bad'
-  }
-  return 'default'
-}
 
 // listPDIRequests() only returns a single page of items. The trend/city/customer
 // charts below need every request in the selected date range (not just page 1),
@@ -58,14 +44,6 @@ async function fetchAllPdiRequests(params) {
 }
 
 export function DashboardPage() {
-  const { locationId } = useRbac()
-
-  const { data, loading, error } = usePolling(
-    ['dashboard', locationId].join(':'),
-    () => mockApi.getDashboard({ locationId }),
-    { intervalMs: 10_000 }
-  )
-
   const [dateFilter, setDateFilter] = useState({ from: '', to: '' })
 
   // /api/pdi-requests/ doesn't support date filtering at all — confirmed it returns the
@@ -83,7 +61,7 @@ export function DashboardPage() {
   const { data: pdiData } = usePolling(
     ['pdi-requests-dashboard', dateFilter.from, dateFilter.to].join(':'),
     () => fetchAllPdiRequests(pdiDateParams),
-    { intervalMs: 20_000 }
+    { intervalMs: 0 }
   )
   const cardValueClass = 'mt-1 text-lg font-semibold tracking-tight text-slate-900'
   const cardHintClass = 'mt-1 text-xs text-slate-500'
@@ -105,27 +83,25 @@ export function DashboardPage() {
   } = usePolling(
     ['payment-stages', dateFilter.from, dateFilter.to].join(':'),
     () => getPaymentStages(dateParams),
-    { intervalMs: 20_000 }
+    { intervalMs: 0 }
   )
 
   const {
     data: vehicleTypesResp,
-    loading: vehicleTypesLoading,
     error: vehicleTypesError,
   } = usePolling(
     ['vehicle-types', dateFilter.from, dateFilter.to].join(':'),
     () => getVehicleTypes(dateParams),
-    { intervalMs: 20_000 }
+    { intervalMs: 0 }
   )
 
   const {
     data: vehicleBrandsResp,
-    loading: vehicleBrandsLoading,
     error: vehicleBrandsError,
   } = usePolling(
     ['vehicle-brands', dateFilter.from, dateFilter.to].join(':'),
     () => getVehicleBrands(dateParams),
-    { intervalMs: 20_000 }
+    { intervalMs: 0 }
   )
 
   const [drilldown, setDrilldown] = useState({
@@ -214,20 +190,6 @@ export function DashboardPage() {
       }
     })
     return Object.values(locations)
-  })()
-
-  // Calculate customer-inspector assignments
-  const customerAssignments = (() => {
-    return filteredPdiItems
-      .filter(item => item.assigned_inspector)
-      .slice(0, 8) // Show top 8 assignments
-      .map(item => ({
-        customer: item.name,
-        inspector: item.assigned_inspector_name,
-        inspectorId: item.assigned_inspector_id,
-        date: item.slot_date,
-        vehicle: `${item.brand_name} ${item.model_name}`
-      }))
   })()
 
   return (
@@ -350,7 +312,7 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      {error || paymentStagesError || vehicleTypesError || vehicleBrandsError ? (
+      {paymentStagesError || vehicleTypesError || vehicleBrandsError ? (
         <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
           Failed to load dashboard data.
         </div>

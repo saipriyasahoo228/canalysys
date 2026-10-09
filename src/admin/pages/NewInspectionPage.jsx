@@ -2520,6 +2520,7 @@ export function NewInspectionPage() {
             pageSize={10}
             rowKey={(row) => row.id}
             enableSearch={false}
+            stickyHeader
           />
           </>
         )}

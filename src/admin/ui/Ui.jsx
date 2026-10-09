@@ -20,6 +20,8 @@ export function PaginatedTable({
   enableExport = false,
   exportFilename = 'report.csv',
   exportBaseName,
+  stickyHeader = false,
+  maxHeightClassName,
 }) {
   const [page, setPage] = useState(1)
   const [rpp, setRpp] = useState(initialRowsPerPage)
@@ -162,7 +164,13 @@ export function PaginatedTable({
         </div>
       ) : null}
 
-      <Table columns={columns} rows={pageRows} rowKey={rowKey} />
+      <Table
+        columns={columns}
+        rows={pageRows}
+        rowKey={rowKey}
+        stickyHeader={stickyHeader}
+        {...(maxHeightClassName ? { maxHeightClassName } : {})}
+      />
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
         <div>
           Showing <span className="font-semibold text-slate-900">{from}</span>–{' '}
@@ -390,14 +398,24 @@ export function Select({ className, children, ...props }) {
   )
 }
 
-export function Table({ columns, rows, rowKey }) {
+export function Table({ columns, rows, rowKey, stickyHeader = false, maxHeightClassName = 'max-h-[65vh]' }) {
   return (
-    <div className="overflow-x-auto overflow-y-visible rounded-2xl border border-slate-300 bg-white">
+    <div
+      className={cx(
+        'overflow-x-auto rounded-2xl border border-slate-300 bg-white',
+        stickyHeader ? cx('overflow-y-auto', maxHeightClassName) : 'overflow-y-visible',
+      )}
+    >
       <table className="w-full text-left text-[13px]">
-        <thead className="bg-slate-200/70 text-[11px] uppercase tracking-wide text-slate-700">
+        <thead
+          className={cx(
+            'text-[11px] uppercase tracking-wide text-slate-700',
+            stickyHeader ? 'sticky top-0 z-10 bg-slate-200 shadow-[0_1px_0_0_rgb(203_213_225)]' : 'bg-slate-200/70',
+          )}
+        >
           <tr>
             {columns.map((c) => (
-              <th key={c.key} className={cx('whitespace-nowrap px-3 py-2.5', c.className)}>
+              <th key={c.key} className={cx('whitespace-nowrap px-3 py-2.5', stickyHeader && 'bg-slate-200', c.className)}>
                 {c.header}
               </th>
             ))}

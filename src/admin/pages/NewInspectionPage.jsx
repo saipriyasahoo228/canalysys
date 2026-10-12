@@ -2860,13 +2860,15 @@ export function NewInspectionPage() {
                 {(() => {
                   const pdiRequest = pdiRequests.find(p => p.request_id === actionsMenu.requestId)
                   const isFullyPaid = pdiRequest?.payment_stage === 'fully_paid'
+                  const isUnpaid = pdiRequest?.payment_stage === 'unpaid'
+                  const isDisabled = isFullyPaid || isUnpaid
                   return (
                     <button
                       type="button"
-                      disabled={isFullyPaid}
-                      className={`w-full px-4 py-3 text-left text-sm ${isFullyPaid ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'hover:bg-amber-50 text-amber-700'}`}
+                      disabled={isDisabled}
+                      className={`w-full px-4 py-3 text-left text-sm ${isDisabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'hover:bg-amber-50 text-amber-700'}`}
                       onClick={async () => {
-                        if (isFullyPaid) return
+                        if (isDisabled) return
                         const reqId = actionsMenu.requestId
                         setRefundRequestId(reqId)
                         setRefundReason('')

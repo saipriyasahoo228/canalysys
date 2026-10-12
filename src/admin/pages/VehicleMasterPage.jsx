@@ -55,15 +55,33 @@ const tabs = [
   { key: 'pricing', label: 'Category pricing' },
 ]
 
+const VEHICLE_MASTER_ACTIVE_TAB_KEY = 'vehicle-master-active-tab'
+const VEHICLE_MASTER_TAB_KEYS = new Set(tabs.map((tab) => tab.key))
+
 const CONDITION_OPTIONS = [
   { value: 'new', label: 'New' },
   { value: 'owned', label: 'Owned' },
+]
+
+const FUEL_TYPE_OPTIONS = [
+  { value: 'petrol', label: 'Petrol' },
+  { value: 'diesel', label: 'Diesel' },
+  { value: 'ev', label: 'Electric' },
+  { value: 'cng', label: 'CNG' },
+  { value: 'ev+petrol', label: 'EV + Petrol' },
+  { value: 'ev+diesel', label: 'EV + Diesel' },
+  { value: 'cng+petrol', label: 'CNG + Petrol' },
 ]
 
 function conditionLabel(v) {
   if (v === 'new') return 'New'
   if (v === 'owned') return 'Owned'
   return '—'
+}
+
+function fuelTypeLabel(v) {
+  const value = String(v || '').trim().toLowerCase()
+  return FUEL_TYPE_OPTIONS.find((option) => option.value === value)?.label || value || 'â€”'
 }
 
 function capitalizeFirst(str) {
@@ -89,7 +107,15 @@ function TabButton({ active, children, ...props }) {
 
 export function VehicleMasterPage() {
   const { actor, permissions } = useRbac()
-  const [activeTab, setActiveTab] = useState('base')
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === 'undefined') return 'base'
+    try {
+      const stored = window.localStorage.getItem(VEHICLE_MASTER_ACTIVE_TAB_KEY)
+      return VEHICLE_MASTER_TAB_KEYS.has(stored) ? stored : 'base'
+    } catch {
+      return 'base'
+    }
+  })
   const [snack, setSnack] = useState({ open: false, tone: 'info', title: '', message: '' })
   const [fieldErrors, setFieldErrors] = useState({})
   const [modelsBrandId, setModelsBrandId] = useState('')
@@ -416,6 +442,15 @@ export function VehicleMasterPage() {
 
   const viewDialogOpen = dialog?.type === 'viewBase' || dialog?.type === 'viewMapping' || dialog?.type === 'viewPricing' || dialog?.type === 'viewCategoryPricing'
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(VEHICLE_MASTER_ACTIVE_TAB_KEY, activeTab)
+    } catch {
+      // Ignore storage failures; tab switching still works for the current session.
+    }
+  }, [activeTab])
+
   // Fetch Category Types on component mount
   useEffect(() => {
     refreshCategoryTypes()
@@ -497,7 +532,7 @@ export function VehicleMasterPage() {
               {
                 key: 'fuel_type',
                 label: 'Fuel type',
-                value: it?.fuel_type_display || it?.fuel_type || '—',
+                value: it?.fuel_type_display || fuelTypeLabel(it?.fuel_type),
                 fullWidth: true,
               },
               { key: 'is_active', label: 'Active', value: it?.is_active === false ? 'No' : 'Yes' },
@@ -800,7 +835,7 @@ export function VehicleMasterPage() {
         className: 'text-right',
         tdClassName: 'text-right',
       },
-    ],
+    ].filter((column) => column.key !== 'advance_amount_paise'),
     [permissions.managePricing]
   )
 
@@ -972,10 +1007,10 @@ export function VehicleMasterPage() {
                         {
                           key: 'fuel_type',
                           header: 'Fuel Type',
-                          exportValue: (r) => r.fuel_type ? r.fuel_type.toUpperCase() : '---',
+                          exportValue: (r) => fuelTypeLabel(r.fuel_type),
                           cell: (r) => (
                             <div className="text-sm text-slate-700">
-                              {r.fuel_type ? r.fuel_type.toUpperCase() : '---'}
+                              {fuelTypeLabel(r.fuel_type)}
                             </div>
                           ),
                           className: 'text-center',
@@ -1029,6 +1064,7 @@ export function VehicleMasterPage() {
                     rowKey={(r) => r.id}
                     initialRowsPerPage={5}
                     rowsPerPageOptions={[5, 10, 20, 'all']}
+                    rowsPerPageStorageKey={`vehicle-master-${block.kind}-rows-per-page`}
                     enableSearch
                     searchPlaceholder={`Search ${block.title.toLowerCase()}…`}
                     enableExport
@@ -1079,6 +1115,7 @@ export function VehicleMasterPage() {
                 rowKey={(r) => r.id}
                 initialRowsPerPage={5}
                 rowsPerPageOptions={[5, 10, 20, 'all']}
+                rowsPerPageStorageKey="vehicle-master-mapping-rows-per-page"
                 enableSearch
                 searchPlaceholder="Search mappings…"
                 enableExport
@@ -1158,6 +1195,7 @@ export function VehicleMasterPage() {
                 rowKey={(r) => r.id}
                 initialRowsPerPage={5}
                 rowsPerPageOptions={[5, 10, 20, 'all']}
+                rowsPerPageStorageKey="vehicle-master-pricing-rows-per-page"
                 enableSearch
                 searchPlaceholder="Search categories…"
                 enableExport
@@ -1359,7 +1397,13 @@ export function VehicleMasterPage() {
                 },
                 { name: 'name', label: 'Variant name *', type: 'text', defaultValue: '' },
                 { name: 'description', label: 'Description', type: 'text', defaultValue: '' },
-                { name: 'fuel_type', label: 'Fuel type', type: 'text', defaultValue: '' },
+                {
+                  name: 'fuel_type',
+                  label: 'Fuel type *',
+                  type: 'popup_select',
+                  defaultValue: FUEL_TYPE_OPTIONS[0].value,
+                  options: FUEL_TYPE_OPTIONS,
+                },
               ]
             }
           }
@@ -1447,7 +1491,13 @@ export function VehicleMasterPage() {
                 },
                 { name: 'name', label: 'Variant name *', type: 'text', defaultValue: dialog?.item?.name || '' },
                 { name: 'description', label: 'Description', type: 'text', defaultValue: dialog?.item?.description || '' },
-                { name: 'fuel_type', label: 'Fuel type', type: 'text', defaultValue: dialog?.item?.fuel_type ?? '' },
+                {
+                  name: 'fuel_type',
+                  label: 'Fuel type *',
+                  type: 'popup_select',
+                  defaultValue: dialog?.item?.fuel_type ?? FUEL_TYPE_OPTIONS[0].value,
+                  options: FUEL_TYPE_OPTIONS,
+                },
               ]
             }
           }
@@ -1591,7 +1641,7 @@ export function VehicleMasterPage() {
                 type: 'date',
                 defaultValue: '',
               },
-            ]
+            ].filter((field) => field.name !== 'advance_amount')
           }
 
           if (dialog?.type === 'editCategoryPricing') {
@@ -1659,7 +1709,7 @@ export function VehicleMasterPage() {
                 type: 'date',
                 defaultValue: it?.effective_to || '',
               },
-            ]
+            ].filter((field) => field.name !== 'advance_amount')
           }
 
           if (dialog?.type === 'deleteCategoryPricing') {
@@ -2071,7 +2121,6 @@ export function VehicleMasterPage() {
                 category: Number(form.category),
                 vehicle_type: String(form.vehicle_type || '').trim(),
                 price: String(form.price || '').trim(),
-                advance_amount_paise: Math.round(Number(form.advance_amount || 0) * 100),
                 currency: 'INR',
                 effective_from: String(form.effective_from || '').trim(),
                 effective_to: String(form.effective_to || '').trim() || null,
@@ -2088,7 +2137,6 @@ export function VehicleMasterPage() {
                 category: Number(form.category),
                 vehicle_type: String(form.vehicle_type || '').trim(),
                 price: String(form.price || '').trim(),
-                advance_amount_paise: Math.round(Number(form.advance_amount || 0) * 100),
                 effective_from: String(form.effective_from || '').trim(),
                 effective_to: String(form.effective_to || '').trim() || null,
               }

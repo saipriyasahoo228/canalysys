@@ -1,4 +1,4 @@
-import { forwardRef, useMemo, useState } from 'react'
+import { forwardRef, useEffect, useMemo, useState } from 'react'
 import { Eye } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -14,6 +14,7 @@ export function PaginatedTable({
   rowKey,
   initialRowsPerPage = 10,
   rowsPerPageOptions = [10, 20, 'all'],
+  rowsPerPageStorageKey,
   enableSearch = false,
   searchPlaceholder = 'Search…',
   getSearchText,
@@ -24,10 +25,29 @@ export function PaginatedTable({
   maxHeightClassName,
 }) {
   const [page, setPage] = useState(1)
-  const [rpp, setRpp] = useState(initialRowsPerPage)
+  const [rpp, setRpp] = useState(() => {
+    if (!rowsPerPageStorageKey || typeof window === 'undefined') return initialRowsPerPage
+    try {
+      const stored = window.localStorage.getItem(rowsPerPageStorageKey)
+      if (stored === 'all') return 'all'
+      const parsed = Number(stored)
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : initialRowsPerPage
+    } catch {
+      return initialRowsPerPage
+    }
+  })
   const [query, setQuery] = useState('')
 
   const normalizedRpp = rpp === 'all' ? 'all' : Number(rpp)
+
+  useEffect(() => {
+    if (!rowsPerPageStorageKey || typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(rowsPerPageStorageKey, String(rpp))
+    } catch {
+      // Ignore storage failures; pagination still works for the current session.
+    }
+  }, [rowsPerPageStorageKey, rpp])
 
   const normalizeSearch = (s) =>
     String(s || '')

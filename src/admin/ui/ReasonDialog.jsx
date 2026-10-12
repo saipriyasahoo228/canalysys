@@ -32,6 +32,7 @@ export function ReasonDialog({
   const [form, setForm] = useState(initial)
   const [comboText, setComboText] = useState({})
   const [comboOpen, setComboOpen] = useState(null)
+  const [popupSelectOpen, setPopupSelectOpen] = useState(null)
   const [calendarView, setCalendarView] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const boxRef = useRef(null)
@@ -140,7 +141,78 @@ export function ReasonDialog({
             <div key={f.name}>
               <div className="text-xs font-medium text-slate-900">{renderFieldLabel(f.label)}</div>
               <div className="mt-1">
-                {f.type === 'select' ? (
+                {f.type === 'popup_select' ? (
+                  (() => {
+                    const isDisabled = !!f.disabled || submitting
+                    const opts = typeof f.options === 'function' ? f.options(form) : f.options || []
+                    const selected = opts.find((o) => o.value === form[f.name])
+                    const isOpen = popupSelectOpen === f.name
+
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          disabled={isDisabled}
+                          className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white px-3 py-2 text-left text-sm text-slate-900 shadow-sm transition hover:bg-slate-50 focus:border-cyan-500/80 focus:outline-none focus:ring-2 focus:ring-cyan-200/70 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={() => {
+                            if (isDisabled) return
+                            setPopupSelectOpen(f.name)
+                          }}
+                        >
+                          <span className={selected ? '' : 'text-slate-500'}>{selected?.label || f.placeholder || 'Select option'}</span>
+                          <ChevronDown className="h-4 w-4 text-slate-500" />
+                        </button>
+
+                        {isOpen ? (
+                          <div className="fixed inset-0 z-[60]">
+                            <div className="absolute inset-0 bg-black/30" onClick={() => setPopupSelectOpen(null)} />
+                            <div className="absolute left-1/2 top-1/2 w-[90vw] max-w-sm -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                                <div className="text-sm font-semibold text-slate-900">{f.label || 'Select option'}</div>
+                                <button
+                                  type="button"
+                                  className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                  onClick={() => setPopupSelectOpen(null)}
+                                  aria-label="Close"
+                                  title="Close"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                              <div className="max-h-[55vh] overflow-y-auto p-2">
+                                {opts.length ? (
+                                  opts.map((o) => (
+                                    <button
+                                      key={o.value}
+                                      type="button"
+                                      className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-slate-900 hover:bg-slate-100"
+                                      onClick={() => {
+                                        const nextVal = o.value
+                                        setForm((s) => {
+                                          const next = { ...s, [f.name]: nextVal }
+                                          if (typeof f.onChange === 'function') return f.onChange(nextVal, next) || next
+                                          return next
+                                        })
+                                        setPopupSelectOpen(null)
+                                      }}
+                                    >
+                                      <span>{o.label}</span>
+                                      {form[f.name] === o.value ? (
+                                        <span className="text-xs font-semibold text-cyan-700">Selected</span>
+                                      ) : null}
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="px-3 py-2 text-sm text-slate-600">No options available</div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+                      </>
+                    )
+                  })()
+                ) : f.type === 'select' ? (
                   <div className="relative">
                     {(() => {
                       const isDisabled = !!f.disabled || submitting

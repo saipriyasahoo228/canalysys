@@ -847,7 +847,7 @@ export function ChecklistBuilderPage() {
           {
             name: 'fuel_type',
             label: 'Fuel Type',
-            type: 'select',
+            type: 'popup_select',
             defaultValue: dialog?.type === 'editTemplate' ? 
               (fuelTypes.find(fuelType => fuelType === editingTemplate?.fuel_type?.toUpperCase()) || '') : '',
             options: fuelTypes.map(fuelType => ({ value: fuelType, label: fuelType })),
